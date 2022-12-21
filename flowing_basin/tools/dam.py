@@ -4,7 +4,8 @@ from .channel import Channel
 
 class Dam:
 
-    def __init__(self, ident: int, instance: Instance, path_flow_max_model: str, path_power_model: str):
+    def __init__(self, ident: int,
+                 instance: Instance, path_flow_max_model: str, path_power_model: str):
 
         self.ident = ident
         self.time_step = instance.get_time_step()
@@ -27,11 +28,21 @@ class Dam:
 
     def update(self, flows: list) -> None:
 
+        """
+        Update the volume of the dam, and the state of its connected channel
+        :param flows:
+        :return:
+        """
+
+        # Obtain flow coming into the dam from the previous dam
         flow_contribution = 0
         if self.ident > 0:
             flow_contribution = flows[self.ident-1]
 
+        # Obtain flow coming out of the dam
         flow_out = flows[self.ident]
+
+        # Update volume
         self.volume = self.volume + (self.unregulated_flow + flow_contribution - flow_out) * self.time_step
 
         self.channel.update(flows=flows, dam_vol=self.volume)

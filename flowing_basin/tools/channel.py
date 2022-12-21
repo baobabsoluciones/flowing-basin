@@ -31,6 +31,14 @@ class Channel:
 
     def update(self, flows: list, dam_vol: float) -> None:
 
+        """
+        Update the record of flows through the dam, its current maximum flow,
+        and the state of the power group after it
+        :param flows:
+        :param dam_vol:
+        :return:
+        """
+
         self.flows_over_time.append(flows[self.ident])
         self.flow_max = self.get_max_flow(dam_vol)
 

@@ -4,7 +4,7 @@ from flowing_basin.core import Instance, Solution
 
 class RiverBasinProblem(ApplicationCore):
     name = "river-basin"
-    description = "Problem for the river basin prblem with dams and reservoirs"
+    description = "Application for the river basin problem with dams and reservoirs"
     instance = Instance
     solution = Solution
     solvers = dict()

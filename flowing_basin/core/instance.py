@@ -20,6 +20,8 @@ class Instance(InstanceCore):
         :return: The time between updates in seconds
         """
 
+        pass
+
     def get_num_dams(self) -> int:
 
         """

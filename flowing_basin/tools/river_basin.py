@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from .dam import Dam
+from dam import Dam
 
 
 class RiverBasin:

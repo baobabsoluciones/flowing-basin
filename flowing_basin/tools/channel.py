@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from .power_group import PowerGroup
+from power_group import PowerGroup
 
 
 class Channel:
@@ -32,7 +32,7 @@ class Channel:
     def update(self, flows: list, dam_vol: float) -> None:
 
         """
-        Update the record of flows through the dam, its current maximum flow,
+        Update the record of flows through the channel, its current maximum flow,
         and the state of the power group after it
         :param flows:
         :param dam_vol:

@@ -1,6 +1,1 @@
-{
-  "$schema": "http://json-schema.org/schema#",
-  "type": "object",
-  "properties": {},
-  "required": []
-}
+{"$schema": "http://json-schema.org/schema#", "type": "object", "properties": {"dam1": {"type": "object", "properties": {"vol_min": {"type": "integer"}, "vol_max": {"type": "integer"}, "initial_vol": {"type": "number"}, "initial_flow": {"type": "number"}, "unreg_flow": {"type": "number"}, "lags": {"type": "array", "items": {"type": "integer"}}, "max_flow_points": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}}}}, "required": ["initial_flow", "initial_vol", "lags", "max_flow_points", "unreg_flow", "vol_max", "vol_min"]}, "dam2": {"type": "object", "properties": {"vol_min": {"type": "integer"}, "vol_max": {"type": "integer"}, "initial_vol": {"type": "number"}, "initial_flow": {"type": "number"}, "unreg_flow": {"type": "number"}, "lags": {"type": "array", "items": {"type": "integer"}}, "max_flow_points": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}}}}, "required": ["initial_flow", "initial_vol", "lags", "max_flow_points", "unreg_flow", "vol_max", "vol_min"]}}, "required": ["dam1", "dam2"]}

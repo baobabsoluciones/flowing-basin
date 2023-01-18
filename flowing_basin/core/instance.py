@@ -1,4 +1,5 @@
 import pickle
+from typing import List
 from cornflow_client import InstanceCore, get_empty_schema
 
 
@@ -35,7 +36,7 @@ class Instance(InstanceCore):
 
         """
 
-        :param ident: Identifier of the dam in the river basin
+        :param ident: Identifier of the dam in the river basin, 1 .. num_dams
         :return: The volume of the dam in the beginning
         """
         data_list = list(self.data.values())
@@ -45,7 +46,7 @@ class Instance(InstanceCore):
 
         """
 
-        :param ident: Identifier of the dam in the river basin
+        :param ident: Identifier of the dam in the river basin, 1 .. num_dams
         :return: Minimum volume of the dam
         """
 
@@ -56,7 +57,7 @@ class Instance(InstanceCore):
 
         """
 
-        :param ident: Identifier of the dam in the river basin
+        :param ident: Identifier of the dam in the river basin, 1 .. num_dams
         :return: Maximum volume of the dam
         """
 
@@ -67,7 +68,7 @@ class Instance(InstanceCore):
 
         """
 
-        :param ident: Identifier of the dam
+        :param ident: Identifier of the dam, 1 .. num_dams
         :return: Unregulated flow that enters the dam (flow that comes from the river)
         """
 
@@ -78,28 +79,28 @@ class Instance(InstanceCore):
 
         """
 
-        :param ident: Identifier of the channel
+        :param ident: Identifier of the channel, 1 .. num_dams
         :return: Flow that goes through the channel in the beginning
         """
 
         data_list = list(self.data.values())
         return data_list[ident - 1]["initial_flow"]
 
-    def get_relevant_lags_of_dam(self, ident: int) -> list[int]:
+    def get_relevant_lags_of_dam(self, ident: int) -> List[int]:
 
         """
 
-        :param ident: Identifier of the dam
+        :param ident: Identifier of the dam, 1 .. num_dams
         :return: List of the relevant lags of the dam (1 lag = 15 minutes of time delay)
         """
         data_list = list(self.data.values())
         return data_list[ident - 1]["lags"]
 
-    def get_max_flow_points_channel(self, ident: int) -> list[list[int]]:
+    def get_max_flow_points_of_channel(self, ident: int) -> List[List[int]]:
 
         """
 
-        :param ident: Identifier of the channel
+        :param ident: Identifier of the channel, 1 .. num_dams
         :return: List of the max flow points of the channel (vol_dam, max_flow)
         """
         data_list = list(self.data.values())
@@ -109,7 +110,7 @@ class Instance(InstanceCore):
 
         """
 
-        :param time: Identifier of the quarter-hour of the day
+        :param time: Identifier of the time step; if we consider steps of 15min for a whole day, 0 .. 95 (24*4)
         :return: FLow entering the first dam
         """
         return self.data["incoming_flow_in_day"][time]
@@ -118,7 +119,7 @@ class Instance(InstanceCore):
 
         """
 
-        :param ident: Identifier of the channel
+        :param ident: Identifier of the channel, 1 .. num_dams
         :return: Initial turbined flow in the first power group, entering the second dam
         """
         data_list = list(self.data.values())

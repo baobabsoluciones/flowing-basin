@@ -5,17 +5,19 @@ from dam import Dam
 class RiverBasin:
     def __init__(self, instance: Instance, path_power_model: str):
 
+        # Dams inside the flowing basin
         self.dams = []
         num_dams = instance.get_num_dams()
-        for dam_ident in range(num_dams):
+        for dam_ident in range(1, num_dams + 1):
             dam = Dam(
                 ident=dam_ident,
                 instance=instance,
                 path_power_model=path_power_model,
             )
             self.dams.append(dam)
+
+        # Identifier of the time step (increases with each update)
         self.time = 0
-        self.previous_turbined_flows = 
 
     def update(self, flows: list) -> None:
 
@@ -24,8 +26,10 @@ class RiverBasin:
         :param flows: List of flows (the indices correspond to the identifiers of the channels)
         """
 
+        # Increase time step identifier
         self.time = self.time + 1
 
+        # Update dams
         for dam in self.dams:
             dam.update(flows=flows, time=self.time)
 

@@ -3,9 +3,14 @@ from power_group import PowerGroup
 
 
 class Channel:
-
-    def __init__(self, ident: int, dam_vol: float,
-                 instance: Instance, path_flow_max_model: str, path_power_model: str):
+    def __init__(
+        self,
+        ident: int,
+        dam_vol: float,
+        instance: Instance,
+        path_flow_max_model: str,
+        path_power_model: str,
+    ):
 
         self.ident = ident
         self.path_flow_max_model = path_flow_max_model
@@ -13,8 +18,10 @@ class Channel:
         self.flows_over_time = [instance.get_initial_flow_of_channel(ident)]
         self.flow_max = self.get_max_flow(dam_vol)
 
-        self.power_group = PowerGroup(flows_over_time=self.flows_over_time,
-                                      path_power_model=path_power_model)
+        self.power_group = PowerGroup(
+            flows_over_time=self.flows_over_time,
+            path_power_model=path_power_model,
+        )
         # Assuming there is only one power group per channel
         # TODO: Let there be more than one channel per dam
 
@@ -29,7 +36,7 @@ class Channel:
 
         pass
 
-    def update(self, flows: list, dam_vol: float) -> None:
+    def update(self, flows: list, dam_vol: float) -> float:
 
         """
         Update the record of flows through the channel, its current maximum flow,
@@ -42,4 +49,4 @@ class Channel:
         self.flows_over_time.append(flows[self.ident])
         self.flow_max = self.get_max_flow(dam_vol)
 
-        self.power_group.update(flows_over_time=self.flows_over_time)
+        return self.power_group.update(flows_over_time=self.flows_over_time)

@@ -22,7 +22,8 @@
                 0,
                 0
             ]
-        ]
+        ],
+        "initial_turbined_flow": 7.27
     },
     "dam2": {
         "vol_min": 0.0,

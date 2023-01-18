@@ -34,10 +34,14 @@
               "type": "integer"
             }
           }
+        },
+        "initial_turbined_flow": {
+          "type": "number"
         }
       },
       "required": [
         "initial_flow",
+        "initial_turbined_flow",
         "initial_vol",
         "lags",
         "max_flow_points",

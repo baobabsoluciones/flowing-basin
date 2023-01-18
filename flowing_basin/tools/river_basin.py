@@ -3,18 +3,19 @@ from dam import Dam
 
 
 class RiverBasin:
-
-    def __init__(self,
-                 instance: Instance, path_flow_max_model: str, path_power_model: str):
+    def __init__(self, instance: Instance, path_power_model: str):
 
         self.dams = []
         num_dams = instance.get_num_dams()
         for dam_ident in range(num_dams):
-            dam = Dam(ident=dam_ident,
-                      instance=instance,
-                      path_flow_max_model=path_flow_max_model,
-                      path_power_model=path_power_model)
+            dam = Dam(
+                ident=dam_ident,
+                instance=instance,
+                path_power_model=path_power_model,
+            )
             self.dams.append(dam)
+        self.time = 0
+        self.previous_turbined_flows = 
 
     def update(self, flows: list) -> None:
 
@@ -23,8 +24,10 @@ class RiverBasin:
         :param flows: List of flows (the indices correspond to the identifiers of the channels)
         """
 
+        self.time = self.time + 1
+
         for dam in self.dams:
-            dam.update(flows=flows)
+            dam.update(flows=flows, time=self.time)
 
     def get_state(self):
 

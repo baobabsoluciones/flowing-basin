@@ -84,38 +84,51 @@ class Instance(InstanceCore):
 
         data_list = list(self.data.values())
         return data_list[ident - 1]["initial_flow"]
-    
+
     def get_relevant_lags_of_dam(self, ident: int) -> list[int]:
-        
+
         """
-        
+
         :param ident: Identifier of the dam
         :return: List of the relevant lags of the dam (1 lag = 15 minutes of time delay)
         """
         data_list = list(self.data.values())
         return data_list[ident - 1]["lags"]
-    
+
     def get_max_flow_points_channel(self, ident: int) -> list[list[int]]:
-        
+
         """
-        
+
         :param ident: Identifier of the channel
         :return: List of the max flow points of the channel (vol_dam, max_flow)
         """
         data_list = list(self.data.values())
         return data_list[ident - 1]["max_flow_points"]
-    
+
     def get_incoming_flow(self, time: int) -> float:
-        
+
         """
-        
+
         :param time: Identifier of the quarter-hour of the day
         :return: FLow entering the first dam
         """
         return self.data["incoming_flow_in_day"][time]
-        
+    
+    def get_initial_turbined_flow(self, ident: int) -> float:
+
+        """
+
+        :param ident: Identifier of the channel
+        :return: Initial turbined flow in the first power group, entering the second dam
+        """
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["max_flow_points"]
+
+
 if __name__ == "__main__":
-    instance = Instance.from_json("C:\\Users\\Usuario\\Desktop\\GitHub\\flowing-basin\\flowing_basin\\data\\input.json")
+    instance = Instance.from_json(
+        "C:\\Users\\Usuario\\Desktop\\GitHub\\flowing-basin\\flowing_basin\\data\\input.json"
+    )
     print(instance.data)
     print(instance.get_num_dams())
     print(instance.get_initial_vol_of_dam(2))

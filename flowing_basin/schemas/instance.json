@@ -89,10 +89,17 @@
         "vol_max",
         "vol_min"
       ]
+    },
+    "incoming_flow_in_day": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      }
     }
   },
   "required": [
     "dam1",
-    "dam2"
+    "dam2",
+    "incoming_flow_in_day"
   ]
 }

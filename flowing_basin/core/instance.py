@@ -29,7 +29,7 @@ class Instance(InstanceCore):
         :return: The number of dams of the river basin
         """
 
-        pass
+        return len(self.data)
 
     def get_initial_vol_of_dam(self, ident: int) -> float:
 
@@ -38,8 +38,8 @@ class Instance(InstanceCore):
         :param ident: Identifier of the dam in the river basin
         :return: The volume of the dam in the beginning
         """
-
-        pass
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["initial_vol"]
 
     def get_min_vol_of_dam(self, ident: int) -> float:
 
@@ -49,7 +49,8 @@ class Instance(InstanceCore):
         :return: Minimum volume of the dam
         """
 
-        pass
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["vol_min"]
 
     def get_max_vol_of_dam(self, ident: int) -> float:
 
@@ -59,7 +60,8 @@ class Instance(InstanceCore):
         :return: Maximum volume of the dam
         """
 
-        pass
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["vol_max"]
 
     def get_unregulated_flow_of_dam(self, ident: int) -> float:
 
@@ -69,7 +71,8 @@ class Instance(InstanceCore):
         :return: Unregulated flow that enters the dam (flow that comes from the river)
         """
 
-        pass
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["unreg_flow"]
 
     def get_initial_flow_of_channel(self, ident: int) -> float:
 
@@ -79,4 +82,47 @@ class Instance(InstanceCore):
         :return: Flow that goes through the channel in the beginning
         """
 
-        pass
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["initial_flow"]
+    
+    def get_relevant_lags_of_dam(self, ident: int) -> list[int]:
+        
+        """
+        
+        :param ident: Identifier of the dam
+        :return: List of the relevant lags of the dam (1 lag = 15 minutes of time delay)
+        """
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["lags"]
+    
+    def get_max_flow_points_channel(self, ident: int) -> list[list[int]]:
+        
+        """
+        
+        :param ident: Identifier of the channel
+        :return: List of the max flow points of the channel (vol_dam, max_flow)
+        """
+        data_list = list(self.data.values())
+        return data_list[ident - 1]["max_flow_points"]
+    
+    def get_incoming_flow(self, time: int) -> float:
+        
+        """
+        
+        :param time: Identifier of the quarter-hour of the day
+        :return: FLow entering the first dam
+        """
+        return self.data["incoming_flow_in_day"][time]
+        
+if __name__ == "__main__":
+    instance = Instance.from_json("C:\\Users\\Usuario\\Desktop\\GitHub\\flowing-basin\\flowing_basin\\data\\input.json")
+    print(instance.data)
+    print(instance.get_num_dams())
+    print(instance.get_initial_vol_of_dam(2))
+    print(instance.get_min_vol_of_dam(1))
+    print(instance.get_max_vol_of_dam(1))
+    print(instance.get_unregulated_flow_of_dam(1))
+    print(instance.get_initial_flow_of_channel(1))
+    print(instance.get_relevant_lags_of_dam(1))
+    print(instance.get_max_flow_points_channel(1))
+    print(instance.get_incoming_flow(0))

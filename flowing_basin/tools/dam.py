@@ -8,8 +8,7 @@ class Dam:
         # Identifier of dam
         self.ident = ident
 
-        # Volume at the END of the current time step
-        # TODO: confirm this is what we want
+        # Initial volume of dam
         self.volume = instance.get_initial_vol_of_dam(ident)
 
         # Constant values for the whole period
@@ -18,9 +17,6 @@ class Dam:
         self.max_volume = instance.get_max_vol_of_dam(ident)
         self.unregulated_flow = instance.get_unregulated_flow_of_dam(ident)
 
-        # Save instance to get incoming flows in the update method
-        self.instance = instance
-
         self.channel = Channel(
             ident=ident,
             dam_vol=self.volume,
@@ -28,28 +24,26 @@ class Dam:
             path_power_model=path_power_model,
         )
 
-    def update(self, flows: list, time: int) -> None:
+    def update(self, flows: list, incoming_flow: float, turbined_flow_of_preceding_dam: float) -> float:
 
         """
         Update the volume of the dam, and the state of its connected channel
         :param flows: decision
-        :param time:
-        :return:
+        :param incoming_flow:
+        :param turbined_flow_of_preceding_dam:
+        :return: Turbined flow in the power group
         """
-
-        turbined_flow_preceding_dam = 0
-        # TODO: this should be the turbined flow of the preceding dam in the CURRENT time step
 
         # Obtain flow coming into the dam from the river or the previous dam
         if self.ident == 1:
-            flow_contribution = self.instance.get_incoming_flow(time)
+            flow_contribution = incoming_flow
         else:
-            flow_contribution = turbined_flow_preceding_dam
+            flow_contribution = turbined_flow_of_preceding_dam
 
         # Obtain flow coming out of the dam
         flow_out = flows[self.ident - 1]
 
-        # Update volume
+        # Update volume to get the volume at the END of this time step
         self.volume = (
             self.volume
             + (self.unregulated_flow + flow_contribution - flow_out)
@@ -58,4 +52,4 @@ class Dam:
 
         # We update the channel with the new volume (the FINAL volume in this time step),
         # because the channel stores the FINAL maximum flow, which is calculated with this volume
-        self.channel.update(flows=flows, dam_vol=self.volume)
+        return self.channel.update(flows=flows, dam_vol=self.volume)

@@ -19,6 +19,9 @@ class RiverBasin:
         # Identifier of the time step (increases with each update)
         self.time = 0
 
+        # Save instance to get incoming flows in the update method
+        self.instance = instance
+
     def update(self, flows: list) -> None:
 
         """
@@ -26,12 +29,20 @@ class RiverBasin:
         :param flows: List of flows (the indices correspond to the identifiers of the channels)
         """
 
-        # Increase time step identifier
-        self.time = self.time + 1
+        # The first dam has no preceding dam
+        turbined_flow_of_preceding_dam = 0
 
         # Update dams
         for dam in self.dams:
-            dam.update(flows=flows, time=self.time)
+            turbined_flow = dam.update(
+                flows=flows,
+                incoming_flow=self.instance.get_incoming_flow(self.time),
+                turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam
+            )
+            turbined_flow_of_preceding_dam = turbined_flow
+
+        # Increase time step identifier to get the next incoming flow
+        self.time = self.time + 1
 
     def get_state(self):
 
@@ -41,4 +52,37 @@ class RiverBasin:
         :return:
         """
 
-        pass
+        volumes = []
+        unregulated_flows = []
+        incoming_flow = self.instance.get_incoming_flow(self.time)
+        lags = []
+
+        for dam in self.dams:
+            volumes.append(dam.volume)
+            unregulated_flows.append(dam.unregulated_flow)
+            lags.append(dam.channel.flows_over_time)
+
+        return volumes, unregulated_flows, incoming_flow, lags
+
+
+# Tests
+
+
+if __name__ == "__main__":
+
+    from os import path
+
+    dir_path = path.dirname(path.dirname(__file__))
+    file_path = path.join(dir_path, "data/input.json")
+    instance = Instance.from_json(file_path)
+
+    river_basin = RiverBasin(instance=instance, path_power_model="")
+    print("initial state:", river_basin.get_state())
+
+    flows = [6.79, 6.58]
+    river_basin.update(flows)
+    print("state after first decision:", river_basin.get_state())
+
+    flows = [7.49, 6.73]
+    river_basin.update(flows)
+    print("state after second decision:", river_basin.get_state())

@@ -20,8 +20,7 @@ class Instance(InstanceCore):
 
         :return: The time between updates in seconds
         """
-
-        pass
+        return self.data["time_step_minutes"] * 60
 
     def get_num_dams(self) -> int:
 
@@ -30,7 +29,7 @@ class Instance(InstanceCore):
         :return: The number of dams of the river basin
         """
 
-        return len(self.data)
+        return len(self.data) - 2
 
     def get_initial_vol_of_dam(self, ident: int) -> float:
 
@@ -75,7 +74,7 @@ class Instance(InstanceCore):
         data_list = list(self.data.values())
         return data_list[ident - 1]["unreg_flow"]
 
-    def get_initial_flow_of_channel(self, ident: int) -> float:
+    def get_initial_lags_of_channel(self, ident: int) -> List[float]:
 
         """
 
@@ -84,7 +83,7 @@ class Instance(InstanceCore):
         """
 
         data_list = list(self.data.values())
-        return data_list[ident - 1]["initial_flow"]
+        return data_list[ident - 1]["initial_lags"]
 
     def get_relevant_lags_of_dam(self, ident: int) -> List[int]:
 
@@ -94,7 +93,7 @@ class Instance(InstanceCore):
         :return: List of the relevant lags of the dam (1 lag = 15 minutes of time delay)
         """
         data_list = list(self.data.values())
-        return data_list[ident - 1]["lags"]
+        return data_list[ident - 1]["relevant_lags"]
 
     def get_max_flow_points_of_channel(self, ident: int) -> List[List[int]]:
 
@@ -114,29 +113,29 @@ class Instance(InstanceCore):
         :return: FLow entering the first dam
         """
         return self.data["incoming_flow_in_day"][time]
-    
-    def get_initial_turbined_flow(self, ident: int) -> float:
 
-        """
 
-        :param ident: Identifier of the channel, 1 .. num_dams
-        :return: Initial turbined flow in the first power group, entering the second dam
-        """
-        data_list = list(self.data.values())
-        return data_list[ident - 1]["max_flow_points"]
+# Tests
 
 
 if __name__ == "__main__":
-    instance = Instance.from_json(
-        "C:\\Users\\Usuario\\Desktop\\GitHub\\flowing-basin\\flowing_basin\\data\\input.json"
-    )
-    print(instance.data)
-    print(instance.get_num_dams())
-    print(instance.get_initial_vol_of_dam(2))
-    print(instance.get_min_vol_of_dam(1))
-    print(instance.get_max_vol_of_dam(1))
-    print(instance.get_unregulated_flow_of_dam(1))
-    print(instance.get_initial_flow_of_channel(1))
-    print(instance.get_relevant_lags_of_dam(1))
-    print(instance.get_max_flow_points_channel(1))
-    print(instance.get_incoming_flow(0))
+
+    from os import path
+
+    # '__file__' is the path of this file; 'path.dirname' returns the path to its directory
+    dir_path = path.dirname(path.dirname(__file__))
+    file_path = path.join(dir_path, "data/input.json")
+    instance = Instance.from_json(file_path)
+
+    dam = 2
+    print("dictionary:", instance.data)
+    print("number of dams:", instance.get_num_dams())
+    print("initial volume:", instance.get_initial_vol_of_dam(dam))
+    print("min volume:", instance.get_min_vol_of_dam(dam))
+    print("max volume:", instance.get_max_vol_of_dam(dam))
+    print("unregulated flow:", instance.get_unregulated_flow_of_dam(dam))
+    print("initial lags:", instance.get_initial_lags_of_channel(dam))
+    print("relevant lags:", instance.get_relevant_lags_of_dam(dam))
+    print("points", instance.get_max_flow_points_of_channel(dam))
+    print("incoming flow:", instance.get_incoming_flow(0))
+

@@ -3,11 +3,14 @@
         "vol_min": 0.0,
         "vol_max": 999.0,
         "initial_vol": 63174.96,
-        "initial_flow": 6.79,
         "unreg_flow": 2.94,
-        "lags": [
+        "relevant_lags": [
             1,
             2
+        ],
+        "initial_lags": [
+            6.53,
+            5.97
         ],
         "max_flow_points": [
             [
@@ -22,19 +25,24 @@
                 0,
                 0
             ]
-        ],
-        "initial_turbined_flow": 7.27
+        ]
     },
     "dam2": {
         "vol_min": 0.0,
         "vol_max": 999.0,
         "initial_vol": 36500.36,
-        "initial_flow": 6.58,
         "unreg_flow": 0.23,
-        "lags": [
+        "relevant_lags": [
             3,
             4,
             5
+        ],
+        "initial_lags": [
+            6.54,
+            6.64,
+            6.82,
+            6.96,
+            7.01
         ],
         "max_flow_points": [
             [
@@ -148,5 +156,6 @@
         3.533125145142857,
         4.870944180031746,
         8.107632731238095
-    ]
+    ],
+    "time_step_minutes": 15
 }

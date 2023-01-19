@@ -1,5 +1,6 @@
 from flowing_basin.core import Instance
 from power_group import PowerGroup
+from collections import deque
 
 
 class Channel:
@@ -14,10 +15,11 @@ class Channel:
         self.ident = ident
         self.max_flow_points = instance.get_max_flow_points_of_channel(ident)
 
-        self.flows_over_time = [instance.get_initial_flow_of_channel(ident)]
+        initial_lags = instance.get_initial_lags_of_channel(ident)
+        num_lags = instance.get_relevant_lags_of_dam(ident)[-1]
+        self.flows_over_time = deque(initial_lags, maxlen=num_lags)
 
-        # Maximum flow of channel at the END of the current time step
-        # TODO: confirm this is what we want
+        # Inicial maximum flow of channel
         self.flow_max = self.get_max_flow(dam_vol)
 
         self.power_group = PowerGroup(
@@ -34,19 +36,24 @@ class Channel:
         :return:
         """
 
+        # TODO: implement this function
+
         pass
 
-    def update(self, flows: list, dam_vol: float) -> None:
+    def update(self, flows: list, dam_vol: float) -> float:
 
         """
         Update the record of flows through the channel, its current maximum flow,
         and the state of the power group after it
         :param flows:
         :param dam_vol:
-        :return:
+        :return: Turbined flow in the power group
         """
 
-        self.flows_over_time.append(flows[self.ident])
+        self.flows_over_time.appendleft(flows[self.ident - 1])
+
+        # Update maximum flow to get the maximum flow at the END of this time step
         self.flow_max = self.get_max_flow(dam_vol)
 
-        self.power_group.update(flows_over_time=self.flows_over_time)
+        # Update power group and get turbined flow
+        return self.power_group.update(flows_over_time=self.flows_over_time)

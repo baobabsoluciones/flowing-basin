@@ -2,99 +2,55 @@
     "$schema": "http://json-schema.org/schema#",
     "type": "object",
     "properties": {
-        "dam1": {
-            "type": "object",
-            "properties": {
-                "vol_min": {
-                    "type": "number"
-                },
-                "vol_max": {
-                    "type": "number"
-                },
-                "initial_vol": {
-                    "type": "number"
-                },
-                "unreg_flow": {
-                    "type": "number"
-                },
-                "relevant_lags": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "initial_lags": {
-                    "type": "array",
-                    "items": {
+        "dams": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "vol_min": {
                         "type": "number"
-                    }
-                },
-                "max_flow_points": {
-                    "type": "array",
-                    "items": {
+                    },
+                    "vol_max": {
+                        "type": "number"
+                    },
+                    "initial_vol": {
+                        "type": "number"
+                    },
+                    "unreg_flow": {
+                        "type": "number"
+                    },
+                    "relevant_lags": {
                         "type": "array",
                         "items": {
                             "type": "integer"
                         }
-                    }
-                }
-            },
-            "required": [
-                "initial_lags",
-                "initial_vol",
-                "max_flow_points",
-                "relevant_lags",
-                "unreg_flow",
-                "vol_max",
-                "vol_min"
-            ]
-        },
-        "dam2": {
-            "type": "object",
-            "properties": {
-                "vol_min": {
-                    "type": "number"
-                },
-                "vol_max": {
-                    "type": "number"
-                },
-                "initial_vol": {
-                    "type": "number"
-                },
-                "unreg_flow": {
-                    "type": "number"
-                },
-                "relevant_lags": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "initial_lags": {
-                    "type": "array",
-                    "items": {
-                        "type": "number"
-                    }
-                },
-                "max_flow_points": {
-                    "type": "array",
-                    "items": {
+                    },
+                    "initial_lags": {
                         "type": "array",
                         "items": {
-                            "type": "integer"
+                            "type": "number"
+                        }
+                    },
+                    "max_flow_points": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
                         }
                     }
-                }
-            },
-            "required": [
-                "initial_lags",
-                "initial_vol",
-                "max_flow_points",
-                "relevant_lags",
-                "unreg_flow",
-                "vol_max",
-                "vol_min"
-            ]
+                },
+                "required": [
+                    "initial_lags",
+                    "initial_vol",
+                    "max_flow_points",
+                    "relevant_lags",
+                    "unreg_flow",
+                    "vol_max",
+                    "vol_min"
+                ]
+            }
         },
         "incoming_flow_in_day": {
             "type": "array",
@@ -107,8 +63,7 @@
         }
     },
     "required": [
-        "dam1",
-        "dam2",
+        "dams",
         "incoming_flow_in_day",
         "time_step_minutes"
     ]

@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from dam import Dam
+from .dam import Dam
 
 
 class RiverBasin:
@@ -63,26 +63,3 @@ class RiverBasin:
             lags.append(dam.channel.flows_over_time)
 
         return volumes, unregulated_flows, incoming_flow, lags
-
-
-# Tests
-
-
-if __name__ == "__main__":
-
-    from os import path
-
-    dir_path = path.dirname(path.dirname(__file__))
-    file_path = path.join(dir_path, "data/input.json")
-    instance = Instance.from_json(file_path)
-
-    river_basin = RiverBasin(instance=instance, path_power_model="")
-    print("initial state:", river_basin.get_state())
-
-    flows = [6.79, 6.58]
-    river_basin.update(flows)
-    print("state after first decision:", river_basin.get_state())
-
-    flows = [7.49, 6.73]
-    river_basin.update(flows)
-    print("state after second decision:", river_basin.get_state())

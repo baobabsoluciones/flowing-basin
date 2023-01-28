@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from channel import Channel
+from .channel import Channel
 
 
 class Dam:

@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from power_group import PowerGroup
+from .power_group import PowerGroup
 from collections import deque
 
 

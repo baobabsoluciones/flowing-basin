@@ -6,17 +6,17 @@ from collections import deque
 class Channel:
     def __init__(
         self,
-        ident: int,
+        idx: str,
         dam_vol: float,
         instance: Instance,
         path_power_model: str,
     ):
 
-        self.ident = ident
-        self.max_flow_points = instance.get_max_flow_points_of_channel(ident)
+        self.idx = idx
+        self.max_flow_points = instance.get_max_flow_points_of_channel(self.idx)
 
-        initial_lags = instance.get_initial_lags_of_channel(ident)
-        num_lags = instance.get_relevant_lags_of_dam(ident)[-1]
+        initial_lags = instance.get_initial_lags_of_channel(self.idx)
+        num_lags = instance.get_relevant_lags_of_dam(self.idx)[-1]
         self.flows_over_time = deque(initial_lags, maxlen=num_lags)
 
         # Inicial maximum flow of channel
@@ -40,7 +40,7 @@ class Channel:
 
         pass
 
-    def update(self, flows: list, dam_vol: float) -> float:
+    def update(self, flows: dict[str, float], dam_vol: float) -> float:
 
         """
         Update the record of flows through the channel, its current maximum flow,
@@ -50,7 +50,7 @@ class Channel:
         :return: Turbined flow in the power group
         """
 
-        self.flows_over_time.appendleft(flows[self.ident - 1])
+        self.flows_over_time.appendleft(flows[self.idx])
 
         # Update maximum flow to get the maximum flow at the END of this time step
         self.flow_max = self.get_max_flow(dam_vol)

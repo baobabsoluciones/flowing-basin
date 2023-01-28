@@ -7,6 +7,12 @@
             "items": {
                 "type": "object",
                 "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "order": {
+                        "type": "integer"
+                    },
                     "vol_min": {
                         "type": "number"
                     },
@@ -42,9 +48,11 @@
                     }
                 },
                 "required": [
+                    "id",
                     "initial_lags",
                     "initial_vol",
                     "max_flow_points",
+                    "order",
                     "relevant_lags",
                     "unreg_flow",
                     "vol_max",

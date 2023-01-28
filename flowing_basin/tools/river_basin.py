@@ -8,9 +8,9 @@ class RiverBasin:
         # Dams inside the flowing basin
         self.dams = []
         num_dams = instance.get_num_dams()
-        for dam_ident in range(1, num_dams + 1):
+        for idx in range(1, num_dams + 1):
             dam = Dam(
-                ident=dam_ident,
+                idx="dam" + str(idx),
                 instance=instance,
                 path_power_model=path_power_model,
             )
@@ -22,11 +22,11 @@ class RiverBasin:
         # Save instance to get incoming flows in the update method
         self.instance = instance
 
-    def update(self, flows: list) -> None:
+    def update(self, flows: dict[str, float]) -> None:
 
         """
 
-        :param flows: List of flows (the indices correspond to the identifiers of the channels)
+        :param flows: Dictionary of flows that should go through each channel, indexed by dam
         """
 
         # The first dam has no preceding dam
@@ -37,7 +37,7 @@ class RiverBasin:
             turbined_flow = dam.update(
                 flows=flows,
                 incoming_flow=self.instance.get_incoming_flow(self.time),
-                turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam
+                turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam,
             )
             turbined_flow_of_preceding_dam = turbined_flow
 

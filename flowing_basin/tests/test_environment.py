@@ -9,10 +9,10 @@ instance = Instance.from_json(file_path)
 river_basin = RiverBasin(instance=instance, path_power_model="")
 print("initial state:", river_basin.get_state())
 
-flows = [6.79, 6.58]
+flows = {"dam1": 6.79, "dam2": 6.58}
 river_basin.update(flows)
 print("state after first decision:", river_basin.get_state())
 
-flows = [7.49, 6.73]
+flows = {"dam1": 7.49, "dam2": 6.73}
 river_basin.update(flows)
 print("state after second decision:", river_basin.get_state())

@@ -7,8 +7,9 @@ file_path = path.join(dir_path, "data/input.json")
 print(file_path)
 instance = Instance.from_json(file_path)
 
-dam = 2
-print("dictionary:", instance.data)
+dam = "dam1"
+print("data property:", instance.data)
+print("dictionary:", instance.to_dict())
 print("number of dams:", instance.get_num_dams())
 print("initial volume:", instance.get_initial_vol_of_dam(dam))
 print("min volume:", instance.get_min_vol_of_dam(dam))

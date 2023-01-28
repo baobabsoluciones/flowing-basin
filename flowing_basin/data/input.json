@@ -1,6 +1,8 @@
 {
   "dams": [
     {
+      "id": "dam1",
+      "order": 1,
       "vol_min": 0.0,
       "vol_max": 999.0,
       "initial_vol": 63174.96,
@@ -29,6 +31,8 @@
       ]
     },
     {
+      "id": "dam2",
+      "order": 2,
       "vol_min": 0.0,
       "vol_max": 999.0,
       "initial_vol": 36500.36,

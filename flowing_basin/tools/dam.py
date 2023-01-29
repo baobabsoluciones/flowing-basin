@@ -1,48 +1,60 @@
 from flowing_basin.core import Instance
-from channel import Channel
+from .channel import Channel
 
 
 class Dam:
+    def __init__(self, idx: str, instance: Instance, path_power_model: str):
 
-    def __init__(self, ident: int,
-                 instance: Instance, path_flow_max_model: str, path_power_model: str):
+        # Identifier and order of the dam
+        self.idx = idx
+        self.order = instance.get_order_of_dam(self.idx)
 
-        self.ident = ident
+        # Initial volume of dam
+        self.volume = instance.get_initial_vol_of_dam(self.idx)
+
+        # Constant values for the whole period
         self.time_step = instance.get_time_step()
+        self.min_volume = instance.get_min_vol_of_dam(self.idx)
+        self.max_volume = instance.get_max_vol_of_dam(self.idx)
+        self.unregulated_flow = instance.get_unregulated_flow_of_dam(self.idx)
 
-        self.volume = instance.get_initial_vol_of_dam(ident)
-        self.min_volume = instance.get_min_vol_of_dam(ident)
-        self.max_volume = instance.get_max_vol_of_dam(ident)
+        self.channel = Channel(
+            idx=self.idx,
+            dam_vol=self.volume,
+            instance=instance,
+            path_power_model=path_power_model,
+        )
 
-        self.unregulated_flow = instance.get_unregulated_flow_of_dam(ident)
-        # Assuming the unregulated flow is the same for the whole day
-        # TODO: let there be a different unregulated flow for each time step
-
-        self.channel = Channel(ident=ident,
-                               dam_vol=self.volume,
-                               instance=instance,
-                               path_flow_max_model=path_flow_max_model,
-                               path_power_model=path_power_model)
-        # Assuming there is only one channel per dam
-        # TODO: Let there be more than one channel per dam
-
-    def update(self, flows: list) -> None:
+    def update(
+        self,
+        flows: dict[str, float],
+        incoming_flow: float,
+        turbined_flow_of_preceding_dam: float,
+    ) -> float:
 
         """
         Update the volume of the dam, and the state of its connected channel
-        :param flows:
-        :return:
+        :param flows: decision
+        :param incoming_flow:
+        :param turbined_flow_of_preceding_dam:
+        :return: Turbined flow in the power group
         """
 
-        # Obtain flow coming into the dam from the previous dam
-        flow_contribution = 0
-        if self.ident > 0:
-            flow_contribution = flows[self.ident-1]
+        # Obtain flow coming into the dam from the river or the previous dam
+        if self.order == 1:
+            flow_contribution = incoming_flow
+        else:
+            flow_contribution = turbined_flow_of_preceding_dam
 
         # Obtain flow coming out of the dam
-        flow_out = flows[self.ident]
+        flow_out = flows[self.idx]
 
-        # Update volume
-        self.volume = self.volume + (self.unregulated_flow + flow_contribution - flow_out) * self.time_step
+        # Update volume to get the volume at the END of this time step
+        self.volume = (
+            self.volume
+            + (self.unregulated_flow + flow_contribution - flow_out) * self.time_step
+        )
 
-        self.channel.update(flows=flows, dam_vol=self.volume)
+        # We update the channel with the new volume (the FINAL volume in this time step),
+        # because the channel stores the FINAL maximum flow, which is calculated with this volume
+        return self.channel.update(flows=flows, dam_vol=self.volume)

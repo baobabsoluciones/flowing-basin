@@ -1,45 +1,59 @@
 from flowing_basin.core import Instance
-from power_group import PowerGroup
+from .power_group import PowerGroup
+from collections import deque
 
 
 class Channel:
+    def __init__(
+        self,
+        idx: str,
+        dam_vol: float,
+        instance: Instance,
+        path_power_model: str,
+    ):
 
-    def __init__(self, ident: int, dam_vol: float,
-                 instance: Instance, path_flow_max_model: str, path_power_model: str):
+        self.idx = idx
+        self.max_flow_points = instance.get_max_flow_points_of_channel(self.idx)
 
-        self.ident = ident
-        self.path_flow_max_model = path_flow_max_model
+        initial_lags = instance.get_initial_lags_of_channel(self.idx)
+        num_lags = instance.get_relevant_lags_of_dam(self.idx)[-1]
+        self.flows_over_time = deque(initial_lags, maxlen=num_lags)
 
-        self.flows_over_time = [instance.get_initial_flow_of_channel(ident)]
+        # Inicial maximum flow of channel
         self.flow_max = self.get_max_flow(dam_vol)
 
-        self.power_group = PowerGroup(flows_over_time=self.flows_over_time,
-                                      path_power_model=path_power_model)
-        # Assuming there is only one power group per channel
-        # TODO: Let there be more than one channel per dam
+        self.power_group = PowerGroup(
+            flows_over_time=self.flows_over_time,
+            path_power_model=path_power_model,
+        )
 
     def get_max_flow(self, dam_vol: float) -> float:
 
         """
-        Using the parameters of the model saved in self.path_flow_max_model,
+        Using the points saved in self.max_flow_points,
         returns the maximum flow that the channel can carry
         :param dam_vol: Volume of preceding dam
         :return:
         """
 
+        # TODO: implement this function
+
         pass
 
-    def update(self, flows: list, dam_vol: float) -> None:
+    def update(self, flows: dict[str, float], dam_vol: float) -> float:
 
         """
         Update the record of flows through the channel, its current maximum flow,
         and the state of the power group after it
         :param flows:
         :param dam_vol:
-        :return:
+        :return: Turbined flow in the power group
         """
 
-        self.flows_over_time.append(flows[self.ident])
+        self.flows_over_time.appendleft(flows[self.idx])
+
+        # Update maximum flow to get the maximum flow at the END of this time step
         self.flow_max = self.get_max_flow(dam_vol)
 
-        self.power_group.update(flows_over_time=self.flows_over_time)
+        # Update power group and get turbined flow
+        return self.power_group.update(flows_over_time=self.flows_over_time)

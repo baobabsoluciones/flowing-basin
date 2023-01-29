@@ -22,7 +22,7 @@ class Instance(InstanceCore):
         # Change dictionary of dams into list, to undo de changes of from_dict
         # Use pickle to work with a copy of the data and avoid changing the property of the class
         data_p = pickle.loads(pickle.dumps(self.data, -1))
-        data_p["dams"] = [properties for idx, properties in data_p["dams"].items()]
+        data_p["dams"] = [properties for properties in data_p["dams"].values()]
 
         return data_p
 

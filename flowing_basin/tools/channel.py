@@ -9,7 +9,7 @@ class Channel:
         idx: str,
         dam_vol: float,
         instance: Instance,
-        path_power_model: str,
+        paths_power_models: dict[str, str],
     ):
 
         self.idx = idx
@@ -18,13 +18,16 @@ class Channel:
         initial_lags = instance.get_initial_lags_of_channel(self.idx)
         num_lags = instance.get_relevant_lags_of_dam(self.idx)[-1]
         self.flows_over_time = deque(initial_lags, maxlen=num_lags)
+        # We need to keep track of as many past flows as the last relevant lag
 
         # Inicial maximum flow of channel
         self.flow_max = self.get_max_flow(dam_vol)
 
         self.power_group = PowerGroup(
+            idx=self.idx,
             flows_over_time=self.flows_over_time,
-            path_power_model=path_power_model,
+            instance=instance,
+            paths_power_models=paths_power_models,
         )
 
     def get_max_flow(self, dam_vol: float) -> float:

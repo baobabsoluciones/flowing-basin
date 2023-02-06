@@ -1,16 +1,12 @@
 from flowing_basin.core import Instance
-from os import path
 
-# '__file__' is the path of this file; 'path.dirname' returns the path to its directory
-dir_path = path.dirname(path.dirname(__file__))
-file_path = path.join(dir_path, "data/input.json")
-print(file_path)
-instance = Instance.from_json(file_path)
+# "../" means "go one step up"; in this case, to the flowing-basin directory
+instance = Instance.from_json("../data/input.json")
 
 dam = "dam1"
 print("data property:", instance.data)
 print("dictionary:", instance.to_dict())
-print("number of dams:", instance.get_num_dams())
+print("IDs of dams:", instance.get_ids_of_dams())
 print("initial volume:", instance.get_initial_vol_of_dam(dam))
 print("min volume:", instance.get_min_vol_of_dam(dam))
 print("max volume:", instance.get_max_vol_of_dam(dam))

@@ -3,16 +3,16 @@ from .dam import Dam
 
 
 class RiverBasin:
-    def __init__(self, instance: Instance, path_power_model: str):
+    def __init__(self, instance: Instance, paths_power_models: dict[str, str]):
 
         # Dams inside the flowing basin
         self.dams = []
-        num_dams = instance.get_num_dams()
-        for idx in range(1, num_dams + 1):
+        dam_ids = instance.get_ids_of_dams()
+        for dam_id in dam_ids:
             dam = Dam(
-                idx="dam" + str(idx),
+                idx=dam_id,
                 instance=instance,
-                path_power_model=path_power_model,
+                paths_power_models=paths_power_models,
             )
             self.dams.append(dam)
 
@@ -56,10 +56,12 @@ class RiverBasin:
         unregulated_flows = []
         incoming_flow = self.instance.get_incoming_flow(self.time)
         lags = []
+        powers = []
 
         for dam in self.dams:
             volumes.append(dam.volume)
             unregulated_flows.append(dam.unregulated_flow)
             lags.append(dam.channel.flows_over_time)
+            powers.append(dam.channel.power_group.power)
 
-        return volumes, unregulated_flows, incoming_flow, lags
+        return volumes, unregulated_flows, incoming_flow, lags, powers

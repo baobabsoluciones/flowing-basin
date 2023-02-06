@@ -1,12 +1,14 @@
 from flowing_basin.core import Instance
 from flowing_basin.tools import RiverBasin
-from os import path
 
-dir_path = path.dirname(path.dirname(__file__))
-file_path = path.join(dir_path, "data/input.json")
-instance = Instance.from_json(file_path)
+PATHS_POWER_MODELS = {
+    "dam1": "C:\\Users\\rodri\\OneDrive - Universidad Politécnica de Madrid\\General\\ml_models\\model_E1.sav",
+    "dam2": "C:\\Users\\rodri\\OneDrive - Universidad Politécnica de Madrid\\General\\ml_models\\model_E2.sav",
+}
 
-river_basin = RiverBasin(instance=instance, path_power_model="")
+instance = Instance.from_json("../data/input.json")
+
+river_basin = RiverBasin(instance=instance, paths_power_models=PATHS_POWER_MODELS)
 print("initial state:", river_basin.get_state())
 
 flows = {"dam1": 6.79, "dam2": 6.58}

@@ -55,6 +55,7 @@ class RiverBasin:
         volumes = []
         unregulated_flows = []
         incoming_flow = self.instance.get_incoming_flow(self.time)
+        price = self.instance.get_price(self.time)
         lags = []
         powers = []
 
@@ -64,4 +65,4 @@ class RiverBasin:
             lags.append(dam.channel.flows_over_time)
             powers.append(dam.channel.power_group.power)
 
-        return volumes, unregulated_flows, incoming_flow, lags, powers
+        return volumes, unregulated_flows, incoming_flow, price, lags, powers

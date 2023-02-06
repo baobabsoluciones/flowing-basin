@@ -91,7 +91,7 @@ class Instance(InstanceCore):
         :return: Unregulated flow that enters the dam (flow that comes from the river)
         """
 
-        return self.data["dams"][idx]["unreg_flow"]
+        return self.data["dams"][idx]["unregulated_flow"]
 
     def get_initial_lags_of_channel(self, idx: str) -> list[float]:
 
@@ -132,4 +132,14 @@ class Instance(InstanceCore):
         :return: FLow entering the first dam
         """
 
-        return self.data["incoming_flow_in_day"][time]
+        return self.data["incoming_flows"][time]
+
+    def get_price(self, time: int) -> float:
+
+        """
+
+        :param time: Identifier of the time step
+        :return: Price of energy for the given time step
+        """
+
+        return self.data["energy_prices"][time]

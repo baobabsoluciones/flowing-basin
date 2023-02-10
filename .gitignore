@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Flowing basin ML models for power prediction
+/flowing_basin/ml_models/model_E1.sav
+/flowing_basin/ml_models/model_E2.sav

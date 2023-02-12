@@ -1,10 +1,11 @@
 from cornflow_client import InstanceCore, get_empty_schema
 import pickle
+import json
 from datetime import datetime
 
 
 class Instance(InstanceCore):
-    schema = get_empty_schema()
+
     schema_checks = get_empty_schema()
 
     @classmethod
@@ -25,6 +26,20 @@ class Instance(InstanceCore):
         data_p["dams"] = list(data_p["dams"].values())
 
         return data_p
+
+    @property
+    def schema(self) -> dict:
+
+        """
+        a dictionary representation of the json-schema for the object
+        """
+
+        path = "../schemas/instance.json"
+
+        with open(path, "r") as f:
+            schema = json.load(f)
+
+        return schema
 
     def check_inconsistencies(self) -> dict:
 
@@ -96,6 +111,20 @@ class Instance(InstanceCore):
                         + " does not equal the last relevant lag of the dam": f"{num_initial_lags} vs. {last_relevant_lag}"
                     }
                 )
+
+        return inconsistencies
+
+    def check(self):
+
+        """
+        Method that checks if the data of the instance does not follow the schema or has inconsistencies
+        :return: A dictionary containing the schema noncompliance problems and inconsistencies found
+        """
+
+        inconsistencies = self.check_inconsistencies()
+        schema_errors = self.check_schema()
+        if schema_errors:
+            inconsistencies.update({"The given data does not follow the schema": schema_errors})
 
         return inconsistencies
 

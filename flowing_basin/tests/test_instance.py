@@ -3,13 +3,8 @@ from flowing_basin.core import Instance
 # "../" means "go one step up"; in this case, to the flowing-basin directory
 instance = Instance.from_json("../data/input_example2.json")
 
-# Make sure data follows schema
-schema_errors = instance.check_schema()
-if schema_errors:
-    raise Exception(f"Data does not follow schema. Errors: {schema_errors}")
-
-# Make sure there are no inconsistencies
-inconsistencies = instance.check_inconsistencies()
+# Make sure data follows schema and has no inconsistencies
+inconsistencies = instance.check()
 if inconsistencies:
     raise Exception(f"There are inconsistencies in the data: {inconsistencies}")
 

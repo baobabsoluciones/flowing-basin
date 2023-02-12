@@ -19,22 +19,10 @@
                     "vol_max": {
                         "type": "number"
                     },
-                    "initial_vol": {
-                        "type": "number"
-                    },
-                    "unreg_flow": {
-                        "type": "number"
-                    },
                     "relevant_lags": {
                         "type": "array",
                         "items": {
                             "type": "integer"
-                        }
-                    },
-                    "initial_lags": {
-                        "type": "array",
-                        "items": {
-                            "type": "number"
                         }
                     },
                     "max_flow_points": {
@@ -45,6 +33,18 @@
                                 "type": "integer"
                             }
                         }
+                    },
+                    "initial_vol": {
+                        "type": "number"
+                    },
+                    "initial_lags": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "unregulated_flow": {
+                        "type": "number"
                     }
                 },
                 "required": [
@@ -54,25 +54,32 @@
                     "max_flow_points",
                     "order",
                     "relevant_lags",
-                    "unreg_flow",
+                    "unregulated_flow",
                     "vol_max",
                     "vol_min"
                 ]
             }
         },
-        "incoming_flow_in_day": {
+        "time_step_minutes": {
+            "type": "integer"
+        },
+        "incoming_flows": {
             "type": "array",
             "items": {
                 "type": "number"
             }
         },
-        "time_step_minutes": {
-            "type": "integer"
+        "energy_prices": {
+            "type": "array",
+            "items": {
+                "type": "number"
+            }
         }
     },
     "required": [
         "dams",
-        "incoming_flow_in_day",
+        "energy_prices",
+        "incoming_flows",
         "time_step_minutes"
     ]
 }

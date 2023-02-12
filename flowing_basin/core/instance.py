@@ -1,5 +1,4 @@
 import pickle
-from typing import List
 from cornflow_client import InstanceCore, get_empty_schema
 
 
@@ -22,7 +21,7 @@ class Instance(InstanceCore):
         # Change dictionary of dams into list, to undo de changes of from_dict
         # Use pickle to work with a copy of the data and avoid changing the property of the class
         data_p = pickle.loads(pickle.dumps(self.data, -1))
-        data_p["dams"] = [properties for properties in data_p["dams"].values()]
+        data_p["dams"] = list(data_p["dams"].values())
 
         return data_p
 
@@ -32,16 +31,17 @@ class Instance(InstanceCore):
 
         :return: The time between updates in seconds
         """
+
         return self.data["time_step_minutes"] * 60
 
-    def get_num_dams(self) -> int:
+    def get_ids_of_dams(self) -> list[str]:
 
         """
 
-        :return: The number of dams of the river basin
+        :return: The IDs of all dams in the river basin
         """
 
-        return len(self.data["dams"])
+        return list(self.data["dams"].keys())
 
     def get_order_of_dam(self, idx: str) -> int:
 
@@ -91,9 +91,9 @@ class Instance(InstanceCore):
         :return: Unregulated flow that enters the dam (flow that comes from the river)
         """
 
-        return self.data["dams"][idx]["unreg_flow"]
+        return self.data["dams"][idx]["unregulated_flow"]
 
-    def get_initial_lags_of_channel(self, idx: str) -> List[float]:
+    def get_initial_lags_of_channel(self, idx: str) -> list[float]:
 
         """
 
@@ -103,7 +103,7 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["initial_lags"]
 
-    def get_relevant_lags_of_dam(self, idx: str) -> List[int]:
+    def get_relevant_lags_of_dam(self, idx: str) -> list[int]:
 
         """
 
@@ -113,7 +113,7 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["relevant_lags"]
 
-    def get_max_flow_points_of_channel(self, idx: str) -> List[List[int]]:
+    def get_max_flow_points_of_channel(self, idx: str) -> list[list[int]]:
 
         """
 
@@ -132,4 +132,14 @@ class Instance(InstanceCore):
         :return: FLow entering the first dam
         """
 
-        return self.data["incoming_flow_in_day"][time]
+        return self.data["incoming_flows"][time]
+
+    def get_price(self, time: int) -> float:
+
+        """
+
+        :param time: Identifier of the time step
+        :return: Price of energy for the given time step
+        """
+
+        return self.data["energy_prices"][time]

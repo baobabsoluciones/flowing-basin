@@ -3,7 +3,9 @@ from .channel import Channel
 
 
 class Dam:
-    def __init__(self, idx: str, instance: Instance, path_power_model: str):
+    def __init__(
+        self, idx: str, instance: Instance, paths_power_models: dict[str, str]
+    ):
 
         # Identifier and order of the dam
         self.idx = idx
@@ -22,7 +24,7 @@ class Dam:
             idx=self.idx,
             dam_vol=self.volume,
             instance=instance,
-            path_power_model=path_power_model,
+            paths_power_models=paths_power_models,
         )
 
     def update(

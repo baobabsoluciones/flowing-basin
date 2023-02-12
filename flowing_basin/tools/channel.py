@@ -1,6 +1,7 @@
 from flowing_basin.core import Instance
 from .power_group import PowerGroup
 from collections import deque
+import numpy as np
 
 
 class Channel:
@@ -13,15 +14,18 @@ class Channel:
     ):
 
         self.idx = idx
-        self.max_flow_points = instance.get_max_flow_points_of_channel(self.idx)
+        self.limit_flow_points = instance.get_flow_limit_obs_for_channel(self.idx)
 
         initial_lags = instance.get_initial_lags_of_channel(self.idx)
         num_lags = instance.get_relevant_lags_of_dam(self.idx)[-1]
         self.flows_over_time = deque(initial_lags, maxlen=num_lags)
         # We need to keep track of as many past flows as the last relevant lag
 
-        # Inicial maximum flow of channel
-        self.flow_max = self.get_max_flow(dam_vol)
+        # Maximum flow of channel
+        self.flow_max = instance.get_max_flow_of_channel(self.idx)
+
+        # Initial flow limit
+        self.flow_limit = self.get_flow_limit(dam_vol)
 
         self.power_group = PowerGroup(
             idx=self.idx,
@@ -30,18 +34,27 @@ class Channel:
             paths_power_models=paths_power_models,
         )
 
-    def get_max_flow(self, dam_vol: float) -> float:
+    def get_flow_limit(self, dam_vol: float) -> float:
 
         """
-        Using the points saved in self.max_flow_points,
-        returns the maximum flow that the channel can carry
+        The flow the channel can carry is limited by the volume of the dam
         :param dam_vol: Volume of preceding dam
-        :return:
+        :return: Flow limit (maximum flow for given volume)
         """
 
-        # TODO: implement this function
+        if self.limit_flow_points is None:
+            flow_limit = self.flow_max
+        else:
+            # Interpolate volume to get flow
+            flow_limit = np.interp(
+                dam_vol,
+                self.limit_flow_points["observed_vols"],
+                self.limit_flow_points["observed_flows"]
+            )
+            # Make sure limit is below maximum flow
+            flow_limit = float(np.clip(flow_limit, 0, self.flow_max))
 
-        pass
+        return flow_limit
 
     def update(self, flows: dict[str, float], dam_vol: float) -> float:
 
@@ -55,8 +68,8 @@ class Channel:
 
         self.flows_over_time.appendleft(flows[self.idx])
 
-        # Update maximum flow to get the maximum flow at the END of this time step
-        self.flow_max = self.get_max_flow(dam_vol)
+        # Update flow limit to get the flow limit at the END of this time step
+        self.flow_limit = self.get_flow_limit(dam_vol)
 
         # Update power group and get turbined flow
         return self.power_group.update(flows_over_time=self.flows_over_time)

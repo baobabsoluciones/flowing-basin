@@ -52,7 +52,7 @@ class PowerGroup:
         """
 
         lags = [flows_over_time[lag - 1] for lag in self.relevant_lags]
-        return self.power_model.predict([lags])
+        return float(self.power_model.predict([lags]))
 
     def get_turbined_flow(self, flows_over_time: deque) -> float:
 

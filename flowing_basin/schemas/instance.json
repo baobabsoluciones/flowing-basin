@@ -2,6 +2,24 @@
     "$schema": "http://json-schema.org/schema#",
     "type": "object",
     "properties": {
+        "time_step_minutes": {
+            "type": "integer"
+        },
+        "datetime": {
+            "type": "object",
+            "properties": {
+                "start": {
+                    "type": "string"
+                },
+                "end": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "end",
+                "start"
+            ]
+        },
         "dams": {
             "type": "array",
             "items": {
@@ -25,13 +43,46 @@
                             "type": "integer"
                         }
                     },
-                    "max_flow_points": {
-                        "type": "array",
-                        "items": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
+                    "flow_max": {
+                        "type": "number"
+                    },
+                    "flow_limit": {
+                        "type": "object",
+                        "properties": {
+                            "exists": {
+                                "type": "boolean"
+                            },
+                            "observed_vols": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            },
+                            "observed_flows": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
                             }
+                        },
+                        "if": {
+                            "properties": {
+                                "exists": {
+                                    "const": true
+                                }
+                            }
+                        },
+                        "then": {
+                            "required": [
+                                "exists",
+                                "observed_vols",
+                                "observed_flows"
+                            ]
+                        },
+                        "else": {
+                            "required": [
+                                "exists"
+                            ]
                         }
                     },
                     "initial_vol": {
@@ -43,25 +94,33 @@
                             "type": "number"
                         }
                     },
-                    "unregulated_flow": {
+                    "unregulated_flow_max": {
                         "type": "number"
+                    },
+                    "unregulated_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
                     }
                 },
                 "required": [
+                    "flow_limit",
+                    "flow_max",
                     "id",
                     "initial_lags",
                     "initial_vol",
-                    "max_flow_points",
                     "order",
                     "relevant_lags",
-                    "unregulated_flow",
+                    "unregulated_flow_max",
+                    "unregulated_flows",
                     "vol_max",
                     "vol_min"
                 ]
             }
         },
-        "time_step_minutes": {
-            "type": "integer"
+        "incoming_flow_max": {
+            "type": "number"
         },
         "incoming_flows": {
             "type": "array",
@@ -78,7 +137,9 @@
     },
     "required": [
         "dams",
+        "datetime",
         "energy_prices",
+        "incoming_flow_max",
         "incoming_flows",
         "time_step_minutes"
     ]

@@ -1,5 +1,6 @@
-import pickle
 from cornflow_client import InstanceCore, get_empty_schema
+import pickle
+from datetime import datetime
 
 
 class Instance(InstanceCore):
@@ -24,6 +25,79 @@ class Instance(InstanceCore):
         data_p["dams"] = list(data_p["dams"].values())
 
         return data_p
+
+    def check_inconsistencies(self) -> dict:
+
+        """
+        Method that checks if there are inconsistencies in the data of the current instance.
+        :return: A dictionary containing the inconsistencies found.
+        """
+
+        inconsistencies = dict()
+
+        # Number of time steps ---- #
+
+        # Calculate number of time steps
+        start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
+        end = datetime.strptime(self.data["datetime"]["end"], "%Y-%m-%d %H:%M")
+        difference = end - start
+        num_time_steps = difference.total_seconds() // self.get_time_step() + 1
+
+        # Calculate the number of each time-dependent variable
+        num_time_dep_var_values = {
+            "incoming flows": len(self.data["incoming_flows"]),
+            "energy prices": len(self.data["energy_prices"]),
+            **{
+                "unregulated flows of "
+                + dam_id: len(self.data["dams"][dam_id]["unregulated_flows"])
+                for dam_id in self.get_ids_of_dams()
+            },
+        }
+
+        # The number of each time-dependent variable must equal the number of time steps
+        for concept, number in num_time_dep_var_values.items():
+            if number != num_time_steps:
+                inconsistencies.update(
+                    {
+                        "The number of "
+                        + concept
+                        + " is not the same as the number of time steps": f"{number} vs. {num_time_steps}"
+                    }
+                )
+
+        # Number of observations of volumes and flows for the flow limit calculation ---- #
+
+        # The number of given volumes must equal the number of given observed flows
+        for dam_id in self.get_ids_of_dams():
+            observations = self.get_flow_limit_obs_for_channel(dam_id)
+            if observations is not None:
+                num_observed_vols = len(observations["observed_vols"])
+                num_observed_flows = len(observations["observed_vols"])
+                if num_observed_vols != num_observed_flows:
+                    inconsistencies.update(
+                        {
+                            "In the flow limit data of " + dam_id + ", "
+                            "the number of given volumes is not the same as "
+                            "the number of observed flows": f"{num_observed_vols} vs. {num_observed_flows}"
+                        }
+                    )
+
+        # Number of initial lags ---- #
+
+        # The number of initial lags must equal the last relevant lag
+        for dam_id in self.get_ids_of_dams():
+            num_initial_lags = len(self.get_initial_lags_of_channel(dam_id))
+            last_relevant_lag = self.get_relevant_lags_of_dam(dam_id)[-1]
+            if num_initial_lags != last_relevant_lag:
+                inconsistencies.update(
+                    {
+                        "The number of initial lags given to "
+                        + dam_id
+                        + " does not equal the last relevant lag of the dam": f"{num_initial_lags} vs. {last_relevant_lag}"
+                    }
+                )
+
+        return inconsistencies
 
     def get_time_step(self) -> float:
 
@@ -83,16 +157,6 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["vol_max"]
 
-    def get_unregulated_flow_of_dam(self, idx: str) -> float:
-
-        """
-
-        :param idx: ID of the dam in the river basin
-        :return: Unregulated flow that enters the dam (flow that comes from the river)
-        """
-
-        return self.data["dams"][idx]["unregulated_flow"]
-
     def get_initial_lags_of_channel(self, idx: str) -> list[float]:
 
         """
@@ -113,22 +177,53 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["relevant_lags"]
 
-    def get_max_flow_points_of_channel(self, idx: str) -> list[list[int]]:
+    def get_max_flow_of_channel(self, idx: str) -> float:
 
         """
 
         :param idx: ID of the dam in the river basin
-        :return: List of the max flow points of the channel (vol_dam, max_flow)
+        :return: Maximum flow the channel can carry
         """
 
-        return self.data["dams"][idx]["max_flow_points"]
+        return self.data["dams"][idx]["flow_max"]
+
+    def get_flow_limit_obs_for_channel(self, idx: str) -> dict[str, list]:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: Dictionary with a list of volumes and the corresponding maximum flow limits observed
+        """
+
+        if self.data["dams"][idx]["flow_limit"]["exists"]:
+            points = {
+                "observed_vols": self.data["dams"][idx]["flow_limit"]["observed_vols"],
+                "observed_flows": self.data["dams"][idx]["flow_limit"][
+                    "observed_flows"
+                ],
+            }
+        else:
+            points = None
+
+        return points
+
+    def get_unregulated_flow_of_dam(self, time: int, idx: str) -> float:
+
+        """
+
+        :param time: Identifier of the time step
+        For example, if we consider steps of 15min for a whole day, this parameter will range from 0 to 95 (24*4)
+        :param idx: ID of the dam in the river basin
+        :return: Unregulated flow that enters the dam (flow that comes from the river)
+        """
+
+        return self.data["dams"][idx]["unregulated_flows"][time]
 
     def get_incoming_flow(self, time: int) -> float:
 
         """
 
         :param time: Identifier of the time step
-        For example, if we consider steps of 15min for a whole day, this parameter will range from 0 to 95 (24*4)
         :return: FLow entering the first dam
         """
 

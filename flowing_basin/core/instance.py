@@ -132,7 +132,7 @@ class Instance(InstanceCore):
 
         """
 
-        :return: The time between updates in seconds
+        :return: The time between updates in seconds (s)
         """
 
         return self.data["time_step_minutes"] * 60
@@ -161,7 +161,7 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: The volume of the dam in the beginning
+        :return: The volume of the dam in the beginning (m3)
         """
 
         return self.data["dams"][idx]["initial_vol"]
@@ -171,7 +171,7 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: Minimum volume of the dam
+        :return: Minimum volume of the dam (m3)
         """
 
         return self.data["dams"][idx]["vol_min"]
@@ -181,7 +181,7 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: Maximum volume of the dam
+        :return: Maximum volume of the dam (m3)
         """
 
         return self.data["dams"][idx]["vol_max"]
@@ -191,7 +191,7 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: Flow that goes through the channel in the beginning
+        :return: Flow that goes through the channel in the beginning (m3/s)
         """
 
         return self.data["dams"][idx]["initial_lags"]
@@ -211,7 +211,7 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: Maximum flow the channel can carry
+        :return: Maximum flow the channel can carry (m3/s)
         """
 
         return self.data["dams"][idx]["flow_max"]
@@ -221,7 +221,7 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: Dictionary with a list of volumes and the corresponding maximum flow limits observed
+        :return: Dictionary with a list of volumes and the corresponding maximum flow limits observed (m3 and m3/s)
         """
 
         if self.data["dams"][idx]["flow_limit"]["exists"]:
@@ -243,7 +243,7 @@ class Instance(InstanceCore):
         :param time: Identifier of the time step
         For example, if we consider steps of 15min for a whole day, this parameter will range from 0 to 95 (24*4)
         :param idx: ID of the dam in the river basin
-        :return: Unregulated flow that enters the dam (flow that comes from the river)
+        :return: Unregulated flow that enters the dam (flow that comes from the river) (m3/s)
         """
 
         return self.data["dams"][idx]["unregulated_flows"][time]
@@ -253,7 +253,7 @@ class Instance(InstanceCore):
         """
 
         :param time: Identifier of the time step
-        :return: FLow entering the first dam
+        :return: FLow entering the first dam (m3/s)
         """
 
         return self.data["incoming_flows"][time]
@@ -263,7 +263,7 @@ class Instance(InstanceCore):
         """
 
         :param time: Identifier of the time step
-        :return: Price of energy for the given time step
+        :return: Price of energy for the given time step (EUR/MWh)
         """
 
         return self.data["energy_prices"][time]

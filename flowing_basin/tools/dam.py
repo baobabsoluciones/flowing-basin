@@ -11,10 +11,10 @@ class Dam:
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
 
-        # Initial volume of dam
+        # Initial volume of dam (m3)
         self.volume = instance.get_initial_vol_of_dam(self.idx)
 
-        # Constant values for the whole period
+        # Constant values for the whole period - time step (seconds, s), min/max volumes (m3)
         self.time_step = instance.get_time_step()
         self.min_volume = instance.get_min_vol_of_dam(self.idx)
         self.max_volume = instance.get_max_vol_of_dam(self.idx)
@@ -36,11 +36,11 @@ class Dam:
 
         """
         Update the volume of the dam, and the state of its connected channel
-        :param flows: decision
-        :param incoming_flow:
-        :param unregulated_flow:
-        :param turbined_flow_of_preceding_dam:
-        :return: Turbined flow in the power group
+        :param flows: Dictionary of flows that should go through each channel, indexed by dam (m3/s)
+        :param incoming_flow: Incoming flow to the river basin (m3/s)
+        :param unregulated_flow: Unregulated flow entering the dam (m3/s)
+        :param turbined_flow_of_preceding_dam: Turbined flow of the previous dam, that is entering this dam (m3/s)
+        :return: Turbined flow produced by the power group of this dam (m3/s)
         """
 
         # Obtain flow coming into the dam from the river or the previous dam

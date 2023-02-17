@@ -21,6 +21,10 @@ for i, flows in enumerate(decisions):
     river_basin.update(flows)
     state = river_basin.get_state()
     print(f"state after decision {i}:", state)
+    print(f"income obtained after decision {i} (EUR): "
+          f"price (EUR/MWh) * power (MW) * time_step (hours) = "
+          f"{state['price']} * ({state['dam1']['power']} + {state['dam2']['power']}) * {instance.get_time_step()/3600} = "
+          f"{state['price'] * (state['dam1']['power'] + state['dam2']['power']) * instance.get_time_step()/3600}")
 
     # Check volumes are consistent throughout states
     dam1_vol = float(np.clip(

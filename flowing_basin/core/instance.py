@@ -52,11 +52,8 @@ class Instance(InstanceCore):
 
         # Number of time steps ---- #
 
-        # Calculate number of time steps
-        start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
-        end = datetime.strptime(self.data["datetime"]["end"], "%Y-%m-%d %H:%M")
-        difference = end - start
-        num_time_steps = difference.total_seconds() // self.get_time_step() + 1
+        # Get number of time steps
+        num_time_steps = self.get_total_num_time_steps()
 
         # Calculate the number of each time-dependent variable
         num_time_dep_var_values = {
@@ -108,7 +105,8 @@ class Instance(InstanceCore):
                     {
                         "The number of initial lags given to "
                         + dam_id
-                        + " does not equal the last relevant lag of the dam": f"{num_initial_lags} vs. {last_relevant_lag}"
+                        + " does not equal the last relevant lag of the dam":
+                            f"{num_initial_lags} vs. {last_relevant_lag}"
                     }
                 )
 
@@ -124,7 +122,9 @@ class Instance(InstanceCore):
         inconsistencies = self.check_inconsistencies()
         schema_errors = self.check_schema()
         if schema_errors:
-            inconsistencies.update({"The given data does not follow the schema": schema_errors})
+            inconsistencies.update(
+                {"The given data does not follow the schema": schema_errors}
+            )
 
         return inconsistencies
 
@@ -136,6 +136,21 @@ class Instance(InstanceCore):
         """
 
         return self.data["time_step_minutes"] * 60
+
+    def get_total_num_time_steps(self) -> int:
+
+        """
+
+        :return: Total number of time steps
+        For example, if the instance spans one day, and we consider steps of 15min, this will be 24*4 = 96
+        """
+
+        start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
+        end = datetime.strptime(self.data["datetime"]["end"], "%Y-%m-%d %H:%M")
+        difference = end - start
+        num_time_steps = difference.total_seconds() // self.get_time_step() + 1
+
+        return int(num_time_steps)
 
     def get_ids_of_dams(self) -> list[str]:
 
@@ -236,34 +251,72 @@ class Instance(InstanceCore):
 
         return points
 
-    def get_unregulated_flow_of_dam(self, time: int, idx: str) -> float:
+    def get_unregulated_flow_of_dam(
+        self, time: int, idx: str, num_steps: int = 1
+    ) -> float | list[float]:
 
         """
 
-        :param time: Identifier of the time step
+        :param time: Identifier of the current time step
         For example, if we consider steps of 15min for a whole day, this parameter will range from 0 to 95 (24*4)
         :param idx: ID of the dam in the river basin
-        :return: Unregulated flow that enters the dam (flow that comes from the river) (m3/s)
+        :param num_steps: Number of time steps to look ahead (by default, only the current time step is considered)
+        :return: Unregulated flow that enters the dam (flow that comes from the river) in all of these time steps (m3/s)
         """
 
-        return self.data["dams"][idx]["unregulated_flows"][time]
+        unreg_flows = self.data["dams"][idx]["unregulated_flows"][
+            time: time + num_steps
+        ]
+        if num_steps == 1:
+            unreg_flows = unreg_flows[0]
 
-    def get_incoming_flow(self, time: int) -> float:
+        return unreg_flows
 
-        """
-
-        :param time: Identifier of the time step
-        :return: FLow entering the first dam (m3/s)
-        """
-
-        return self.data["incoming_flows"][time]
-
-    def get_price(self, time: int) -> float:
+    def get_max_unregulated_flow_of_dam(self, idx: str) -> float:
 
         """
 
-        :param time: Identifier of the time step
-        :return: Price of energy for the given time step (EUR/MWh)
+        :param idx: ID of the dam in the river basin
+        :return: Maximum unregulated flow that can enter the dam (in any date) (m3/s)
         """
 
-        return self.data["energy_prices"][time]
+        return self.data["dams"][idx]["unregulated_flow_max"]
+
+    def get_incoming_flow(self, time: int, num_steps: int = 1) -> float | list[float]:
+
+        """
+
+        :param time: Identifier of the current time step
+        :param num_steps: Number of time steps to look ahead (by default, only the current time step is considered)
+        :return: FLow entering the first dam in all of these time steps (m3/s)
+        """
+
+        incoming_flows = self.data["incoming_flows"][time: time + num_steps]
+        if num_steps == 1:
+            incoming_flows = incoming_flows[0]
+
+        return incoming_flows
+
+    def get_max_incoming_flow(self) -> float:
+
+        """
+
+        :return: Maximum possible value for the incoming flow (in any date) (m3/s)
+        """
+
+        return self.data["incoming_flow_max"]
+
+    def get_price(self, time: int, num_steps: int = 1) -> float | list[float]:
+
+        """
+
+        :param time: Identifier of the current time step
+        :param num_steps: Number of time steps to look ahead (by default, only the current time step is considered)
+        :return: Price of energy in all of these time steps (EUR/MWh)
+        """
+
+        prices = self.data["energy_prices"][time: time + num_steps]
+        if num_steps == 1:
+            prices = prices[0]
+
+        return prices

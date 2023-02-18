@@ -12,9 +12,13 @@ if inconsistencies:
 time = 0
 print("data property:", instance.data)
 print("dictionary:", instance.to_dict())
+print("number of time steps:", instance.get_total_num_time_steps())
 print("IDs of dams:", instance.get_ids_of_dams())
 print("incoming flow:", instance.get_incoming_flow(time))
+print("incoming flows (next 12 steps):", instance.get_incoming_flow(time, num_steps=12))
+print("maximum incoming flow:", instance.get_max_incoming_flow())
 print("price:", instance.get_price(time))
+print("prices (next 12 steps):", instance.get_price(time, num_steps=12))
 
 # Print dam info
 for dam in instance.get_ids_of_dams():
@@ -27,6 +31,8 @@ for dam in instance.get_ids_of_dams():
     print("max flow:", instance.get_max_flow_of_channel(dam))
     print("flow limit observations:", instance.get_flow_limit_obs_for_channel(dam))
     print("unregulated flow:", instance.get_unregulated_flow_of_dam(time, dam))
+    print("unregulated flows (next 12 steps):", instance.get_unregulated_flow_of_dam(time, dam, num_steps=12))
+    print("maximum unregulated flow:", instance.get_max_unregulated_flow_of_dam(dam))
 
 # Plot channel limit flow points
 # from matplotlib import pyplot as plt

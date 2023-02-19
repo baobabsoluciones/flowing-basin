@@ -14,5 +14,7 @@ env = Environment(
     num_unreg_flows=10,
     num_incoming_flows=10,
 )
+print("low:", env._low.tensor)
+print("high:", env._high.tensor)
 print("initial observation:", env.get_observation(normalize=False))
 print("initial observation (normalized):", env.get_observation())

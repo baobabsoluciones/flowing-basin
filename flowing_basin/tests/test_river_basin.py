@@ -18,6 +18,7 @@ old_state = state
 decisions = [{"dam1": 6.79, "dam2": 6.58}, {"dam1": 7.49, "dam2": 6.73}]
 for i, flows in enumerate(decisions):
 
+    print(f"---- decision {i} ----")
     river_basin.update(flows)
     state = river_basin.get_state()
     print(f"state after decision {i}:", state)

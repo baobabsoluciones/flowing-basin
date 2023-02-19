@@ -9,43 +9,47 @@ class DamObservation:
 
     """
     Class representing the observation of the agent for each dam
+    After initialization, the values are flattened into a `list` attribute
     """
 
     vol: float
     lags: list[float]
     unreg_flows: list[float]
-    tensor: torch.Tensor = field(init=False)
+    list: list = field(init=False)
 
     def __post_init__(self):
 
-        self.tensor = torch.tensor([self.vol, *self.lags, *self.unreg_flows])
+        self.list = [self.vol, *self.lags, *self.unreg_flows]
 
 
 @dataclass
 class Observation:
 
     """
-    Class representing an observation of the agent (normalized state of the river basin)
+    Class representing an observation of the agent
+    After initialization, the values are flattened into a `tensor` attribute
+    After calling the normalization method, the normalized tensor is saved in a `normalized` attribute
     """
 
-    prices: list[float] | float
-    incoming_flows: list[float] | float
+    prices: list[float]
+    incoming_flows: list[float]
     dams: list[DamObservation]
     tensor: torch.Tensor = field(init=False)
+    normalized: None | torch.Tensor = field(init=False)
 
     def __post_init__(self):
 
-        dam_values = [value for dam in self.dams for value in dam.tensor.tolist()]
+        dam_values = [value for dam in self.dams for value in dam.list]
         self.tensor = torch.tensor([*self.prices, *self.incoming_flows, *dam_values])
+        self.normalized = None
 
-    def normalize(self, low: "Observation", high: "Observation") -> torch.Tensor:
+    def normalize(self, low: "Observation", high: "Observation"):
 
         """
         Brings the values of the tensor to the range [0, 1]
         """
 
-        self.tensor = (self.tensor - low.tensor) / (high.tensor - low.tensor)
-        return self.tensor
+        self.normalized = (self.tensor - low.tensor) / (high.tensor - low.tensor)
 
 
 class Environment:
@@ -53,7 +57,7 @@ class Environment:
     """
     Class representing the environment for the RL agent
     The class acts as a wrapper of the river basin:
-     - It normalizes the basin's states, turning them into observations
+     - It filters and normalizes the river basin's states, turning them into observations
      - It computes the rewards for the agent (proportional to the generated energy and its price)
     """
 
@@ -75,6 +79,11 @@ class Environment:
 
     def _get_lower_limits(self) -> Observation:
 
+        """
+        Returns the lower limits (as an Observation object) of the values of the agent's observations
+        All attributes are 0, except the volume (for which the minimum volume is given)
+        """
+
         return Observation(
             prices=[0] * self.num_prices,
             incoming_flows=[0] * self.num_incoming_flows,
@@ -89,6 +98,10 @@ class Environment:
         )
 
     def _get_upper_limits(self) -> Observation:
+
+        """
+        Returns the upper limits (as an Observation object) of the values of the agent's observations
+        """
 
         return Observation(
             prices=[
@@ -113,7 +126,11 @@ class Environment:
             ],
         )
 
-    def get_observation(self, normalize: bool = True) -> torch.Tensor:
+    def get_observation(self) -> Observation:
+
+        """
+        Returns the observation of the agent for the current state of the river basin
+        """
 
         obs = Observation(
             prices=self.instance.get_price(
@@ -134,7 +151,40 @@ class Environment:
             ],
         )
 
-        if normalize:
-            obs.normalize(self._low, self._high)
+        obs.normalize(self._low, self._high)
 
-        return obs.tensor
+        return obs
+
+    def get_reward(self) -> float:
+
+        """
+        Returns the reward that should be given to the agent for the energy generated in the current time step
+
+        The reward is proportional to the income obtained, income (EUR) = price (EUR/MWh) * power (MW) * time_step (h)
+        However, the normalized energy price is used, to avoid inconsistencies throughout several episodes
+        (in which energy prices are normalized differently)
+        """
+
+        price_normalized = self.instance.get_price(self.river_basin.time) / self._high.prices[0]
+        power = sum(dam.channel.power_group.power for dam in self.river_basin.dams.values())
+        time_step_hours = self.instance.get_time_step() / 3600
+
+        return price_normalized * power * time_step_hours
+
+    def step(self, action: torch.Tensor) -> tuple[float, Observation, bool]:
+
+        """
+        Updates the river basin with the given action
+        Returns the reward obtained, the next observation, and whether the episode is finished or not
+        """
+
+        assert list(action.size()) == [len(self.instance.get_ids_of_dams())]
+
+        flows = {dam_id: flow for dam_id, flow in zip(self.instance.get_ids_of_dams(), action.tolist())}
+        self.river_basin.update(flows)
+
+        reward = self.get_reward()
+        next_obs = self.get_observation()
+        done = self.river_basin.time >= self.instance.get_total_num_time_steps()
+
+        return reward, next_obs, done

@@ -4,6 +4,11 @@ import numpy as np
 
 
 class RiverBasin:
+
+    """
+    Class representing the river basin
+    """
+
     def __init__(self, instance: Instance, paths_power_models: dict[str, str]):
 
         # Dams inside the flowing basin
@@ -43,7 +48,9 @@ class RiverBasin:
             turbined_flow = dam.update(
                 flows=flows_p,
                 incoming_flow=self.instance.get_incoming_flow(self.time),
-                unregulated_flow=self.instance.get_unregulated_flow_of_dam(self.time, dam_id),
+                unregulated_flow=self.instance.get_unregulated_flow_of_dam(
+                    self.time, dam_id
+                ),
                 turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam,
             )
             turbined_flow_of_preceding_dam = turbined_flow

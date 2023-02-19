@@ -1,11 +1,15 @@
 from cornflow_client import InstanceCore, get_empty_schema
+from cornflow_client.core.tools import load_json
 import pickle
-import json
 from datetime import datetime
+import os
 
 
 class Instance(InstanceCore):
 
+    schema = load_json(
+        os.path.join(os.path.dirname(__file__), "../schemas/instance.json")
+    )
     schema_checks = get_empty_schema()
 
     @classmethod
@@ -26,20 +30,6 @@ class Instance(InstanceCore):
         data_p["dams"] = list(data_p["dams"].values())
 
         return data_p
-
-    @property
-    def schema(self) -> dict:
-
-        """
-        a dictionary representation of the json-schema for the object
-        """
-
-        path = "../schemas/instance.json"
-
-        with open(path, "r") as f:
-            schema = json.load(f)
-
-        return schema
 
     def check_inconsistencies(self) -> dict:
 

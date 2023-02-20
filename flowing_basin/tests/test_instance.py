@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance
 
 # "../" means "go one step up"; in this case, to the flowing-basin directory
-instance = Instance.from_json("../data/input_example2.json")
+instance = Instance.from_json("../data/input_example1.json")
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = instance.check()

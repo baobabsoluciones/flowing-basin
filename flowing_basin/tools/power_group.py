@@ -22,6 +22,11 @@ class PowerGroup:
         self.power = self.get_power(flows_over_time)
         self.turbined_flow = self.get_turbined_flow(flows_over_time)
 
+    def reset(self, flows_over_time: deque):
+
+        self.power = self.get_power(flows_over_time)
+        self.turbined_flow = self.get_turbined_flow(flows_over_time)
+
     @staticmethod
     def get_power_model(path_power_model: str) -> lightgbm.LGBMClassifier:
 

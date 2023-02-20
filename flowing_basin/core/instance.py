@@ -13,7 +13,7 @@ class Instance(InstanceCore):
     schema_checks = get_empty_schema()
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> "Instance":
 
         # Change list of dams into dictionary indexed by ID
         # This also changes the parent's from_json method, as this method calls from_dict

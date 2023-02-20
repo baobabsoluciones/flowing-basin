@@ -35,6 +35,16 @@ class Channel:
             paths_power_models=paths_power_models,
         )
 
+    def reset(self, dam_vol: float, instance: Instance):
+
+        initial_lags = instance.get_initial_lags_of_channel(self.idx)
+        num_lags = instance.get_relevant_lags_of_dam(self.idx)[-1]
+        self.flows_over_time = deque(initial_lags, maxlen=num_lags)
+
+        self.flow_limit = self.get_flow_limit(dam_vol)
+
+        self.power_group.reset(flows_over_time=self.flows_over_time)
+
     def get_flow_limit(self, dam_vol: float) -> float:
 
         """

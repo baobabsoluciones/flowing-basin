@@ -131,3 +131,6 @@ dmypy.json
 # Flowing basin ML models for power prediction
 /flowing_basin/ml_models/model_E1.sav
 /flowing_basin/ml_models/model_E2.sav
+
+# Training data
+/flowing_basin/data/rl_training_data/training_data.pickle

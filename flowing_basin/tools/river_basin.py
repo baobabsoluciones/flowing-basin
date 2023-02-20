@@ -28,6 +28,19 @@ class RiverBasin:
         # Save instance to get incoming and unregulated flows in the update method
         self.instance = instance
 
+    def reset(self, instance: Instance):
+
+        """
+        Resets the river basin
+        This method resets the instance and all attributes that represent time-dependent values
+        """
+
+        for dam in self.dams.values():
+            dam.reset(instance)
+
+        self.time = 0
+        self.instance = instance
+
     def update(self, flows: dict[str, float]) -> None:
 
         """

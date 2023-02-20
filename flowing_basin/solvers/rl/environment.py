@@ -61,19 +61,37 @@ class Environment:
      - It computes the rewards for the agent (proportional to the generated energy and its price)
     """
 
-    def __init__(self, instance: Instance, paths_power_models: dict[str, str], num_prices, num_incoming_flows, num_unreg_flows):
+    def __init__(
+        self,
+        instance: Instance,
+        paths_power_models: dict[str, str],
+        num_prices: int,
+        num_incoming_flows: int,
+        num_unreg_flows: int,
+    ):
 
-        self.instance = instance
-        self.river_basin = RiverBasin(
-            instance=self.instance, paths_power_models=paths_power_models
-        )
+        self.paths_power_models = paths_power_models
 
         # Configuration
         self.num_prices = num_prices
         self.num_incoming_flows = num_incoming_flows
         self.num_unreg_flows = num_unreg_flows
 
-        # Attributes for value normalization
+        # Instance and river basin
+        self.instance = instance
+        self.river_basin = RiverBasin(
+            instance=self.instance, paths_power_models=self.paths_power_models
+        )
+
+        # Observation limits (for state normalization)
+        self.obs_low = self.get_obs_lower_limits()
+        self.obs_high = self.get_obs_upper_limits()
+
+    def reset(self, instance: Instance):
+
+        self.instance = instance
+        self.river_basin.reset(self.instance)
+
         self.obs_low = self.get_obs_lower_limits()
         self.obs_high = self.get_obs_upper_limits()
 
@@ -165,8 +183,12 @@ class Environment:
         (in which energy prices are normalized differently)
         """
 
-        price_normalized = self.instance.get_price(self.river_basin.time) / self.obs_high.prices[0]
-        power = sum(dam.channel.power_group.power for dam in self.river_basin.dams.values())
+        price_normalized = (
+            self.instance.get_price(self.river_basin.time) / self.obs_high.prices[0]
+        )
+        power = sum(
+            dam.channel.power_group.power for dam in self.river_basin.dams.values()
+        )
         time_step_hours = self.instance.get_time_step() / 3600
 
         return price_normalized * power * time_step_hours
@@ -180,7 +202,10 @@ class Environment:
 
         assert list(action.size()) == [self.instance.get_num_dams()]
 
-        flows = {dam_id: flow for dam_id, flow in zip(self.instance.get_ids_of_dams(), action.tolist())}
+        flows = {
+            dam_id: flow
+            for dam_id, flow in zip(self.instance.get_ids_of_dams(), action.tolist())
+        }
         self.river_basin.update(flows)
 
         reward = self.get_reward()

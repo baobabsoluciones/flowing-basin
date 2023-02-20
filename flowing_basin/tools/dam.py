@@ -26,6 +26,11 @@ class Dam:
             paths_power_models=paths_power_models,
         )
 
+    def reset(self, instance: Instance):
+
+        self.volume = instance.get_initial_vol_of_dam(self.idx)
+        self.channel.reset(dam_vol=self.volume, instance=instance)
+
     def update(
         self,
         flows: dict[str, float],

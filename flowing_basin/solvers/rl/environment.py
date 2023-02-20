@@ -74,10 +74,10 @@ class Environment:
         self.num_unreg_flows = num_unreg_flows
 
         # Attributes for value normalization
-        self._low = self._get_lower_limits()
-        self._high = self._get_upper_limits()
+        self.obs_low = self.get_obs_lower_limits()
+        self.obs_high = self.get_obs_upper_limits()
 
-    def _get_lower_limits(self) -> Observation:
+    def get_obs_lower_limits(self) -> Observation:
 
         """
         Returns the lower limits (as an Observation object) of the values of the agent's observations
@@ -97,7 +97,7 @@ class Environment:
             ],
         )
 
-    def _get_upper_limits(self) -> Observation:
+    def get_obs_upper_limits(self) -> Observation:
 
         """
         Returns the upper limits (as an Observation object) of the values of the agent's observations
@@ -107,7 +107,7 @@ class Environment:
             prices=[
                 max(
                     self.instance.get_price(
-                        0, num_steps=self.instance.get_total_num_time_steps()
+                        0, num_steps=self.instance.get_num_time_steps()
                     )
                 )
             ]
@@ -151,7 +151,7 @@ class Environment:
             ],
         )
 
-        obs.normalize(self._low, self._high)
+        obs.normalize(self.obs_low, self.obs_high)
 
         return obs
 
@@ -165,7 +165,7 @@ class Environment:
         (in which energy prices are normalized differently)
         """
 
-        price_normalized = self.instance.get_price(self.river_basin.time) / self._high.prices[0]
+        price_normalized = self.instance.get_price(self.river_basin.time) / self.obs_high.prices[0]
         power = sum(dam.channel.power_group.power for dam in self.river_basin.dams.values())
         time_step_hours = self.instance.get_time_step() / 3600
 
@@ -178,13 +178,13 @@ class Environment:
         Returns the reward obtained, the next observation, and whether the episode is finished or not
         """
 
-        assert list(action.size()) == [len(self.instance.get_ids_of_dams())]
+        assert list(action.size()) == [self.instance.get_num_dams()]
 
         flows = {dam_id: flow for dam_id, flow in zip(self.instance.get_ids_of_dams(), action.tolist())}
         self.river_basin.update(flows)
 
         reward = self.get_reward()
         next_obs = self.get_observation()
-        done = self.river_basin.time >= self.instance.get_total_num_time_steps()
+        done = self.river_basin.time >= self.instance.get_num_time_steps()
 
         return reward, next_obs, done

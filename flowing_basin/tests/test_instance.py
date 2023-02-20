@@ -12,7 +12,7 @@ if inconsistencies:
 time = 0
 print("data property:", instance.data)
 print("dictionary:", instance.to_dict())
-print("number of time steps:", instance.get_total_num_time_steps())
+print("number of time steps:", instance.get_num_time_steps())
 print("IDs of dams:", instance.get_ids_of_dams())
 print("incoming flow:", instance.get_incoming_flow(time))
 print("incoming flows (next 12 steps):", instance.get_incoming_flow(time, num_steps=12))

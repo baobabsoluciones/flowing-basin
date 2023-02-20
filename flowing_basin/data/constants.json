@@ -1,0 +1,68 @@
+{
+    "time_step_minutes": 15,
+    "datetime": {
+        "start": null,
+        "end": null
+    },
+    "dams": [
+        {
+            "id": "dam1",
+            "order": 1,
+            "vol_min": 34045.0,
+            "vol_max": 70882.0,
+            "relevant_lags": [
+                1,
+                2
+            ],
+            "flow_max": 14.15,
+            "flow_limit": {
+                "exists": false
+            },
+            "initial_vol": null,
+            "initial_lags": null,
+            "unregulated_flow_max": 14.670018869093832,
+            "unregulated_flows": null
+        },
+        {
+            "id": "dam2",
+            "order": 2,
+            "vol_min": 17117.0,
+            "vol_max": 58343.0,
+            "relevant_lags": [
+                3,
+                4,
+                5,
+                6
+            ],
+            "flow_max": 11.27,
+            "flow_limit": {
+                "exists": true,
+                "observed_vols": [
+                    0.0,
+                    23810.0,
+                    48371.0,
+                    71429.0,
+                    95238.0,
+                    110476.0,
+                    114286.0
+                ],
+                "observed_flows": [
+                    0.424,
+                    4.571,
+                    8.062,
+                    12.138,
+                    16.186,
+                    19.048,
+                    19.048
+                ]
+            },
+            "initial_vol": null,
+            "initial_lags": null,
+            "unregulated_flow_max": 5.701345855787728,
+            "unregulated_flows": null
+        }
+    ],
+    "incoming_flow_max": 15.55630069111111,
+    "incoming_flows": null,
+    "energy_prices": null
+}

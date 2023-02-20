@@ -43,7 +43,7 @@ class Instance(InstanceCore):
         # Number of time steps ---- #
 
         # Get number of time steps
-        num_time_steps = self.get_total_num_time_steps()
+        num_time_steps = self.get_num_time_steps()
 
         # Calculate the number of each time-dependent variable
         num_time_dep_var_values = {
@@ -127,7 +127,7 @@ class Instance(InstanceCore):
 
         return self.data["time_step_minutes"] * 60
 
-    def get_total_num_time_steps(self) -> int:
+    def get_num_time_steps(self) -> int:
 
         """
 
@@ -141,6 +141,15 @@ class Instance(InstanceCore):
         num_time_steps = difference.total_seconds() // self.get_time_step() + 1
 
         return int(num_time_steps)
+
+    def get_num_dams(self) -> int:
+
+        """
+
+        :return: The number of dams in the river basin
+        """
+
+        return len(self.data["dams"])
 
     def get_ids_of_dams(self) -> list[str]:
 

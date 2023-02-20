@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from flowing_basin.solvers import Environment
+from flowing_basin.solvers.rl import Environment
 import torch
 
 
@@ -20,8 +20,8 @@ env = Environment(
 )
 
 # Private attributes of the environment
-print("low:", env._low.tensor)
-print("high:", env._high.tensor)
+print("low:", env.obs_low.tensor)
+print("high:", env.obs_high.tensor)
 
 # Initial observation
 obs = env.get_observation()

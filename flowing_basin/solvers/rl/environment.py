@@ -160,7 +160,7 @@ class Environment:
             dams=[
                 DamObservation(
                     vol=dam.volume,
-                    lags=dam.channel.flows_over_time,
+                    lags=dam.channel.flows_over_time.squeeze().tolist(),
                     unreg_flows=self.instance.get_unregulated_flow_of_dam(
                         self.river_basin.time, dam_id, num_steps=self.num_unreg_flows
                     ),
@@ -202,10 +202,7 @@ class Environment:
 
         assert list(action.size()) == [self.instance.get_num_dams()]
 
-        flows = {
-            dam_id: flow
-            for dam_id, flow in zip(self.instance.get_ids_of_dams(), action.tolist())
-        }
+        flows = action.tolist()
         self.river_basin.update(flows)
 
         reward = self.get_reward()

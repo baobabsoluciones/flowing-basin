@@ -252,7 +252,7 @@ class Instance(InstanceCore):
 
     def get_unregulated_flow_of_dam(
         self, time: int, idx: str, num_steps: int = 1
-    ) -> float | list[float]:
+    ) -> float | list[float] | None:
 
         """
 
@@ -262,6 +262,9 @@ class Instance(InstanceCore):
         :param num_steps: Number of time steps to look ahead (by default, only the current time step is considered)
         :return: Unregulated flow that enters the dam (flow that comes from the river) in all of these time steps (m3/s)
         """
+
+        if time >= self.get_num_time_steps():
+            return None
 
         unreg_flows = self.data["dams"][idx]["unregulated_flows"][
             time: time + num_steps
@@ -281,7 +284,7 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["unregulated_flow_max"]
 
-    def get_incoming_flow(self, time: int, num_steps: int = 1) -> float | list[float]:
+    def get_incoming_flow(self, time: int, num_steps: int = 1) -> float | list[float] | None:
 
         """
 
@@ -289,6 +292,9 @@ class Instance(InstanceCore):
         :param num_steps: Number of time steps to look ahead (by default, only the current time step is considered)
         :return: FLow entering the first dam in all of these time steps (m3/s)
         """
+
+        if time >= self.get_num_time_steps():
+            return None
 
         incoming_flows = self.data["incoming_flows"][time: time + num_steps]
         if num_steps == 1:
@@ -305,7 +311,7 @@ class Instance(InstanceCore):
 
         return self.data["incoming_flow_max"]
 
-    def get_price(self, time: int, num_steps: int = 1) -> float | list[float]:
+    def get_price(self, time: int, num_steps: int = 1) -> float | list[float] | None:
 
         """
 
@@ -313,6 +319,9 @@ class Instance(InstanceCore):
         :param num_steps: Number of time steps to look ahead (by default, only the current time step is considered)
         :return: Price of energy in all of these time steps (EUR/MWh)
         """
+
+        if time >= self.get_num_time_steps():
+            return None
 
         prices = self.data["energy_prices"][time: time + num_steps]
         if num_steps == 1:

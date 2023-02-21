@@ -12,6 +12,8 @@ class Training:
     def __init__(
         self,
         length_episodes: int,
+        path_constants: str,
+        path_training_data: str,
         paths_power_models: dict[str, str],
         num_prices: int,
         num_incoming_flows: int,
@@ -21,17 +23,8 @@ class Training:
 
         self.length_episodes = length_episodes
 
-        self.constants = load_json(
-            os.path.join(
-                os.path.dirname(__file__), "../../data/rl_training_data/constants.json"
-            )
-        )
-        self.training_data = pd.read_pickle(
-            os.path.join(
-                os.path.dirname(__file__),
-                "../../data/rl_training_data/training_data.pickle",
-            )
-        )
+        self.constants = load_json(path_constants)
+        self.training_data = pd.read_pickle(path_training_data)
 
         self.env = Environment(
             instance=self.create_instance(initial_row=initial_row),

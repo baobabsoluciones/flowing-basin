@@ -1,5 +1,5 @@
 from flowing_basin.solvers.rl import Training
-from datetime import datetime
+# from datetime import datetime
 
 paths_power_models = {
     "dam1": "../ml_models/model_E1.sav",
@@ -8,6 +8,8 @@ paths_power_models = {
 training = Training(
     length_episodes=24*4,
     paths_power_models=paths_power_models,
+    path_constants="../data/rl_training_data/constants.json",
+    path_training_data="../data/rl_training_data/training_data.pickle",
     num_prices=10,
     num_unreg_flows=10,
     num_incoming_flows=10,

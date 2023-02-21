@@ -105,5 +105,3 @@ class Training:
         instance = Instance.from_dict(data)
 
         return instance
-
-

@@ -1,5 +1,6 @@
 from flowing_basin.core import Instance
 from .channel import Channel
+import numpy as np
 
 
 class Dam:
@@ -11,13 +12,14 @@ class Dam:
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
 
-        # Initial volume of dam (m3)
-        self.volume = instance.get_initial_vol_of_dam(self.idx)
-
         # Constant values for the whole period - time step (seconds, s), min/max volumes (m3)
         self.time_step = instance.get_time_step()
         self.min_volume = instance.get_min_vol_of_dam(self.idx)
         self.max_volume = instance.get_max_vol_of_dam(self.idx)
+
+        # Initial volume of dam (m3)
+        self.volume = instance.get_initial_vol_of_dam(self.idx)
+        self.volume = float(np.clip(self.volume, self.min_volume, self.max_volume))
 
         self.channel = Channel(
             idx=self.idx,

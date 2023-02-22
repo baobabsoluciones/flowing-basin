@@ -27,6 +27,8 @@ class Channel:
 
         # Maximum flow of channel (m3/s)
         self.flow_max = instance.get_max_flow_of_channel(self.idx)
+        if self.num_scenarios > 1:
+            self.flow_max = np.repeat(self.flow_max, self.num_scenarios)
 
         # Initial flow limit (m3/s)
         self.flow_limit = self.get_flow_limit(dam_vol)
@@ -35,8 +37,8 @@ class Channel:
             idx=self.idx,
             flows_over_time=self.flows_over_time,
             instance=instance,
-            num_scenarios=self.num_scenarios,
             paths_power_models=paths_power_models,
+            num_scenarios=self.num_scenarios,
         )
 
     def reset(self, dam_vol: float | np.ndarray, instance: Instance):
@@ -52,16 +54,16 @@ class Channel:
 
         """
         The flow the channel can carry is limited by the volume of the dam
-        :param dam_vol: Volume of preceding dam (m3)
-        :return: Flow limit (maximum flow for given volume) (m3/s)
+        :param dam_vol:
+         - Volume of the dam connected to the channel (m3)
+         - OR Array of shape num_scenarios containing the volume of every scenario (m3)
+        :return:
+         - Flow limit (maximum flow for given volume) (m3/s)
+         - OR Array of shape num_scenarios with the flow limit in every scenario (m3/s)
         """
 
         if self.limit_flow_points is None:
-            flow_limit = self.flow_max
-            if self.num_scenarios > 1:
-                flow_limit = np.repeat(flow_limit, self.num_scenarios)
-
-            return flow_limit
+            return self.flow_max
 
         # Interpolate volume to get flow
         flow_limit = np.interp(
@@ -69,6 +71,7 @@ class Channel:
             self.limit_flow_points["observed_vols"],
             self.limit_flow_points["observed_flows"]
         )
+
         # Make sure limit is below maximum flow
         flow_limit = np.clip(flow_limit, 0, self.flow_max)
         if self.num_scenarios == 1:

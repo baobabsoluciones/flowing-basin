@@ -6,6 +6,12 @@ import numpy as np
 
 
 class PowerGroup:
+
+    POWER_FLOW_LINE_COEFS = {
+        "dam1": [2.99625925, 0.05524465],
+        "dam2": [1.32432353, 0.25964468],
+    }
+
     def __init__(
         self,
         idx: str,
@@ -23,12 +29,12 @@ class PowerGroup:
 
         # Power generated (MW) and turbined flow (m3/s)
         self.power = self.get_power(flows_over_time)
-        self.turbined_flow = self.get_turbined_flow(flows_over_time)
+        self.turbined_flow = self.get_turbined_flow(self.power)
 
     def reset(self, flows_over_time: np.ndarray):
 
         self.power = self.get_power(flows_over_time)
-        self.turbined_flow = self.get_turbined_flow(flows_over_time)
+        self.turbined_flow = self.get_turbined_flow(self.power)
 
     @staticmethod
     def get_power_model(path_power_model: str) -> lightgbm.LGBMClassifier:
@@ -70,19 +76,22 @@ class PowerGroup:
             power = power.item()
         return power
 
-    def get_turbined_flow(self, flows_over_time: np.ndarray) -> float | np.ndarray:
+    def get_turbined_flow(self, power: float | np.ndarray) -> float | np.ndarray:
 
         """
 
-        :param flows_over_time: Array of shape num_scenarios x num_lags with all past flows of the channel (m3/s)
+        :param power:
+         - Power (MW)
+         - OR Array of shape num_scenarios with power valoes (MW)
         :return:
-         - Turbined flow in this time step (m3/s)
-         - OR Array of shape num_scenarios containing the turbined flow of every scenario (m3/s)
+         - Corresponding turbined flow (m3/s)
+         - OR Array of shape num_scenarios with the corresponding turbined flows (m3/s)
         """
 
-        # TODO: implement this function
+        line = np.poly1d(self.POWER_FLOW_LINE_COEFS[self.idx])
+        turbined_flow = line(power)
 
-        return 0
+        return turbined_flow
 
     def update(self, flows_over_time: np.ndarray) -> float | np.ndarray:
 
@@ -95,7 +104,7 @@ class PowerGroup:
         """
 
         self.power = self.get_power(flows_over_time)
-        self.turbined_flow = self.get_turbined_flow(flows_over_time)
+        self.turbined_flow = self.get_turbined_flow(self.power)
 
         # Bring turbined flow upstream, since it is used to update the volume of the next dam
         return self.turbined_flow

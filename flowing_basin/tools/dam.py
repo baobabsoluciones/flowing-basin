@@ -35,8 +35,8 @@ class Dam:
             idx=self.idx,
             dam_vol=self.volume,
             instance=instance,
-            num_scenarios=self.num_scenarios,
             paths_power_models=paths_power_models,
+            num_scenarios=self.num_scenarios,
         )
 
     def reset(self, instance: Instance):
@@ -106,7 +106,7 @@ class Dam:
         # print(
         #     self.idx + " calc",
         #     old_volume,
-        #     incoming_flow,
+        #     flow_contribution,
         #     unregulated_flow,
         #     flows[self.index],
         #     self.volume,

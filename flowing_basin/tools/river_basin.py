@@ -26,8 +26,8 @@ class RiverBasin:
                 index=dam_index,
                 idx=dam_id,
                 instance=instance,
-                num_scenarios=self.num_scenarios,
                 paths_power_models=paths_power_models,
+                num_scenarios=self.num_scenarios,
             )
             self.dams.update({dam_id: dam})
 
@@ -42,7 +42,7 @@ class RiverBasin:
         """
         Resets the river basin
         This method resets the instance (if given)
-        and all attributes that represent time-dependent values
+        and all attributes that represent time-dependent (non-constant) values
         """
 
         self.time = 0
@@ -98,7 +98,7 @@ class RiverBasin:
         time_step_hours = self.instance.get_time_step() / 3600
         income = price * power * time_step_hours
 
-        # Increase time step identifier to get the next incoming and unregulated flows
+        # Increase time step identifier to get the next price, incoming flow, and unregulated flows
         self.time = self.time + 1
 
         return income
@@ -137,15 +137,15 @@ class RiverBasin:
         """
 
         state = {
-            "incoming_flow": self.instance.get_incoming_flow(self.time),
-            "price": self.instance.get_price(self.time),
+            "next_incoming_flow": self.instance.get_incoming_flow(self.time),
+            "next_price": self.instance.get_price(self.time),
         }
 
         for dam_id, dam in self.dams.items():
             state[dam_id] = {
                 "vol": dam.volume,
                 "flow_limit": dam.channel.flow_limit,
-                "unregulated_flow": self.instance.get_unregulated_flow_of_dam(
+                "next_unregulated_flow": self.instance.get_unregulated_flow_of_dam(
                     self.time, dam_id
                 ),
                 "lags": dam.channel.flows_over_time,

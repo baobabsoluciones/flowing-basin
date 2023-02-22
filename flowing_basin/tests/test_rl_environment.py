@@ -28,23 +28,16 @@ print("---- initial observation ----")
 obs = env1.get_observation()
 print("initial observation:", obs.tensor)
 print("initial observation (normalized):", obs.normalized)
-print("initial reward:", env1.get_reward())
 
 # First decision
-print("---- decision 1 ----")
-action = torch.tensor([6.79, 6.58])
-reward, next_obs, done = env1.step(action)
-print("reward:", reward)
-print("observation:", next_obs.tensor)
-print("done:", done)
-
-# Second decision
-print("---- decision 2 ----")
-action = torch.tensor([7.49, 6.73])
-reward, next_obs, done = env1.step(action)
-print("reward:", reward)
-print("observation:", next_obs.tensor)
-print("done:", done)
+decisions = [[6.79, 6.58], [7.49, 6.73], [7.49, 6.73], [7.49, 6.73], [7.49, 6.73]]
+for i, decision in enumerate(decisions):
+    print(f">>>> decision {i}")
+    action = torch.tensor(decision)
+    reward, next_obs, done = env1.step(action)
+    print("reward:", reward)
+    print("observation:", next_obs.tensor)
+    print("done:", done)
 
 # ENVIRONMENT 2 (WITH INSTANCE 2)
 instance2 = Instance.from_json("../data/input_example3.json")

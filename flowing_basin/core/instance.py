@@ -3,6 +3,7 @@ from cornflow_client.core.tools import load_json
 import pickle
 from datetime import datetime
 import os
+import warnings
 
 
 class Instance(InstanceCore):
@@ -95,8 +96,7 @@ class Instance(InstanceCore):
                     {
                         "The number of initial lags given to "
                         + dam_id
-                        + " does not equal the last relevant lag of the dam":
-                            f"{num_initial_lags} vs. {last_relevant_lag}"
+                        + " does not equal the last relevant lag of the dam": f"{num_initial_lags} vs. {last_relevant_lag}"
                     }
                 )
 
@@ -118,6 +118,18 @@ class Instance(InstanceCore):
 
         return inconsistencies
 
+    def get_start_end_datetimes(self) -> tuple[datetime, datetime]:
+
+        """
+
+        :return: Starting datetime and final datetime
+        """
+
+        start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
+        end = datetime.strptime(self.data["datetime"]["end"], "%Y-%m-%d %H:%M")
+
+        return start, end
+
     def get_time_step(self) -> float:
 
         """
@@ -135,8 +147,7 @@ class Instance(InstanceCore):
         For example, if the instance spans one day, and we consider steps of 15min, this will be 24*4 = 96
         """
 
-        start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
-        end = datetime.strptime(self.data["datetime"]["end"], "%Y-%m-%d %H:%M")
+        start, end = self.get_start_end_datetimes()
         difference = end - start
         num_time_steps = difference.total_seconds() // self.get_time_step() + 1
 
@@ -264,10 +275,14 @@ class Instance(InstanceCore):
         """
 
         if time >= self.get_num_time_steps():
+            warnings.warn(
+                f"Tried to access unregulated flow for {time=}, which is greater than {self.get_num_time_steps()=}. "
+                f"None was returned"
+            )
             return None
 
         unreg_flows = self.data["dams"][idx]["unregulated_flows"][
-            time: time + num_steps
+            time : time + num_steps
         ]
         if num_steps == 1:
             unreg_flows = unreg_flows[0]
@@ -284,7 +299,9 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["unregulated_flow_max"]
 
-    def get_incoming_flow(self, time: int, num_steps: int = 1) -> float | list[float] | None:
+    def get_incoming_flow(
+        self, time: int, num_steps: int = 1
+    ) -> float | list[float] | None:
 
         """
 
@@ -294,9 +311,13 @@ class Instance(InstanceCore):
         """
 
         if time >= self.get_num_time_steps():
+            warnings.warn(
+                f"Tried to access incoming flow for {time=}, which is greater than {self.get_num_time_steps()=}. "
+                f"None was returned"
+            )
             return None
 
-        incoming_flows = self.data["incoming_flows"][time: time + num_steps]
+        incoming_flows = self.data["incoming_flows"][time : time + num_steps]
         if num_steps == 1:
             incoming_flows = incoming_flows[0]
 
@@ -321,9 +342,13 @@ class Instance(InstanceCore):
         """
 
         if time >= self.get_num_time_steps():
+            warnings.warn(
+                f"Tried to access price for {time=}, which is greater than {self.get_num_time_steps()=}. "
+                f"None was returned"
+            )
             return None
 
-        prices = self.data["energy_prices"][time: time + num_steps]
+        prices = self.data["energy_prices"][time : time + num_steps]
         if num_steps == 1:
             prices = prices[0]
 

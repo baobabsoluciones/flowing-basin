@@ -4,7 +4,6 @@ from cornflow_client.core.tools import load_json
 import pandas as pd
 from datetime import datetime
 import pickle
-import os
 from random import randint
 
 
@@ -18,7 +17,7 @@ class Training:
         num_prices: int,
         num_incoming_flows: int,
         num_unreg_flows: int,
-        initial_row: int | datetime = None
+        initial_row: int | datetime = None,
     ):
 
         self.length_episodes = length_episodes
@@ -27,7 +26,12 @@ class Training:
         self.training_data = pd.read_pickle(path_training_data)
 
         self.env = Environment(
-            instance=self.create_instance(initial_row=initial_row),
+            instance=self.create_instance(
+                length_episodes=self.length_episodes,
+                constants=self.constants,
+                training_data=self.training_data,
+                initial_row=initial_row,
+            ),
             paths_power_models=paths_power_models,
             num_prices=num_prices,
             num_incoming_flows=num_incoming_flows,
@@ -38,10 +42,16 @@ class Training:
 
         self.env.reset(instance)
 
-    def create_instance(self, initial_row: int | datetime = None) -> Instance:
+    @staticmethod
+    def create_instance(
+        length_episodes: int,
+        constants: dict,
+        training_data: pd.DataFrame,
+        initial_row: int | datetime = None,
+    ) -> Instance:
 
         # Incomplete instance (we create a deepcopy of constants to avoid modifying it)
-        data = pickle.loads(pickle.dumps(self.constants, -1))
+        data = pickle.loads(pickle.dumps(constants, -1))
         instance_constants = Instance.from_dict(data)
 
         # Get necessary constants
@@ -52,45 +62,50 @@ class Training:
         }
 
         # Required rows from data frame
+        total_rows = len(training_data.index)
+        min_row = max(channel_last_lags.values())
+        max_row = total_rows - length_episodes
         if isinstance(initial_row, datetime):
-            initial_row = self.training_data.index[
-                self.training_data["datetime"] == initial_row
+            initial_row = training_data.index[
+                training_data["datetime"] == initial_row
             ].tolist()[0]
         if initial_row is None:
-            total_rows = len(self.training_data.index)
-            initial_row = randint(0, total_rows - self.length_episodes)
-        last_row = initial_row + self.length_episodes - 1
+            initial_row = randint(min_row, max_row)
+        assert initial_row in range(min_row, max_row + 1), f"{initial_row=} should be between {min_row=} and {max_row=}"
+        last_row = initial_row + length_episodes - 1
 
         # Add time-dependent values to the data
 
-        data["datetime"]["start"] = self.training_data.loc[
-            initial_row, "datetime"
-        ].strftime("%Y-%m-%d %H:%M")
-        data["datetime"]["end"] = self.training_data.loc[last_row, "datetime"].strftime(
+        data["datetime"]["start"] = training_data.loc[initial_row, "datetime"].strftime(
+            "%Y-%m-%d %H:%M"
+        )
+        data["datetime"]["end"] = training_data.loc[last_row, "datetime"].strftime(
             "%Y-%m-%d %H:%M"
         )
 
-        data["incoming_flows"] = self.training_data.loc[
+        data["incoming_flows"] = training_data.loc[
             initial_row:last_row, "incoming_flow"
         ].values.tolist()
-        data["energy_prices"] = self.training_data.loc[
+        data["energy_prices"] = training_data.loc[
             initial_row:last_row, "price"
         ].values.tolist()
 
         for order, dam_id in enumerate(dam_ids):
 
-            data["dams"][order]["initial_vol"] = self.training_data.loc[
+            # Initial volume
+            # Not to be confused with the volume at the end of the first time step
+            data["dams"][order]["initial_vol"] = training_data.loc[
                 initial_row, dam_id + "_vol"
             ]
 
-            initial_lags = self.training_data.loc[
+            initial_lags = training_data.loc[
                 initial_row - channel_last_lags[dam_id] : initial_row - 1,
                 dam_id + "_flow",
             ].values.tolist()
             initial_lags.reverse()
             data["dams"][order]["initial_lags"] = initial_lags
 
-            data["dams"][order]["unregulated_flows"] = self.training_data.loc[
+            data["dams"][order]["unregulated_flows"] = training_data.loc[
                 initial_row:last_row, dam_id + "_unreg_flow"
             ].values.tolist()
 

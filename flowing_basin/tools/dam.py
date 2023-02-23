@@ -10,7 +10,6 @@ class Dam:
 
         self.num_scenarios = num_scenarios
 
-        # Index, identifier and order of the dam
         self.index = index
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
@@ -20,7 +19,7 @@ class Dam:
         self.min_volume = instance.get_min_vol_of_dam(self.idx)
         self.max_volume = instance.get_max_vol_of_dam(self.idx)
 
-        # Initial volume of dam (m3)
+        # Initial volume of dam (m3) - the STARTING volume in this time step, or the FINAL volume of the previous one
         self.volume = instance.get_initial_vol_of_dam(self.idx)
         if self.num_scenarios > 1:
             self.volume = np.repeat(self.volume, self.num_scenarios)
@@ -53,7 +52,7 @@ class Dam:
 
     def update(
         self,
-        flows: list[float] | np.ndarray,
+        flow_out: float | np.ndarray,
         incoming_flow: float,
         unregulated_flow: float,
         turbined_flow_of_preceding_dam: float,
@@ -61,9 +60,9 @@ class Dam:
 
         """
         Update the volume of the dam, and the state of its connected channel
-        :param flows:
-         - List of flows that should go through each channel, in order (m3/s)
-         - OR Array of shape num_dams x num_scenarios with these flows for every scenario (m3/s)
+        :param flow_out:
+         - Flow exiting the dam to go through the channel (m3/s)
+         - OR Array of shape num_scenarios with the flow exiting the dam in every scenario (m3/s)
         :param incoming_flow: Incoming flow to the river basin (m3/s)
         :param unregulated_flow: Unregulated flow entering the dam (m3/s)
         :param turbined_flow_of_preceding_dam:
@@ -80,9 +79,6 @@ class Dam:
         else:
             flow_contribution = turbined_flow_of_preceding_dam
 
-        # Obtain flow coming out of the dam
-        flow_out = flows[self.index]
-
         # Update volume to get the volume at the END of this time step
         old_volume = self.volume
         volume_increase = (unregulated_flow + flow_contribution) * self.time_step
@@ -96,7 +92,7 @@ class Dam:
 
         # Limit the water that gets out of the dam if volume was below minimum
         # This only changes the value of the flow if the volume was increased to the minimum value
-        flows[self.index] = (old_volume + volume_increase - self.volume) / self.time_step
+        flow_out = (old_volume + volume_increase - self.volume) / self.time_step
 
         # Clip volume to max value
         self.volume = np.clip(self.volume, None, self.max_volume)
@@ -114,4 +110,4 @@ class Dam:
 
         # We update the channel with the new volume (the FINAL volume in this time step),
         # because the channel stores the FINAL maximum flow, which is calculated with this volume
-        return self.channel.update(flows=flows, dam_vol=self.volume)
+        return self.channel.update(flow=flow_out, dam_vol=self.volume)

@@ -111,7 +111,7 @@ class Environment:
                     lags=[0] * self.instance.get_relevant_lags_of_dam(dam_id)[-1],
                     next_unreg_flows=[0] * self.num_unreg_flows,
                 )
-                for dam_id, dam in self.river_basin.dams.items()
+                for dam_id in self.instance.get_ids_of_dams()
             ],
         )
 
@@ -140,7 +140,7 @@ class Environment:
                     next_unreg_flows=[self.instance.get_max_unregulated_flow_of_dam(dam_id)]
                     * self.num_unreg_flows,
                 )
-                for dam_id, dam in self.river_basin.dams.items()
+                for dam_id in self.instance.get_ids_of_dams()
             ],
         )
 
@@ -160,12 +160,12 @@ class Environment:
             dams=[
                 DamObservation(
                     vol=dam.volume,
-                    lags=dam.channel.flows_over_time.squeeze().tolist(),
+                    lags=dam.channel.past_flows.squeeze().tolist(),
                     next_unreg_flows=self.instance.get_unregulated_flow_of_dam(
-                        self.river_basin.time, dam_id, num_steps=self.num_unreg_flows
+                        self.river_basin.time, dam.idx, num_steps=self.num_unreg_flows
                     ),
                 )
-                for dam_id, dam in self.river_basin.dams.items()
+                for dam in self.river_basin.dams
             ],
         )
 

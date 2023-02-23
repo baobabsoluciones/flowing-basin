@@ -19,23 +19,25 @@ class RiverBasin:
         # Number of scenarios (e.g. candidate solutions) for which to do calculations at the same time
         self.num_scenarios = num_scenarios
 
+        self.instance = instance
+
         # Dams inside the flowing basin
-        self.dams = dict()
-        for dam_index, dam_id in enumerate(instance.get_ids_of_dams()):
+        self.dams = []
+        for dam_index, dam_id in enumerate(self.instance.get_ids_of_dams()):
             dam = Dam(
                 index=dam_index,
                 idx=dam_id,
-                instance=instance,
+                instance=self.instance,
                 paths_power_models=paths_power_models,
                 num_scenarios=self.num_scenarios,
             )
-            self.dams.update({dam_id: dam})
+            self.dams.append(dam)
 
         # Identifier of the time step (increases with each update)
         self.time = 0
 
-        # Save instance to get incoming and unregulated flows in the update method
-        self.instance = instance
+        # Create log
+        self.log = self.create_log()
 
     def reset(self, instance: Instance = None):
 
@@ -46,11 +48,30 @@ class RiverBasin:
         """
 
         self.time = 0
+        self.log = self.create_log()
         if instance is not None:
             self.instance = instance
 
-        for dam in self.dams.values():
+        for dam in self.dams:
             dam.reset(self.instance)
+
+    def create_log(self) -> str:
+
+        """
+        Create head for the table-like string in which we will be putting values
+        """
+
+        log = f"{'time': ^15}{'incoming': ^15}"
+        log += "".join([
+            (
+                f"{f'{dam_id}_unreg': ^15}{f'{dam_id}_flow': ^15}{f'{dam_id}_vol': ^15}"
+                f"|\t"
+                f"{f'{dam_id}_turbined': ^15}"
+            )
+            for dam_id in self.instance.get_ids_of_dams()
+        ])
+
+        return log
 
     def update(self, flows: list[float] | np.ndarray) -> float | np.ndarray:
 
@@ -67,34 +88,41 @@ class RiverBasin:
         if isinstance(flows, list):
             assert len(flows) == self.instance.get_num_dams()
         if isinstance(flows, np.ndarray):
-            assert flows.shape == (self.instance.get_num_dams(), self.num_scenarios)
+            assert flows.shape == (
+                self.instance.get_num_dams(),
+                self.num_scenarios,
+            ), f"{flows.shape=} should actually be {(self.instance.get_num_dams(), self.num_scenarios)=}"
 
         # The first dam has no preceding dam
         turbined_flow_of_preceding_dam = 0
 
         # Clip flows according to the flow limits of the channels
-        for dam_index, dam in enumerate(self.dams.values()):
+        for dam_index, dam in enumerate(self.dams):
             flows[dam_index] = np.clip(flows[dam_index], 0, dam.channel.flow_limit)
             if self.num_scenarios == 1:
                 flows[dam_index] = flows[dam_index].item()
 
         # Update dams
-        for dam_id, dam in self.dams.items():
+        incoming_flow = self.instance.get_incoming_flow(self.time)
+        if self.num_scenarios == 1:
+            self.log += f"\n{round(self.time, 2): ^15}{round(incoming_flow, 2): ^15}"
+        for dam in self.dams:
+            flow_out = flows[dam.index]
+            unregulated_flow = self.instance.get_unregulated_flow_of_dam(self.time, dam.idx)
             turbined_flow = dam.update(
-                flows=flows,
-                incoming_flow=self.instance.get_incoming_flow(self.time),
-                unregulated_flow=self.instance.get_unregulated_flow_of_dam(
-                    self.time, dam_id
-                ),
+                flow_out=flow_out,
+                incoming_flow=incoming_flow,
+                unregulated_flow=unregulated_flow,
                 turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam,
             )
             turbined_flow_of_preceding_dam = turbined_flow
+            if self.num_scenarios == 1:
+                self.log += f"{round(unregulated_flow, 2): ^15}{round(flow_out, 2): ^15}{round(dam.volume, 2): ^15}" \
+                            f"|\t{round(turbined_flow, 2): ^15}"
 
         # Calculate income
         price = self.instance.get_price(self.time)
-        power = sum(
-            dam.channel.power_group.power for dam in self.dams.values()
-        )
+        power = sum(dam.channel.power_group.power for dam in self.dams)
         time_step_hours = self.instance.get_time_step() / 3600
         income = price * power * time_step_hours
 
@@ -121,7 +149,7 @@ class RiverBasin:
 
         return income
 
-    def get_state(self):
+    def get_state(self) -> dict:
 
         """
         Returns the state of the river basin
@@ -140,15 +168,14 @@ class RiverBasin:
             "next_incoming_flow": self.instance.get_incoming_flow(self.time),
             "next_price": self.instance.get_price(self.time),
         }
-
-        for dam_id, dam in self.dams.items():
-            state[dam_id] = {
+        for dam in self.dams:
+            state[dam.idx] = {
                 "vol": dam.volume,
                 "flow_limit": dam.channel.flow_limit,
                 "next_unregulated_flow": self.instance.get_unregulated_flow_of_dam(
-                    self.time, dam_id
+                    self.time, dam.idx
                 ),
-                "lags": dam.channel.flows_over_time,
+                "lags": dam.channel.past_flows,
                 "power": dam.channel.power_group.power,
                 "turbined_flow": dam.channel.power_group.turbined_flow,
             }

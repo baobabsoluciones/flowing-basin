@@ -9,8 +9,8 @@ from datetime import datetime
 import os
 
 LENGTH_EPISODE = 24 * 4
-START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
-# START = None
+# START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
+START = None
 # Use None if you want a random starting datetime
 CHECK_INCOMES = True
 CHECK_VOLUMES = True
@@ -48,15 +48,10 @@ river_basin = RiverBasin(instance=instance, paths_power_models=paths_power_model
 
 # Calculate volumes, turbined flows and powers with the decisions saved in data ---- #
 
-vols_calc = {
-    dam_id: [] for dam_id in instance.get_ids_of_dams()
-}
-turbined_flows_calc = {
-    dam_id: [] for dam_id in instance.get_ids_of_dams()
-}
-powers_calc = {
-    dam_id: [] for dam_id in instance.get_ids_of_dams()
-}
+vols_calc = {dam_id: [] for dam_id in instance.get_ids_of_dams()}
+turbined_flows_calc = {dam_id: [] for dam_id in instance.get_ids_of_dams()}
+powers_calc = {dam_id: [] for dam_id in instance.get_ids_of_dams()}
+incomes = []
 
 initial_state = river_basin.get_state()
 old_state = initial_state
@@ -65,11 +60,14 @@ for dam_id in instance.get_ids_of_dams():
     vols_calc[dam_id].append(initial_state[dam_id]["vol"])
     turbined_flows_calc[dam_id].append(initial_state[dam_id]["turbined_flow"])
     powers_calc[dam_id].append(initial_state[dam_id]["power"])
+incomes.append(None)
 
 decisions = [
     [dam1_flow, dam2_flow]
-    for dam1_flow, dam2_flow in zip(df["dam1_flow"].loc[initial_row: last_row],
-                                    df["dam2_flow"].loc[initial_row: last_row])
+    for dam1_flow, dam2_flow in zip(
+        df["dam1_flow"].loc[initial_row:last_row],
+        df["dam2_flow"].loc[initial_row:last_row],
+    )
 ]
 print(decisions)
 
@@ -100,29 +98,49 @@ for row, flows in enumerate(decisions):
         vols_calc[dam_id].append(state[dam_id]["vol"])
         turbined_flows_calc[dam_id].append(state[dam_id]["turbined_flow"])
         powers_calc[dam_id].append(state[dam_id]["power"])
+    incomes.append(income)
 
 # Join the calculated volumes, turbined flows and powers with the real values in a data frame ---- #
 
 df1 = pd.DataFrame()
 
-df1["datetime"] = np.array(df["datetime"].loc[initial_row - 1: last_row])
+df1["datetime"] = np.array(df["datetime"].loc[initial_row - 1 : last_row])
 
 for dam_id in instance.get_ids_of_dams():
 
-    df1[dam_id + "_flow"] = np.array(df[dam_id + "_flow"].loc[initial_row - 1: last_row])
+    df1[dam_id + "_flow"] = np.array(
+        df[dam_id + "_flow"].loc[initial_row - 1 : last_row]
+    )
 
     # The volume stored in data is the initial volume of every period (and not the final volume, as we do)
     # This is why we shift the column of the data by one row, so it represents the final volume in every time step
-    df1[dam_id + "_vol_REAL"] = np.array(df[dam_id + "_vol"].loc[initial_row: last_row + 1])
+    df1[dam_id + "_vol_REAL"] = np.array(
+        df[dam_id + "_vol"].loc[initial_row : last_row + 1]
+    )
     df1[dam_id + "_vol_CALC"] = np.array(vols_calc[dam_id])
 
-    df1[dam_id + "_turbined_flow_REAL"] = np.array(df[dam_id + "_turbined_flow"].loc[initial_row - 1: last_row])
+    df1[dam_id + "_turbined_flow_REAL"] = np.array(
+        df[dam_id + "_turbined_flow"].loc[initial_row - 1 : last_row]
+    )
     df1[dam_id + "_turbined_flow_CALC"] = np.array(turbined_flows_calc[dam_id])
 
-    df1[dam_id + "_power_REAL"] = np.array(df[dam_id + "_power"].loc[initial_row - 1: last_row])
+    df1[dam_id + "_power_REAL"] = np.array(
+        df[dam_id + "_power"].loc[initial_row - 1 : last_row]
+    )
     df1[dam_id + "_power_CALC"] = np.array(powers_calc[dam_id])
 
-    df1[dam_id + "_unreg_flow"] = np.array(df[dam_id + "_unreg_flow"].loc[initial_row - 1: last_row])
+    df1[dam_id + "_unreg_flow"] = np.array(
+        df[dam_id + "_unreg_flow"].loc[initial_row - 1 : last_row]
+    )
+
+df1["price"] = np.array(df["price"].loc[initial_row - 1 : last_row])
+df1["income_REAL"] = np.array(
+    (df1["dam1_power_REAL"] + df1["dam2_power_REAL"])
+    * instance.get_time_step()
+    / 3600
+    * df1["price"]
+)
+df1["income_CALC"] = np.array(incomes)
 
 print(df1)
 

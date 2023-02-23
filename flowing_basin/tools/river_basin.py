@@ -61,15 +61,17 @@ class RiverBasin:
         Create head for the table-like string in which we will be putting values
         """
 
-        log = f"{'time': ^15}{'incoming': ^15}"
+        log = f"{'time': ^13}{'incoming': ^13}"
         log += "".join([
             (
-                f"{f'{dam_id}_unreg': ^15}{f'{dam_id}_flow': ^15}{f'{dam_id}_vol': ^15}"
+                f"{f'{dam_id}_unreg': ^13}{f'{dam_id}_flow': ^13}{f'{dam_id}_netflow': ^13}"
+                f"{f'{dam_id}_volchange': ^15}{f'{dam_id}_vol': ^13}{f'{dam_id}_power': ^13}"
                 f"|\t"
                 f"{f'{dam_id}_turbined': ^15}"
             )
             for dam_id in self.instance.get_ids_of_dams()
         ])
+        log += f"{'price': ^13}{'income': ^13}"
 
         return log
 
@@ -105,7 +107,7 @@ class RiverBasin:
         # Update dams
         incoming_flow = self.instance.get_incoming_flow(self.time)
         if self.num_scenarios == 1:
-            self.log += f"\n{round(self.time, 2): ^15}{round(incoming_flow, 2): ^15}"
+            self.log += f"\n{round(self.time, 2): ^13}{round(incoming_flow, 2): ^13}"
         for dam in self.dams:
             flow_out = flows[dam.index]
             unregulated_flow = self.instance.get_unregulated_flow_of_dam(self.time, dam.idx)
@@ -117,14 +119,25 @@ class RiverBasin:
             )
             turbined_flow_of_preceding_dam = turbined_flow
             if self.num_scenarios == 1:
-                self.log += f"{round(unregulated_flow, 2): ^15}{round(flow_out, 2): ^15}{round(dam.volume, 2): ^15}" \
-                            f"|\t{round(turbined_flow, 2): ^15}"
+                net_flow = (
+                    incoming_flow + unregulated_flow - flow_out if dam.order == 1 else
+                    turbined_flow_of_preceding_dam + unregulated_flow - flow_out
+                )
+                self.log += (
+                    f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^13}{round(net_flow, 4): ^13}"
+                    f"{round(net_flow * self.instance.get_time_step(), 5): ^15}{round(dam.volume, 2): ^13}"
+                    f"{round(dam.channel.power_group.power, 2): ^13}"
+                    f"|\t"
+                    f"{round(turbined_flow, 5): ^15}"
+                )
 
         # Calculate income
         price = self.instance.get_price(self.time)
         power = sum(dam.channel.power_group.power for dam in self.dams)
         time_step_hours = self.instance.get_time_step() / 3600
         income = price * power * time_step_hours
+        if self.num_scenarios == 1:
+            self.log += f"{round(price, 2): ^13}{round(income, 2): ^13}"
 
         # Increase time step identifier to get the next price, incoming flow, and unregulated flows
         self.time = self.time + 1

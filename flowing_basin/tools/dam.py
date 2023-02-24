@@ -5,12 +5,11 @@ import numpy as np
 
 class Dam:
     def __init__(
-        self, index: int, idx: str, instance: Instance, paths_power_models: dict[str, str], num_scenarios: int
+        self, idx: str, instance: Instance, paths_power_models: dict[str, str], num_scenarios: int
     ):
 
         self.num_scenarios = num_scenarios
 
-        self.index = index
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
 
@@ -30,7 +29,6 @@ class Dam:
             self.volume = self.volume.item()
 
         self.channel = Channel(
-            index=self.index,
             idx=self.idx,
             dam_vol=self.volume,
             instance=instance,
@@ -104,7 +102,7 @@ class Dam:
         #     old_volume,
         #     flow_contribution,
         #     unregulated_flow,
-        #     flows[self.index],
+        #     flow_out,
         #     self.volume,
         # )
 

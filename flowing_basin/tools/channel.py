@@ -6,7 +6,6 @@ import numpy as np
 class Channel:
     def __init__(
         self,
-        index: int,
         idx: str,
         dam_vol: float,
         instance: Instance,
@@ -16,7 +15,6 @@ class Channel:
 
         self.num_scenarios = num_scenarios
 
-        self.index = index
         self.idx = idx
         self.limit_flow_points = instance.get_flow_limit_obs_for_channel(self.idx)
 
@@ -69,7 +67,7 @@ class Channel:
         flow_limit = np.interp(
             dam_vol,
             self.limit_flow_points["observed_vols"],
-            self.limit_flow_points["observed_flows"]
+            self.limit_flow_points["observed_flows"],
         )
 
         # Make sure limit is below maximum flow
@@ -79,7 +77,9 @@ class Channel:
 
         return flow_limit
 
-    def update(self, flow: float | np.ndarray, dam_vol: float | np.ndarray) -> float | np.ndarray:
+    def update(
+        self, flow: float | np.ndarray, dam_vol: float | np.ndarray
+    ) -> float | np.ndarray:
 
         """
         Update the record of flows through the channel, its current maximum flow,
@@ -97,7 +97,9 @@ class Channel:
 
         # Append a column to the left of the array with the assigned flow to the channel in every scenario
         self.past_flows = np.insert(self.past_flows, obj=0, values=flow, axis=1)
-        self.past_flows = np.delete(self.past_flows, obj=self.past_flows.shape[1] - 1, axis=1)
+        self.past_flows = np.delete(
+            self.past_flows, obj=self.past_flows.shape[1] - 1, axis=1
+        )
 
         # Update flow limit to get the flow limit at the END of this time step
         # This is used in the next update() call of RiverBasin

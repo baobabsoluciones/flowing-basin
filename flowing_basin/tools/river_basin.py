@@ -23,9 +23,8 @@ class RiverBasin:
 
         # Dams inside the flowing basin
         self.dams = []
-        for dam_index, dam_id in enumerate(self.instance.get_ids_of_dams()):
+        for dam_id in self.instance.get_ids_of_dams():
             dam = Dam(
-                index=dam_index,
                 idx=dam_id,
                 instance=self.instance,
                 paths_power_models=paths_power_models,
@@ -61,11 +60,12 @@ class RiverBasin:
         Create head for the table-like string in which we will be putting values
         """
 
-        log = f"{'time': ^13}{'incoming': ^13}"
+        log = f"{'time': ^6}{'incoming': ^13}"
         log += "".join([
             (
-                f"{f'{dam_id}_unreg': ^13}{f'{dam_id}_flow': ^13}{f'{dam_id}_netflow': ^13}"
-                f"{f'{dam_id}_volchange': ^15}{f'{dam_id}_vol': ^13}{f'{dam_id}_power': ^13}"
+                f"{f'{dam_id}_unreg': ^13}{f'{dam_id}_flow': ^13}"
+                f"{f'{dam_id}_netflow': ^13}{f'{dam_id}_volchange': ^15}{f'{dam_id}_vol': ^13}"
+                f"{f'{dam_id}_power': ^13}"
                 f"|\t"
                 f"{f'{dam_id}_turbined': ^15}"
             )
@@ -105,11 +105,15 @@ class RiverBasin:
                 flows[dam_index] = flows[dam_index].item()
 
         # Update dams
+
         incoming_flow = self.instance.get_incoming_flow(self.time)
+
         if self.num_scenarios == 1:
-            self.log += f"\n{round(self.time, 2): ^13}{round(incoming_flow, 2): ^13}"
-        for dam in self.dams:
-            flow_out = flows[dam.index]
+            self.log += f"\n{self.time: ^6}{round(incoming_flow, 2): ^13}"
+
+        for dam_index, dam in enumerate(self.dams):
+
+            flow_out = flows[dam_index]
             unregulated_flow = self.instance.get_unregulated_flow_of_dam(self.time, dam.idx)
             turbined_flow = dam.update(
                 flow_out=flow_out,
@@ -117,19 +121,21 @@ class RiverBasin:
                 unregulated_flow=unregulated_flow,
                 turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam,
             )
-            turbined_flow_of_preceding_dam = turbined_flow
+
             if self.num_scenarios == 1:
                 net_flow = (
                     incoming_flow + unregulated_flow - flow_out if dam.order == 1 else
                     turbined_flow_of_preceding_dam + unregulated_flow - flow_out
                 )
                 self.log += (
-                    f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^13}{round(net_flow, 4): ^13}"
-                    f"{round(net_flow * self.instance.get_time_step(), 5): ^15}{round(dam.volume, 2): ^13}"
-                    f"{round(dam.channel.power_group.power, 2): ^13}"
+                    f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^13}"
+                    f"{round(net_flow, 4): ^13}{round(net_flow * self.instance.get_time_step(), 5): ^15}"
+                    f"{round(dam.volume, 2): ^13}{round(dam.channel.power_group.power, 2): ^13}"
                     f"|\t"
                     f"{round(turbined_flow, 5): ^15}"
                 )
+
+            turbined_flow_of_preceding_dam = turbined_flow
 
         # Calculate income
         price = self.instance.get_price(self.time)

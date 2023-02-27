@@ -7,7 +7,10 @@ import pyswarms as ps
 
 class PSO:
     def __init__(self):
-        # Se debe crear la instancia (objeto de Instance; se pueden tomar los datos "input_example1.json") y guardar las rutas a los modelos de ML (los archivos "model_E1.sav" y "model_E2.sav"), y con ello crear el entorno (objeto de RiverBasin):
+
+        # Se debe crear la instancia (objeto de Instance; se pueden tomar los datos "input_example1.json")
+        # y guardar las rutas a los modelos de ML (los archivos "model_E1.sav" y "model_E2.sav"),
+        # y con ello crear el entorno (objeto de RiverBasin):
         self.instance = Instance.from_json("../data/input_example1.json")
         paths_power_models = {
             "dam1": "../ml_models/model_E1.sav",

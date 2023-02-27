@@ -1,6 +1,18 @@
 {
-  "$schema": "http://json-schema.org/schema#",
-  "type": "object",
-  "properties": {},
-  "required": []
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties": {
+        "flows": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                }
+            }
+        }
+    },
+    "required": [
+        "flows"
+    ]
 }

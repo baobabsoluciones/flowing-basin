@@ -64,7 +64,8 @@ class RiverBasin:
         log += "".join([
             (
                 f"{f'{dam_id}_unreg': ^13}{f'{dam_id}_flow': ^13}"
-                f"{f'{dam_id}_netflow': ^13}{f'{dam_id}_volchange': ^15}{f'{dam_id}_vol': ^13}"
+                f"{f'{dam_id}_clipped1': ^14}{f'{dam_id}_clipped2': ^14}"
+                f"{f'{dam_id}_netflow': ^14}{f'{dam_id}_volchange': ^15}{f'{dam_id}_vol': ^13}"
                 f"{f'{dam_id}_power': ^13}"
                 f"|\t"
                 f"{f'{dam_id}_turbined': ^15}"
@@ -95,27 +96,28 @@ class RiverBasin:
                 self.num_scenarios,
             ), f"{flows.shape=} should actually be {(self.instance.get_num_dams(), self.num_scenarios)=}"
 
-        # The first dam has no preceding dam
-        turbined_flow_of_preceding_dam = 0
-
-        # Clip flows according to the flow limits of the channels
-        for dam_index, dam in enumerate(self.dams):
-            flows[dam_index] = np.clip(flows[dam_index], 0, dam.channel.flow_limit)
-            if self.num_scenarios == 1:
-                flows[dam_index] = flows[dam_index].item()
-
-        # Update dams
-
+        # Get incoming flow
         incoming_flow = self.instance.get_incoming_flow(self.time)
-
         if self.num_scenarios == 1:
             self.log += f"\n{self.time: ^6}{round(incoming_flow, 2): ^13}"
 
+        # Clip flows according to the flow limits of the channels
+        clipped_flows = np.copy(flows)
+        if self.num_scenarios == 1:
+            clipped_flows = clipped_flows.tolist()
+        for dam_index, dam in enumerate(self.dams):
+            clipped_flows[dam_index] = np.clip(flows[dam_index], 0, dam.channel.flow_limit)
+
+        # Update dams
+
+        # The first dam has no preceding dam
+        turbined_flow_of_preceding_dam = 0
+
         for dam_index, dam in enumerate(self.dams):
 
-            flow_out = flows[dam_index]
+            flow_out = clipped_flows[dam_index]
             unregulated_flow = self.instance.get_unregulated_flow_of_dam(self.time, dam.idx)
-            turbined_flow = dam.update(
+            turbined_flow, flow_out_clipped = dam.update(
                 flow_out=flow_out,
                 incoming_flow=incoming_flow,
                 unregulated_flow=unregulated_flow,
@@ -128,8 +130,9 @@ class RiverBasin:
                     turbined_flow_of_preceding_dam + unregulated_flow - flow_out
                 )
                 self.log += (
-                    f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^13}"
-                    f"{round(net_flow, 4): ^13}{round(net_flow * self.instance.get_time_step(), 5): ^15}"
+                    f"{round(unregulated_flow, 4): ^13}{round(flows[dam_index], 4): ^13}"
+                    f"{round(clipped_flows[dam_index], 4): ^14}{round(flow_out_clipped, 4): ^14}"
+                    f"{round(net_flow, 4): ^14}{round(net_flow * self.instance.get_time_step(), 5): ^15}"
                     f"{round(dam.volume, 2): ^13}{round(dam.channel.power_group.power, 2): ^13}"
                     f"|\t"
                     f"{round(turbined_flow, 5): ^15}"

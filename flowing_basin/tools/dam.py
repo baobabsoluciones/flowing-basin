@@ -54,7 +54,7 @@ class Dam:
         incoming_flow: float,
         unregulated_flow: float,
         turbined_flow_of_preceding_dam: float,
-    ) -> float | np.ndarray:
+    ) -> tuple[float, float] | tuple[np.ndarray, float]:
 
         """
         Update the volume of the dam, and the state of its connected channel
@@ -66,9 +66,10 @@ class Dam:
         :param turbined_flow_of_preceding_dam:
          - Turbined flow of the previous dam, that is entering this dam (m3/s)
          - OR Array of shape num_scenarios containing these flows (m3/s)
-        :return:
-         - Turbined flow in the power group (m3/s)
-         - OR Array of shape num_scenarios containing the turbined flow of every scenario (m3/s)
+        :return: Tuple with:
+         1. - Turbined flow in the power group (m3/s)
+            - OR Array of shape num_scenarios containing the turbined flow of every scenario (m3/s)
+         2. The flow coming out of the dam (possibly clipped because of volume limit)
         """
 
         # Obtain flow coming into the dam from the river or the previous dam
@@ -108,4 +109,4 @@ class Dam:
 
         # We update the channel with the new volume (the FINAL volume in this time step),
         # because the channel stores the FINAL maximum flow, which is calculated with this volume
-        return self.channel.update(flow=flow_out, dam_vol=self.volume)
+        return self.channel.update(flow=flow_out, dam_vol=self.volume), flow_out

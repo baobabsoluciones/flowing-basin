@@ -20,7 +20,7 @@ EXTENSION = ".png"
 
 # Episode length and starting date
 LENGTH_EPISODE = 24 * 4  # One day
-START = datetime.strptime("2020-04-09 03:15", "%Y-%m-%d %H:%M")
+START = datetime.strptime("2020-12-01 05:45", "%Y-%m-%d %H:%M")
 # START = None
 # Use None if you want a random starting datetime
 
@@ -111,7 +111,6 @@ log_real = river_basin.create_log()
 
 for row, flows in enumerate(decisions):
 
-    # Check consistency
     income = river_basin.update(flows)
     state = river_basin.get_state()
     if CHECK_VOLUMES:
@@ -157,7 +156,8 @@ for row, flows in enumerate(decisions):
             turbined_flow_of_preceding_dam + unregulated_flow - flow_out
         )
         log_real += (
-            f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^13}"
+            f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^14}"
+            f"{round(flow_out, 4): ^14}{round(flow_out, 4): ^14}"
             f"{round(net_flow, 4): ^13}{round(net_flow * instance.get_time_step(), 5): ^15}"
             f"{round(volume, 2): ^13}{round(power, 2): ^13}"
             f"|\t"

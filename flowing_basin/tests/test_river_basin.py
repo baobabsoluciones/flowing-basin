@@ -242,7 +242,7 @@ if __name__ == "__main__":
     print(f"state after deep update: {river_basin2.get_state()}")
     print(f"accumulated income: {income}")
 
-    print("---- SCENARIOS VA, DEEP UPDATE WITH VARIATIONS ----")
+    print("---- SCENARIO VA, DEEP UPDATE WITH VARIATIONS ----")
     river_basin1.reset()
     decisionsVA = [
         [0.5, 0.5],
@@ -252,17 +252,34 @@ if __name__ == "__main__":
     print(f"accumulated income: {income}")
     print(river_basin1.log)
 
+    print("---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS ----")
+    river_basin3.reset()
+    decisionsNVABC = np.array(
+        [
+            [
+                [0.5, 0.75, 1],
+                [0.5, 0.75, 1],
+            ],
+            [
+                [0.25, 0.5, 1],
+                [0.25, 0.5, 1],
+            ],
+        ]
+    )
+    income = river_basin3.deep_update_relative_variations(decisionsNVABC)
+    print(f"accumulated income: {income}")
+
     print("---- SCENARIOS VA, VB and VC, EQUIVALENT NORMAL DEEP UPDATE ----")
     river_basin3.reset()
     decisionsNVABC = np.array(
         [
             [
-                [13.60645663, 10.06895663, 8.30020663],
-                [12.17849932, 9.36099932, 7.95224932],
+                [13.60645663, 17.14395663, 20.68145663],
+                [12.17849932, 14.99599932, 17.81349932],
             ],
             [
-                [17.14395663, 11.83770663, 9.14920663],
-                [14.99599932, 10.76974932, 8.62844932],
+                [17.14395663, 21.225, 28.3],
+                [9.19225623, 12.00975623, 17.64475623],
             ],
         ]
     )

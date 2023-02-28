@@ -78,13 +78,16 @@ class RiverBasin:
 
         return log
 
-    def update(self, flows: list[float] | np.ndarray) -> float | np.ndarray:
+    def update(
+        self, flows: list[float] | np.ndarray, return_clipped_flows: bool = False
+    ) -> (float | np.ndarray) | (tuple[float, float] | tuple[np.ndarray, np.ndarray]):
 
         """
 
         :param flows:
          - List of flows that should go through each channel in the current time step (m3/s)
          - OR Array of shape num_dams x num_scenarios with these flows for every scenario (m3/s)
+        :param return_clipped_flows: If true, return the flows clipped because of the flow limits and minimum volumes
         :return:
          - Income obtained with the indicated flows in this time step (€)
          - OR Array of size num_scenarios with the income obtained in every scenario (€)
@@ -100,11 +103,6 @@ class RiverBasin:
                 self.num_scenarios,
             ), f"{flows.shape=} should actually be {(self.instance.get_num_dams(), self.num_scenarios)=}"
 
-        # Get incoming flow
-        incoming_flow = self.instance.get_incoming_flow(self.time)
-        if self.num_scenarios == 1:
-            self.log += f"\n{self.time: ^6}{round(incoming_flow, 2): ^13}"
-
         # Clip flows according to the flow limits of the channels
         clipped_flows = np.copy(flows)
         if self.num_scenarios == 1:
@@ -114,13 +112,19 @@ class RiverBasin:
                 flows[dam_index], 0, dam.channel.flow_limit
             )
 
-        # Update dams
+        # Update dams ---- #
+
+        # Incoming flow to the first dam
+        incoming_flow = self.instance.get_incoming_flow(self.time)
+        if self.num_scenarios == 1:
+            self.log += f"\n{self.time: ^6}{round(incoming_flow, 2): ^13}"
 
         # The first dam has no preceding dam
         turbined_flow_of_preceding_dam = 0
 
         for dam_index, dam in enumerate(self.dams):
 
+            # Update dam with the flow we take from it, and the incoming and/or unregulated flow it receives
             flow_out = clipped_flows[dam_index]
             unregulated_flow = self.instance.get_unregulated_flow_of_dam(
                 self.time, dam.idx
@@ -132,6 +136,9 @@ class RiverBasin:
                 turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam,
             )
 
+            # Flows may be clipped once again because of the minimum volumes
+            clipped_flows[dam_index] = flow_out_clipped
+
             if self.num_scenarios == 1:
                 net_flow = (
                     incoming_flow + unregulated_flow - flow_out
@@ -140,7 +147,7 @@ class RiverBasin:
                 )
                 self.log += (
                     f"{round(unregulated_flow, 4): ^13}{round(flows[dam_index], 4): ^13}"
-                    f"{round(clipped_flows[dam_index], 4): ^14}{round(flow_out_clipped, 4): ^14}"
+                    f"{round(flow_out, 4): ^14}{round(flow_out_clipped, 4): ^14}"
                     f"{round(net_flow, 4): ^14}{round(net_flow * self.instance.get_time_step(), 5): ^15}"
                     f"{round(dam.volume, 2): ^13}{round(dam.channel.power_group.power, 2): ^13}"
                     f"|\t"
@@ -160,6 +167,8 @@ class RiverBasin:
         # Increase time step identifier to get the next price, incoming flow, and unregulated flows
         self.time = self.time + 1
 
+        if return_clipped_flows:
+            return income, clipped_flows
         return income
 
     def sanitize_input(self, input_all_periods: list[list[float]] | np.ndarray) -> None:
@@ -237,9 +246,6 @@ class RiverBasin:
                 (self.instance.get_num_dams(), self.num_scenarios)
             )
 
-        print(f"{max_flows=}")
-        print(self.time, {dam.idx: dam.channel.past_flows for dam in self.dams})
-
         # Update river basin repeatedly
         income = 0
         for rel_vars in rel_vars_all_periods:
@@ -248,10 +254,9 @@ class RiverBasin:
             if self.num_scenarios == 1:
                 new_flows = new_flows.tolist()
 
-            income += self.update(new_flows)
-            old_flows = new_flows
-
-            print(self.time, new_flows)
+            new_income, clipped_flows = self.update(new_flows, return_clipped_flows=True)
+            income += new_income
+            old_flows = clipped_flows
 
         return income
 

@@ -54,7 +54,7 @@ class Dam:
         incoming_flow: float,
         unregulated_flow: float,
         turbined_flow_of_preceding_dam: float,
-    ) -> tuple[float, float] | tuple[np.ndarray, float]:
+    ) -> tuple[float, float] | tuple[np.ndarray, np.ndarray]:
 
         """
         Update the volume of the dam, and the state of its connected channel
@@ -69,7 +69,8 @@ class Dam:
         :return: Tuple with:
          1. - Turbined flow in the power group (m3/s)
             - OR Array of shape num_scenarios containing the turbined flow of every scenario (m3/s)
-         2. The flow coming out of the dam (possibly clipped because of volume limit)
+         2. - The flow coming out of the dam (possibly clipped because of volume limit)
+            - OR Array of shape num_scenarios containing the clipped flow of every scenario (m3/s)
         """
 
         # Obtain flow coming into the dam from the river or the previous dam

@@ -31,8 +31,9 @@ class PowerGroup:
         self.power = self.get_power(flows_over_time)
         self.turbined_flow = self.get_turbined_flow(self.power)
 
-    def reset(self, flows_over_time: np.ndarray):
+    def reset(self, flows_over_time: np.ndarray, num_scenarios: int):
 
+        self.num_scenarios = num_scenarios
         self.power = self.get_power(flows_over_time)
         self.turbined_flow = self.get_turbined_flow(self.power)
 

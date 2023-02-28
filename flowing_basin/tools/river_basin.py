@@ -1,6 +1,8 @@
 from flowing_basin.core import Instance
 from .dam import Dam
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 
 class RiverBasin:
@@ -35,10 +37,11 @@ class RiverBasin:
         # Identifier of the time step (increases with each update)
         self.time = 0
 
-        # Create log
+        # Create history and log
+        self.history = self.create_history()
         self.log = self.create_log()
 
-    def reset(self, instance: Instance = None):
+    def reset(self, instance: Instance = None, num_scenarios: int = None):
 
         """
         Resets the river basin
@@ -46,13 +49,72 @@ class RiverBasin:
         and all attributes that represent time-dependent (non-constant) values
         """
 
-        self.time = 0
-        self.log = self.create_log()
         if instance is not None:
             self.instance = instance
+        if num_scenarios is not None:
+            self.num_scenarios = num_scenarios
+        self.time = 0
+        self.history = self.create_history()
+        self.log = self.create_log()
 
         for dam in self.dams:
-            dam.reset(self.instance)
+            dam.reset(instance=self.instance, num_scenarios=self.num_scenarios)
+
+    def create_history(self) -> pd.DataFrame:
+
+        """
+        Create head for the data frame we will be concatenating rows
+        """
+
+        column_list = []
+        for dam_id in self.instance.get_ids_of_dams():
+            column_list += [f"{dam_id}_vol", f"{dam_id}_flow", f"{dam_id}_power"]
+        column_list += ["price"]
+
+        df = pd.DataFrame(columns=column_list)
+
+        return df
+
+    def plot_history(self):
+
+        """
+        Plot series saved in history
+        """
+
+        fig, axs = plt.subplots(1, 3)
+
+        # Add X labels
+        for i in range(3):
+            axs[i].set_xlabel("Time (15min)")
+
+        # Add Y labels
+        axs[0].set_ylabel("Volume (m3)")
+        axs[1].set_ylabel("Flow (m3/s)")
+        axs[2].set_ylabel("Power (MW)")
+        twinax = axs[2].twinx()
+        twinax.set_ylabel("Price (€/MWh)")
+
+        # Plot series
+        for dam_id in self.instance.get_ids_of_dams():
+            axs[0].plot(self.history[f"{dam_id}_vol"], label=f"{dam_id}_vol")
+            axs[1].plot(self.history[f"{dam_id}_flow"], label=f"{dam_id}_flow")
+            axs[2].plot(self.history[f"{dam_id}_power"], label=f"{dam_id}_power")
+        twinax.plot(self.history["price"], color="green", label="price")
+
+        # Add legends
+        for i in range(3):
+            axs[i].legend()
+        twinax.legend()
+
+        # Failed attempt using Pandas' plot method:
+        # subplots = [
+        #     [f"{dam_id}_vol" for dam_id in self.instance.get_ids_of_dams()],
+        #     [f"{dam_id}_flow" for dam_id in self.instance.get_ids_of_dams()],
+        #     ["price", *[f"{dam_id}_power" for dam_id in self.instance.get_ids_of_dams()]]
+        # ]
+        # self.history.plot(ax=axs, subplots=subplots, secondary_y=["price"])
+
+        plt.show()
 
     def create_log(self) -> str:
 
@@ -164,6 +226,23 @@ class RiverBasin:
         if self.num_scenarios == 1:
             self.log += f"{round(price, 2): ^13}{round(income, 2): ^13}"
 
+        # Update history
+        if self.num_scenarios == 1:
+            new_row = dict()
+            for dam_index, dam in enumerate(self.dams):
+                new_row.update(
+                    {
+                        f"{dam.idx}_vol": dam.volume,
+                        f"{dam.idx}_flow": clipped_flows[dam_index],
+                        f"{dam.idx}_power": dam.channel.power_group.power,
+                    }
+                )
+            new_row.update({"price": price})
+            self.history = pd.concat(
+                [self.history, pd.DataFrame([new_row])],
+                ignore_index=True,
+            )
+
         # Increase time step identifier to get the next price, incoming flow, and unregulated flows
         self.time = self.time + 1
 
@@ -186,11 +265,11 @@ class RiverBasin:
                 input_all_periods.shape[0] <= self.instance.get_num_time_steps()
             ), f"{input_all_periods.shape[0]=} should be lower than {self.instance.get_num_time_steps()=}"
 
-    def deep_update(self, flows_all_periods: list[list[float]] | np.ndarray) -> float:
+    def deep_update_flows(self, flows: list[list[float]] | np.ndarray) -> float:
 
         """
 
-        :param flows_all_periods:
+        :param flows:
          - Lists of lists with the flows that should go through each channel in every time step (m3/s)
          - OR Array of shape num_time_steps x num_dams x num_scenarios with these flows for every scenario (m3/s)
         :return:
@@ -198,29 +277,34 @@ class RiverBasin:
          - OR Array of size num_scenarios with the accumulated income obtained in every scenario (€)
         """
 
-        self.sanitize_input(flows_all_periods)
+        self.sanitize_input(flows)
 
         income = 0
-        for flows in flows_all_periods:
-            income += self.update(flows)
+        for flow in flows:
+            income += self.update(flow)
 
         return income
 
-    def deep_update_relative_variations(
-        self, rel_vars_all_periods: list[list[float]] | np.ndarray
-    ) -> float:
+    def deep_update_relvars(
+        self,
+        relvars: list[list[float]] | np.ndarray,
+        return_equivalent_flows: bool = False,
+    ) -> (float | np.ndarray) | (
+        tuple[float, list[list[float]]] | tuple[np.ndarray, np.ndarray]
+    ):
 
         """
 
-        :param rel_vars_all_periods:
+        :param relvars: Relative variations
          - Lists of lists with the variation of flow (as a fraction of flow max) through each channel in every time step (m3/s)
          - OR Array of shape num_time_steps x num_dams x num_scenarios with these relative variations for every scenario (m3/s)
+        :param return_equivalent_flows: If True, returns the flows equivalent to the given relative variations
         :return:
          - Accumulated income obtained with the indicated relative variations in all time steps (€)
          - OR Array of size num_scenarios with the accumulated income obtained in every scenario (€)
         """
 
-        self.sanitize_input(rel_vars_all_periods)
+        self.sanitize_input(relvars)
 
         # Max flow through each channel
         max_flows = np.array(
@@ -246,18 +330,30 @@ class RiverBasin:
                 (self.instance.get_num_dams(), self.num_scenarios)
             )
 
+        # Equivalent flows to the given relvars
+        equivalent_flows = []
+
         # Update river basin repeatedly
         income = 0
-        for rel_vars in rel_vars_all_periods:
+        for relvar in relvars:
 
-            new_flows = old_flows + rel_vars * max_flows
+            new_flows = old_flows + relvar * max_flows
             if self.num_scenarios == 1:
                 new_flows = new_flows.tolist()
 
-            new_income, clipped_flows = self.update(new_flows, return_clipped_flows=True)
+            new_income, clipped_flows = self.update(
+                new_flows, return_clipped_flows=True
+            )
             income += new_income
+            equivalent_flows.append(clipped_flows)
             old_flows = clipped_flows
 
+        if self.num_scenarios > 1:
+            # Turn list into array
+            equivalent_flows = np.array(equivalent_flows)
+
+        if return_equivalent_flows:
+            return income, equivalent_flows
         return income
 
     def get_state(self) -> dict:

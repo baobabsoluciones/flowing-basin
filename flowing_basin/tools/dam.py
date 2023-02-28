@@ -36,7 +36,9 @@ class Dam:
             num_scenarios=self.num_scenarios,
         )
 
-    def reset(self, instance: Instance):
+    def reset(self, instance: Instance, num_scenarios: int):
+
+        self.num_scenarios = num_scenarios
 
         self.volume = instance.get_initial_vol_of_dam(self.idx)
         if self.num_scenarios > 1:
@@ -46,7 +48,7 @@ class Dam:
         if self.num_scenarios == 1:
             self.volume = self.volume.item()
 
-        self.channel.reset(dam_vol=self.volume, instance=instance)
+        self.channel.reset(dam_vol=self.volume, instance=instance, num_scenarios=self.num_scenarios)
 
     def update(
         self,

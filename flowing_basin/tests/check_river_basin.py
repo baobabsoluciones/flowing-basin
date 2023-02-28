@@ -14,13 +14,14 @@ CHECK_INCOMES = True
 CHECK_VOLUMES = True
 
 # Path and extension in which to save the generated graphs
+SAVE_PLOT = False
 PATH_START = "river_basin_checks/check_"
 PATH_END = ""
 EXTENSION = ".png"
 
 # Episode length and starting date
 LENGTH_EPISODE = 24 * 4  # One day
-START = datetime.strptime("2020-12-01 05:45", "%Y-%m-%d %H:%M")
+START = datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M")
 # START = None
 # Use None if you want a random starting datetime
 
@@ -235,11 +236,12 @@ for i, dam in enumerate(["dam1", "dam2"]):
 plt.show()
 
 # Save plot
-version = 0
-path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M')) + PATH_END + EXTENSION
-while os.path.exists(path):
-    version += 1
-    path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M'))+ PATH_END + f"_v{version}" + EXTENSION
-print(path)
-fig.savefig(fname=path)
-plt.close()
+if SAVE_PLOT:
+    version = 0
+    path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M')) + PATH_END + EXTENSION
+    while os.path.exists(path):
+        version += 1
+        path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M')) + PATH_END + f"_v{version}" + EXTENSION
+    print(path)
+    fig.savefig(fname=path)
+    plt.close()

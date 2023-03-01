@@ -1,1 +1,1 @@
-from .pso import PSO
+from .pso import PSOFlowVariations, PSOFlows

@@ -267,7 +267,7 @@ class RiverBasin:
                 input_all_periods.shape[0] <= self.instance.get_num_time_steps()
             ), f"{input_all_periods.shape[0]=} should be lower than {self.instance.get_num_time_steps()=}"
 
-    def deep_update_flows(self, flows: list[list[float]] | np.ndarray) -> float:
+    def deep_update_flows(self, flows: list[list[float]] | np.ndarray) -> float | np.ndarray:
 
         """
 

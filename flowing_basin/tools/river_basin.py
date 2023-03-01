@@ -45,7 +45,7 @@ class RiverBasin:
 
         """
         Resets the river basin
-        This method resets the instance (if given)
+        This method resets the instance and the number of scenarios (if given)
         and all attributes that represent time-dependent (non-constant) values
         """
 
@@ -64,6 +64,7 @@ class RiverBasin:
 
         """
         Create head for the data frame we will be concatenating rows
+        This data frame will only be filled if there is a single scenario
         """
 
         column_list = []
@@ -120,6 +121,7 @@ class RiverBasin:
 
         """
         Create head for the table-like string in which we will be putting values
+        This log will only be filled if there is a single scenario
         """
 
         log = f"{'time': ^6}{'incoming': ^13}"

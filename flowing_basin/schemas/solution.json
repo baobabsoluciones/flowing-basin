@@ -2,17 +2,29 @@
     "$schema": "http://json-schema.org/schema#",
     "type": "object",
     "properties": {
-        "flows": {
+        "dams": {
             "type": "array",
             "items": {
-                "type": "array",
-                "items": {
-                    "type": "number"
-                }
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "required": [
+                    "flows",
+                    "id"
+                ]
             }
         }
     },
     "required": [
-        "flows"
+        "dams"
     ]
 }

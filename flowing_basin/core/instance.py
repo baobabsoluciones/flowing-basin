@@ -276,7 +276,8 @@ class Instance(InstanceCore):
 
         if time >= self.get_num_time_steps():
             warnings.warn(
-                f"Tried to access unregulated flow for {time=}, which is greater than {self.get_num_time_steps()=}. "
+                f"Tried to access unregulated flow for {time=}, "
+                f"which is equal or greater than {self.get_num_time_steps()=}. "
                 f"None was returned"
             )
             return None
@@ -312,7 +313,8 @@ class Instance(InstanceCore):
 
         if time >= self.get_num_time_steps():
             warnings.warn(
-                f"Tried to access incoming flow for {time=}, which is greater than {self.get_num_time_steps()=}. "
+                f"Tried to access incoming flow for {time=}, "
+                f"which is equal or greater than {self.get_num_time_steps()=}. "
                 f"None was returned"
             )
             return None
@@ -343,7 +345,8 @@ class Instance(InstanceCore):
 
         if time >= self.get_num_time_steps():
             warnings.warn(
-                f"Tried to access price for {time=}, which is greater than {self.get_num_time_steps()=}. "
+                f"Tried to access price for {time=}, "
+                f"which is equal or greater than {self.get_num_time_steps()=}. "
                 f"None was returned"
             )
             return None

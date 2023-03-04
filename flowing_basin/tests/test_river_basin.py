@@ -31,14 +31,6 @@ def check_volume(
         min_vol_dam1,
         max_vol_dam1,
     )
-    # print(
-    #     "dam1 calc in TEST",
-    #     old_state["dam1"]["vol"],
-    #     old_state["next_incoming_flow"],
-    #     old_state["dam1"]["next_unregulated_flow"],
-    #     state["dam1"]["lags"][:, 0],
-    #     dam1_vol,
-    # )
     if num_scenarios == 1:
         dam1_vol = dam1_vol.item()
 
@@ -54,14 +46,6 @@ def check_volume(
         min_vol_dam2,
         max_vol_dam2,
     )
-    # print(
-    #     "dam2 calc in TEST",
-    #     old_state["dam2"]["vol"],
-    #     state["dam1"]["turbined_flow"],
-    #     old_state["dam2"]["next_unregulated_flow"],
-    #     state["dam2"]["lags"][:, 0],
-    #     dam2_vol,
-    # )
     if num_scenarios == 1:
         dam2_vol = dam2_vol.item()
 
@@ -179,47 +163,47 @@ if __name__ == "__main__":
         paths_power_models=paths_power_models
     )
 
-    # print("---- SCENARIO A ----")
-    # river_basin.reset(num_scenarios=1)
-    # decisionsA = [[6.79, 6.58], [7.49, 6.73], [7.49, 6.73], [7.49, 6.73], [7.49, 6.73]]
-    # test_river_basin(river_basin, decisions=decisionsA)
-    # print("--- log")
-    # print(river_basin.log)
-    # print("--- history")
-    # pd.set_option('display.max_columns', None)
-    # print(river_basin.history)
-    #
-    # print("---- SCENARIO A, WITH DEEP UPDATE ----")
-    # river_basin.reset(num_scenarios=1)
-    # income = river_basin.deep_update_flows(decisionsA)
-    # print(">>>> deep update")
-    # print(f"state after deep update: {river_basin.get_state()}")
-    # print(f"accumulated income: {income}")
-    #
-    # print("---- SCENARIO A, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
-    # river_basin.reset(num_scenarios=1)
-    # decisions_all_periods = [[0, 0] for _ in range(instance.get_num_time_steps())]
-    # print(f"number of time steps: {instance.get_num_time_steps()}")
-    # income = river_basin.deep_update_flows(decisions_all_periods)
-    # print(">>>> deep update")
-    # print(f"state after deep update: {river_basin.get_state()}")
-    # print(f"accumulated income: {income}")
-    #
-    # print("---- SCENARIO B ----")
-    # river_basin.reset(num_scenarios=1)
-    # decisionsB = [[8, 7], [9, 8.5]]
-    # test_river_basin(
-    #     river_basin,
-    #     decisions=decisionsB,
-    # )
-    #
-    # print("---- SCENARIOS A and B ----")
-    # river_basin.reset(num_scenarios=2)
-    # decisionsAB = np.array([[[6.79, 8], [6.58, 7]], [[7.49, 9], [6.73, 8.5]]])
-    # test_river_basin(
-    #     river_basin,
-    #     decisions=decisionsAB,
-    # )
+    print("---- SCENARIO A ----")
+    river_basin.reset(num_scenarios=1)
+    decisionsA = [[6.79, 6.58], [7.49, 6.73], [7.49, 6.73], [7.49, 6.73], [7.49, 6.73]]
+    test_river_basin(river_basin, decisions=decisionsA)
+    print("--- log")
+    print(river_basin.log)
+    print("--- history")
+    pd.set_option('display.max_columns', None)
+    print(river_basin.history)
+
+    print("---- SCENARIO A, WITH DEEP UPDATE ----")
+    river_basin.reset(num_scenarios=1)
+    income = river_basin.deep_update_flows(decisionsA)
+    print(">>>> deep update")
+    print(f"state after deep update: {river_basin.get_state()}")
+    print(f"accumulated income: {income}")
+
+    print("---- SCENARIO A, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
+    river_basin.reset(num_scenarios=1)
+    decisions_all_periods = [[0, 0] for _ in range(instance.get_num_time_steps())]
+    print(f"number of time steps: {instance.get_num_time_steps()}")
+    income = river_basin.deep_update_flows(decisions_all_periods)
+    print(">>>> deep update")
+    print(f"state after deep update: {river_basin.get_state()}")
+    print(f"accumulated income: {income}")
+
+    print("---- SCENARIO B ----")
+    river_basin.reset(num_scenarios=1)
+    decisionsB = [[8, 7], [9, 8.5]]
+    test_river_basin(
+        river_basin,
+        decisions=decisionsB,
+    )
+
+    print("---- SCENARIOS A and B ----")
+    river_basin.reset(num_scenarios=2)
+    decisionsAB = np.array([[[6.79, 8], [6.58, 7]], [[7.49, 9], [6.73, 8.5]]])
+    test_river_basin(
+        river_basin,
+        decisions=decisionsAB,
+    )
     #
     # print("---- SCENARIOS A and B, WITH DEEP UPDATE ----")
     # river_basin.reset(num_scenarios=2)
@@ -237,24 +221,24 @@ if __name__ == "__main__":
     # print(f"state after deep update: {river_basin.get_state()}")
     # print(f"accumulated income: {income}")
 
-    print("---- SCENARIOS A, B and C, WITH DEEP UPDATE ----")
-    decisionsABC = np.array(
-        [[[6.79, 8, 1], [6.58, 7, 1]], [[7.49, 9, 1], [6.73, 8.5, 1]]]
-    )
-    river_basin.reset(num_scenarios=3)
-    income = river_basin.deep_update_flows(decisionsABC)
-    print(">>>> deep update")
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {income}")
-
-    print("---- SCENARIOS A, B and C, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
-    padding = np.array([[[0, 0, 0], [0, 0, 0]] for _ in range(instance.get_num_time_steps() - decisionsABC.shape[0])])
-    decisionsABC_all_periods = np.concatenate([decisionsABC, padding])
-    river_basin.reset(num_scenarios=3)
-    income = river_basin.deep_update_flows(decisionsABC_all_periods)
-    print(">>>> deep update")
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {income}")
+    # print("---- SCENARIOS A, B and C, WITH DEEP UPDATE ----")
+    # decisionsABC = np.array(
+    #     [[[6.79, 8, 1], [6.58, 7, 1]], [[7.49, 9, 1], [6.73, 8.5, 1]]]
+    # )
+    # river_basin.reset(num_scenarios=3)
+    # income = river_basin.deep_update_flows(decisionsABC)
+    # print(">>>> deep update")
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {income}")
+    #
+    # print("---- SCENARIOS A, B and C, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
+    # padding = np.array([[[0, 0, 0], [0, 0, 0]] for _ in range(instance.get_num_time_steps() - decisionsABC.shape[0])])
+    # decisionsABC_all_periods = np.concatenate([decisionsABC, padding])
+    # river_basin.reset(num_scenarios=3)
+    # income = river_basin.deep_update_flows(decisionsABC_all_periods)
+    # print(">>>> deep update")
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {income}")
 
     # print("---- SCENARIO VA, DEEP UPDATE WITH VARIATIONS ----")
     # river_basin.reset(num_scenarios=1)

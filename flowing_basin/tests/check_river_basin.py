@@ -15,14 +15,14 @@ CHECK_VOLUMES = True
 
 # Path and extension in which to save the generated graphs
 SAVE_PLOT = False
-PATH_START = "river_basin_checks/check_"
+PATH_START = "river_basin_checks/check_NO-NA_"
 PATH_END = ""
 EXTENSION = ".png"
 
 # Episode length and starting date
 LENGTH_EPISODE = 24 * 4  # One day
-START = datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M")
-# START = None
+# START = datetime.strptime("2021-01-21 12:45", "%Y-%m-%d %H:%M")
+START = None
 # Use None if you want a random starting datetime
 
 # Number of log lines (of the river basin and of the data) that should be printed
@@ -46,6 +46,9 @@ LOG_LINES = LENGTH_EPISODE
 # - Like in 2021-09-29 01:00, in this episode the real volume of dam2 keeps steady,
 #   when it should actually be increasing with the unregulated and turbined flow it gets (as seen in our model)
 #   Something similar (although less striking) happens with the volume of dam1
+# NOTE: These problems arise both with training_data.pickle
+# and with training_data_NO_NA.pickle (in which rows with unknown unregulated flows were eliminated and not set to 0)
+# Although the inconsistency problem is less often (actually, very uncommon) with the second dataset
 
 # ---- CODE ---- #
 
@@ -53,7 +56,7 @@ LOG_LINES = LENGTH_EPISODE
 
 # Create instance
 path_constants = "../data/rl_training_data/constants.json"
-path_training_data = "../data/rl_training_data/training_data.pickle"
+path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"
 df = pd.read_pickle(path_training_data)
 instance = Training.create_instance(
     length_episodes=LENGTH_EPISODE,

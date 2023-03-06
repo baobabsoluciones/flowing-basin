@@ -7,11 +7,6 @@ import numpy as np
 
 class PowerGroup:
 
-    POWER_FLOW_LINE_COEFS = {
-        "dam1": [2.99625925, 0.05524465],
-        "dam2": [1.32432353, 0.25964468],
-    }
-
     def __init__(
         self,
         idx: str,
@@ -26,6 +21,7 @@ class PowerGroup:
         self.idx = idx
         self.power_model = self.get_power_model(paths_power_models[self.idx])
         self.relevant_lags = instance.get_relevant_lags_of_dam(self.idx)
+        self.turbined_flow_points = instance.get_turbined_flow_obs_for_power_group(self.idx)
 
         # Power generated (MW) and turbined flow (m3/s)
         self.power = self.get_power(flows_over_time)
@@ -33,7 +29,13 @@ class PowerGroup:
 
     def reset(self, flows_over_time: np.ndarray, num_scenarios: int):
 
+        """
+        Reset power and turbined flow
+        Power models and turbined flow observations are not reset as they are constant
+        """
+
         self.num_scenarios = num_scenarios
+
         self.power = self.get_power(flows_over_time)
         self.turbined_flow = self.get_turbined_flow(self.power)
 
@@ -83,14 +85,18 @@ class PowerGroup:
 
         :param power:
          - Power (MW)
-         - OR Array of shape num_scenarios with power valoes (MW)
+         - OR Array of shape num_scenarios with power values (MW)
         :return:
          - Corresponding turbined flow (m3/s)
          - OR Array of shape num_scenarios with the corresponding turbined flows (m3/s)
         """
 
-        line = np.poly1d(self.POWER_FLOW_LINE_COEFS[self.idx])
-        turbined_flow = line(power)
+        # Interpolate power to get flow
+        turbined_flow = np.interp(
+            power,
+            self.turbined_flow_points["observed_powers"],
+            self.turbined_flow_points["observed_flows"],
+        )
 
         return turbined_flow
 

@@ -45,6 +45,11 @@ class Dam:
 
     def reset(self, instance: Instance, num_scenarios: int):
 
+        """
+        Reset volume to the initial volume of the given instance
+        Min and max volumes are not reset as they are constant
+        """
+
         self.num_scenarios = num_scenarios
 
         self.volume = instance.get_initial_vol_of_dam(self.idx)

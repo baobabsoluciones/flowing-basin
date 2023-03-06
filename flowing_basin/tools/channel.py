@@ -41,15 +41,23 @@ class Channel:
 
     def reset(self, dam_vol: float | np.ndarray, instance: Instance, num_scenarios: int):
 
+        """
+        Reset all time-varying attributes: past flows, max flow and flow limit
+        Flow limit observations are not reset as they are constant
+        """
+
         self.num_scenarios = num_scenarios
 
+        # Reset past flows
         initial_lags = instance.get_initial_lags_of_channel(self.idx)
         self.past_flows = np.repeat([initial_lags], repeats=self.num_scenarios, axis=0)
 
+        # Reset max flow
         self.flow_max = instance.get_max_flow_of_channel(self.idx)
         if self.num_scenarios > 1:
             self.flow_max = np.repeat(self.flow_max, self.num_scenarios)
 
+        # Reset flow limit
         self.flow_limit = self.get_flow_limit(dam_vol)
 
         self.power_group.reset(flows_over_time=self.past_flows, num_scenarios=self.num_scenarios)

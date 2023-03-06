@@ -11,18 +11,19 @@ paths_power_models = {
 }
 
 # PSO object to find the solution
-use_variations = False
+path_solution = "../data/output_example1.json"
+path_history_plot = "../data/output_example1.png"
+use_variations = True
 if use_variations:
     print("---- SOLVING PROBLEM WITH PSO FLOW VARIATIONS ----")
-    path_solution = "../data/output_example1_variations.json"
     pso = PSOFlowVariations(
         instance=instance,
         paths_power_models=paths_power_models,
         num_particles=20,
+        max_relvar=0.1
     )
 else:
     print("---- SOLVING PROBLEM WITH PSO FLOWS ----")
-    path_solution = "../data/output_example1_flows.json"
     pso = PSOFlows(
         instance=instance,
         paths_power_models=paths_power_models,
@@ -52,10 +53,7 @@ decisions = [
 # Study original solution ---- #
 print("original solution:", decisions)
 income = river_basin.deep_update_flows(decisions)
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-print("optimal solution history:", river_basin.history)
-river_basin.plot_history()
+# river_basin.plot_history()
 print("original solution income:", income)
 
 # Optimal solution found by PSO ---- #
@@ -67,13 +65,5 @@ if solution_inconsistencies:
     print("inconsistencies with schema:", solution_inconsistencies)
 print("optimal solution:", pso.solution.data)
 print("optimal income:", pso.get_objective())
-pso.solution.to_json(path_solution)
-
-# Study optimal solution ---- #
-opt_flows = pso.solution.to_nestedlist()
-print("optimal solution equivalent flows:", opt_flows)
-river_basin.reset()
-opt_income = river_basin.deep_update_flows(opt_flows)
-print("original income calculated with equivalent flows:", opt_income)
-print("optimal solution history:\n", river_basin.history)
-river_basin.plot_history()
+pso.save_solution(path_solution)
+pso.save_history_plot(path_history_plot)

@@ -3,6 +3,7 @@ from flowing_basin.tools import RiverBasin
 from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
 import pyswarms as ps
+import os
 
 
 class PSO(Experiment):
@@ -20,6 +21,7 @@ class PSO(Experiment):
         self.num_dimensions = (
             self.instance.get_num_dams() * self.instance.get_num_time_steps()
         )
+        self.metadata = dict()
 
         # The upper and lower bounds for the position of the particles depend on what they represent,
         # so this attribute must be assigned in the child classes
@@ -119,8 +121,6 @@ class PSO(Experiment):
         )
 
         cost, position = optimizer.optimize(self.objective_function, iters=num_iters)
-        print("optimal solution (inside):", self.particle_to_flows(position))
-        print("optimal income (inside):", -cost)
 
         return cost, position
 
@@ -128,10 +128,13 @@ class PSO(Experiment):
 
         """
         Fill the 'solution' attribute of the object, with the optimal solution found by the PSO algorithm
-        :param options: Dictionary with options given to the PySwarms optimizer (see 'optimize' above for more info)
+        :param options: Dictionary with options given to the PySwarms optimizer (see 'optimize' method for more info)
         :param num_iters: Number of iterations with which to run the optimization algorithm
         :return: A dictionary with status codes
         """
+
+        self.metadata.update({"i": num_iters, "p": self.num_particles})
+        self.metadata.update(options)
 
         _, optimal_particle = self.optimize(options=options, num_iters=num_iters)
         optimal_flows = self.particle_to_flows(optimal_particle)
@@ -153,6 +156,41 @@ class PSO(Experiment):
 
         return total_income
 
+    def get_descriptive_filename(self, path: str) -> str:
+
+        """
+        Append useful information to the given path
+        """
+
+        filename, extension = os.path.splitext(path)
+        filename += "_"
+        filename += "_".join([f"{k}={v}" for k, v in self.metadata.items()])
+
+        version = 0
+        while os.path.exists(filename + f"_v{version}" + extension):
+            version += 1
+
+        return filename + f"_v{version}" + extension
+
+    def save_solution(self, path: str):
+
+        """
+        Save the current solution using a descriptive filename
+        """
+
+        self.solution.to_json(self.get_descriptive_filename(path))
+
+    def save_history_plot(self, path: str):
+
+        """
+        Save the history plot of the river basin updated with the current solution
+        using a descriptive filename
+        """
+
+        self.river_basin.reset(num_scenarios=1)
+        self.river_basin.deep_update_flows(self.solution.to_nestedlist())
+        self.river_basin.plot_history(path=self.get_descriptive_filename(path))
+
 
 class PSOFlowVariations(PSO):
     def __init__(
@@ -161,6 +199,7 @@ class PSOFlowVariations(PSO):
         paths_power_models: dict[str, str],
         num_particles: int,
         solution: Solution = None,
+        max_relvar: float = 0.5
     ):
 
         super().__init__(
@@ -170,9 +209,11 @@ class PSOFlowVariations(PSO):
             solution=solution,
         )
 
-        max_bound = 0.5 * np.ones(self.num_dimensions)
+        max_bound = max_relvar * np.ones(self.num_dimensions)
         min_bound = -max_bound
         self.bounds = (min_bound, max_bound)
+
+        self.metadata.update({"m": max_relvar})
 
     def particle_to_relvar(self, particle: np.ndarray) -> list[list[float]]:
 

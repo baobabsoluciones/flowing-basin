@@ -102,13 +102,16 @@ class RiverBasin:
             ignore_index=True,
         )
 
-    def plot_history(self):
+    def plot_history(self, show: bool = True, path: str = None):
 
         """
         Plot the series saved in history
+        :param show: Show plot
+        :param path: Save plot in given path
         """
 
         fig, axs = plt.subplots(1, 3)
+        fig.set_size_inches(18.5, 10.5)
 
         # Add X labels
         for i in range(3):
@@ -141,7 +144,14 @@ class RiverBasin:
         # ]
         # self.history.plot(ax=axs, subplots=subplots, secondary_y=["price"])
 
-        plt.show()
+        if path is not None:
+            plt.savefig(path)
+
+        # This instruction must be AFTER we save the plot, otherwise nothing will be saved
+        if show:
+            plt.show()
+
+        plt.close()
 
     def create_log(self) -> str:
 

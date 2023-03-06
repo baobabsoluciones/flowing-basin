@@ -18,6 +18,28 @@
             "flow_limit": {
                 "exists": false
             },
+            "turbined_flow": {
+                "observed_flows": [
+                    1.43,
+                    2.82,
+                    4.98,
+                    5.95,
+                    7.62,
+                    9.4,
+                    13.66,
+                    15.24
+                ],
+                "observed_powers": [
+                    0.0,
+                    0.4,
+                    1.79,
+                    2.14,
+                    2.35,
+                    3.38,
+                    4.6,
+                    4.6
+                ]
+            },
             "initial_vol": null,
             "initial_lags": null,
             "unregulated_flow_max": 14.670018869093832,
@@ -54,6 +76,26 @@
                     16.186,
                     19.048,
                     19.048
+                ]
+            },
+            "turbined_flow": {
+                "observed_flows": [
+                    2.42,
+                    4.52,
+                    5.11,
+                    7.29,
+                    8.04,
+                    11.28,
+                    11.43
+                ],
+                "observed_powers": [
+                    0.0,
+                    3.48,
+                    3.48,
+                    5.6,
+                    5.6,
+                    8.48,
+                    8.48
                 ]
             },
             "initial_vol": null,

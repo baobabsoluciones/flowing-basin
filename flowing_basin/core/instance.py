@@ -68,14 +68,14 @@ class Instance(InstanceCore):
                     }
                 )
 
-        # Number of observations of volumes and flows for the flow limit calculation ---- #
+        # Number of X and Y observations ---- #
 
         # The number of given volumes must equal the number of given observed flows
         for dam_id in self.get_ids_of_dams():
-            observations = self.get_flow_limit_obs_for_channel(dam_id)
-            if observations is not None:
-                num_observed_vols = len(observations["observed_vols"])
-                num_observed_flows = len(observations["observed_vols"])
+            obs_flow_limit = self.get_flow_limit_obs_for_channel(dam_id)
+            if obs_flow_limit is not None:
+                num_observed_vols = len(obs_flow_limit["observed_vols"])
+                num_observed_flows = len(obs_flow_limit["observed_flows"])
                 if num_observed_vols != num_observed_flows:
                     inconsistencies.update(
                         {
@@ -84,6 +84,20 @@ class Instance(InstanceCore):
                             "the number of observed flows": f"{num_observed_vols} vs. {num_observed_flows}"
                         }
                     )
+
+        # The number of given flows must equal the number of given observed powers
+        for dam_id in self.get_ids_of_dams():
+            obs_turbined_flow = self.get_turbined_flow_obs_for_power_group(dam_id)
+            num_observed_flows = len(obs_turbined_flow["observed_flows"])
+            num_observed_powers = len(obs_turbined_flow["observed_powers"])
+            if num_observed_flows != num_observed_powers:
+                inconsistencies.update(
+                    {
+                        "In the turbined flow data of " + dam_id + ", "
+                                                                "the number of given flows is not the same as "
+                                                                "the number of observed powers": f"{num_observed_flows} vs. {num_observed_powers}"
+                    }
+                )
 
         # Number of initial lags ---- #
 
@@ -258,6 +272,23 @@ class Instance(InstanceCore):
             }
         else:
             points = None
+
+        return points
+
+    def get_turbined_flow_obs_for_power_group(self, idx: str) -> dict[str, list]:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: Dictionary with a list of turbined flows and the corresponding power observed (m3/s and MW)
+        """
+
+        points = {
+            "observed_flows": self.data["dams"][idx]["turbined_flow"]["observed_flows"],
+            "observed_powers": self.data["dams"][idx]["turbined_flow"][
+                "observed_powers"
+            ],
+        }
 
         return points
 

@@ -85,6 +85,27 @@
                             ]
                         }
                     },
+                    "turbined_flow": {
+                        "type": "object",
+                        "properties": {
+                            "observed_flows": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            },
+                            "observed_powers": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            }
+                        },
+                        "required": [
+                            "observed_flows",
+                            "observed_powers"
+                        ]
+                    },
                     "initial_vol": {
                         "type": "number"
                     },

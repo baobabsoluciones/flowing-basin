@@ -30,6 +30,7 @@ for dam in instance.get_ids_of_dams():
     print("relevant lags:", instance.get_relevant_lags_of_dam(dam))
     print("max flow:", instance.get_max_flow_of_channel(dam))
     print("flow limit observations:", instance.get_flow_limit_obs_for_channel(dam))
+    print("turbined flow observations:", instance.get_turbined_flow_obs_for_power_group(dam))
     print("unregulated flow:", instance.get_unregulated_flow_of_dam(time, dam))
     print("unregulated flows (next 12 steps):", instance.get_unregulated_flow_of_dam(time, dam, num_steps=12))
     print("maximum unregulated flow:", instance.get_max_unregulated_flow_of_dam(dam))

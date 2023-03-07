@@ -199,7 +199,8 @@ class PSOFlowVariations(PSO):
         paths_power_models: dict[str, str],
         num_particles: int,
         solution: Solution = None,
-        max_relvar: float = 0.5
+        keep_direction: int = 0,
+        max_relvar: float = 0.5,
     ):
 
         super().__init__(
@@ -209,11 +210,13 @@ class PSOFlowVariations(PSO):
             solution=solution,
         )
 
+        self.keep_direction = keep_direction
+
         max_bound = max_relvar * np.ones(self.num_dimensions)
         min_bound = -max_bound
         self.bounds = (min_bound, max_bound)
 
-        self.metadata.update({"m": max_relvar})
+        self.metadata.update({"k": self.keep_direction, "m": max_relvar})
 
     def particle_to_relvar(self, particle: np.ndarray) -> list[list[float]]:
 
@@ -244,7 +247,7 @@ class PSOFlowVariations(PSO):
 
         self.river_basin.reset(num_scenarios=1)
         _, equivalent_flows = self.river_basin.deep_update_relvars(
-            relvar, return_equivalent_flows=True
+            relvar, keep_direction=self.keep_direction, return_equivalent_flows=True
         )
 
         return equivalent_flows
@@ -267,7 +270,7 @@ class PSOFlowVariations(PSO):
 
         self.river_basin.reset(num_scenarios=self.num_particles)
         relvars = self.swarm_to_input(swarm)
-        accumulated_income = self.river_basin.deep_update_relvars(relvars)
+        accumulated_income = self.river_basin.deep_update_relvars(relvars, keep_direction=self.keep_direction)
 
         return -accumulated_income
 
@@ -289,12 +292,14 @@ class PSOFlows(PSO):
         )
 
         max_bound = np.tile(
-            [self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()],
-            self.instance.get_num_time_steps()
+            [
+                self.instance.get_max_flow_of_channel(dam_id)
+                for dam_id in self.instance.get_ids_of_dams()
+            ],
+            self.instance.get_num_time_steps(),
         )
         min_bound = np.zeros(self.num_dimensions)
         self.bounds = (min_bound, max_bound)
-        print(f"{self.bounds=}")
 
     def particle_to_flows(self, particle: np.ndarray) -> list[list[float]]:
 

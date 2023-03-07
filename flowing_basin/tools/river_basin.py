@@ -232,7 +232,8 @@ class RiverBasin:
         :param flows:
          - List of flows that should go through each channel in the current time step (m3/s)
          - OR Array of shape num_dams x num_scenarios with these flows for every scenario (m3/s)
-        :param return_clipped_flows: If true, return the flows clipped because of the flow limits and minimum volumes
+        :param return_clipped_flows:
+           If true, return the flows clipped because of the flow limits and minimum volumes
         :return:
          - Income obtained with the indicated flows in this time step (€)
          - OR Array of size num_scenarios with the income obtained in every scenario (€)
@@ -327,6 +328,7 @@ class RiverBasin:
     def deep_update_relvars(
         self,
         relvars: list[list[float]] | np.ndarray,
+        keep_direction: int = 0,
         return_equivalent_flows: bool = False,
     ) -> (float | np.ndarray) | (
         tuple[float, list[list[float]]] | tuple[np.ndarray, np.ndarray]
@@ -337,7 +339,11 @@ class RiverBasin:
         :param relvars: Relative variations
          - Lists of lists with the variation of flow (as a fraction of flow max) through each channel in every time step (m3/s)
          - OR Array of shape num_time_steps x num_dams x num_scenarios with these relative variations for every scenario (m3/s)
-        :param return_equivalent_flows: If True, returns the flows equivalent to the given relative variations
+        :param keep_direction:
+           Number of periods in which we force to keep the direction (flow increasing OR decreasing) in each dam
+           Note that this rule may not apply if flows must be clipped
+        :param return_equivalent_flows:
+           If True, returns the flows equivalent to the given relative variations
         :return:
          - Accumulated income obtained with the indicated relative variations in all time steps (€)
          - OR Array of size num_scenarios with the accumulated income obtained in every scenario (€)
@@ -372,14 +378,38 @@ class RiverBasin:
         # Equivalent flows to the given relvars
         equivalent_flows = []
 
-        # Update river basin repeatedly
+        # Update river basin repeatedly ---- #
+
+        # Initialize income
         income = 0
+
+        # Initialize old relative variations,
+        # which is used to know when the direction of variations changes from one period to the next
+        old_relvars = np.zeros((1, self.instance.get_num_dams(), self.num_scenarios))
+        if self.num_scenarios == 1:
+            # Remove last dimension of array and turn it into list of lists
+            old_relvars = old_relvars[:, :, 0].tolist()
+
+        # Create copy of relvars to avoid modifying it
+        # This also turns relvars into an array if it isn't already, which is convenient
+        relvars = np.copy(relvars)
+
         for relvar in relvars:
 
+            if keep_direction > 0:
+                # Prevent change of direction among the last N = keep_distance periods:
+                # Check all elements of the current relvar have the same sign as the last N relvars
+                # Otherwise, set these elements to 0
+                sign_changes_each_period = old_relvars[-keep_direction:] * relvar < 0
+                sign_changes_any_period = np.sum(sign_changes_each_period, axis=0) > 0
+                relvar[sign_changes_any_period] = 0
+
+            # Calculate new flows by adding the current variation
             new_flows = old_flows + relvar * max_flows
             if self.num_scenarios == 1:
                 new_flows = new_flows.tolist()
 
+            # Update river basin with the new flows and get income
             new_income, clipped_flows = self.update(
                 new_flows, return_clipped_flows=True
             )
@@ -387,6 +417,7 @@ class RiverBasin:
             equivalent_flows.append(clipped_flows)
 
             old_flows = clipped_flows
+            old_relvars = np.append(old_relvars, [relvar], axis=0)
 
         if self.num_scenarios > 1:
             # Turn list into array

@@ -20,7 +20,8 @@ if use_variations:
         instance=instance,
         paths_power_models=paths_power_models,
         num_particles=20,
-        max_relvar=0.1
+        max_relvar=0.5,
+        keep_direction=3
     )
 else:
     print("---- SOLVING PROBLEM WITH PSO FLOWS ----")

@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from flowing_basin.solvers import PSOFlowVariations
+from flowing_basin.solvers import PSOConfiguration, PSOFlowVariations
 import numpy as np
 
 
@@ -8,11 +8,18 @@ paths_power_models = {
     "dam1": "../ml_models/model_E1.sav",
     "dam2": "../ml_models/model_E2.sav",
 }
+config = PSOConfiguration(
+    num_particles=3,
+    max_relvar=0.5,
+    keep_direction=2,
+    volume_shortage_penalty=3,
+    volume_exceedance_bonus=0.1,
+    volume_objectives=[59627.42324, 31010.43613642857],
+)
 pso = PSOFlowVariations(
     instance=instance,
     paths_power_models=paths_power_models,
-    num_particles=3,
-    keep_direction=2,
+    config=config,
 )
 
 # Test instance and river basin are correctly saved ---- #
@@ -61,6 +68,7 @@ for i in range(pso.num_particles):
 
 # Test objective function ---- #
 print(pso.objective_function(swarm))
+print(pso.river_basin.get_state())
 
 # Test particle ---- #
 # particle = np.array(

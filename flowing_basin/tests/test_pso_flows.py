@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from flowing_basin.solvers import PSOFlows
+from flowing_basin.solvers import PSOConfiguration, PSOFlows
 import numpy as np
 
 
@@ -8,10 +8,16 @@ paths_power_models = {
     "dam1": "../ml_models/model_E1.sav",
     "dam2": "../ml_models/model_E2.sav",
 }
+config = PSOConfiguration(
+    num_particles=3,
+    volume_shortage_penalty=3,
+    volume_exceedance_bonus=0.1,
+    volume_objectives=[59627.42324, 31010.43613642857],
+)
 pso = PSOFlows(
     instance=instance,
     paths_power_models=paths_power_models,
-    num_particles=3,
+    config=config,
 )
 
 # Test particle and flows equivalence ---- #

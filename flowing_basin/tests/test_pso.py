@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from flowing_basin.solvers import PSOFlowVariations, PSOFlows
+from flowing_basin.solvers import PSOConfiguration, PSOFlowVariations, PSOFlows
 from flowing_basin.tools import RiverBasin
 import pandas as pd
 
@@ -14,21 +14,27 @@ paths_power_models = {
 path_solution = "../data/output_example1.json"
 path_history_plot = "../data/output_example1.png"
 use_variations = True
+config = PSOConfiguration(
+    num_particles=20,
+    max_relvar=0.5,
+    keep_direction=2,
+    volume_shortage_penalty=3,
+    volume_exceedance_bonus=0.1,
+    volume_objectives=[59627.42324, 31010.43613642857],
+)
 if use_variations:
     print("---- SOLVING PROBLEM WITH PSO FLOW VARIATIONS ----")
     pso = PSOFlowVariations(
         instance=instance,
         paths_power_models=paths_power_models,
-        num_particles=20,
-        max_relvar=0.5,
-        keep_direction=3
+        config=config,
     )
 else:
     print("---- SOLVING PROBLEM WITH PSO FLOWS ----")
     pso = PSOFlows(
         instance=instance,
         paths_power_models=paths_power_models,
-        num_particles=20,
+        config=config,
     )
 
 # River basin object to study the solutions
@@ -65,6 +71,6 @@ solution_inconsistencies = pso.solution.check_schema()
 if solution_inconsistencies:
     print("inconsistencies with schema:", solution_inconsistencies)
 print("optimal solution:", pso.solution.data)
-print("optimal income:", pso.get_objective())
+print("optimal objective function value:", pso.get_objective())
 pso.save_solution(path_solution)
 pso.save_history_plot(path_history_plot)

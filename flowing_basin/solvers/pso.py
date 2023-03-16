@@ -4,6 +4,24 @@ from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
 import pyswarms as ps
 import os
+from dataclasses import dataclass
+
+
+@dataclass
+class PSOConfiguration:
+
+    # Swarm size
+    num_particles: int
+
+    # Objective final volumes, the penalty for unfulfilling them and the bonus for exceeding them (in €/m3)
+    volume_objectives: list[float]
+    volume_shortage_penalty: float
+    volume_exceedance_bonus: float
+
+    # Conditions on the flow variations (PSOFlowVariations)
+    # For PSOFlows, these are ignored
+    keep_direction: int = 0
+    max_relvar: float = 0.5
 
 
 class PSO(Experiment):
@@ -11,13 +29,14 @@ class PSO(Experiment):
         self,
         instance: Instance,
         paths_power_models: dict[str, str],
-        num_particles: int,
+        config: PSOConfiguration,
         solution: Solution = None,
     ):
 
         super().__init__(instance=instance, solution=solution)
 
-        self.num_particles = num_particles
+        self.config = config
+        self.num_particles = self.config.num_particles
         self.num_dimensions = (
             self.instance.get_num_dams() * self.instance.get_num_time_steps()
         )
@@ -88,17 +107,37 @@ class PSO(Experiment):
         # so it must be implemented in the child classes
         raise NotImplementedError()
 
+    def get_income(self, swarm: np.ndarray) -> np.ndarray:
+
+        """
+        :param swarm: Array of shape num_particles x num_dimensions
+        :return: Array of size num_particles with the total accumulated income obtained by each particle
+        """
+
+        # The way the income is calculated depends on what the particles represent,
+        # so this method must be implemented in the child classes
+        raise NotImplementedError()
+
     def objective_function(self, swarm: np.ndarray) -> np.ndarray:
 
         """
         :param swarm: Array of shape num_particles x num_dimensions
-        :return: Array of size num_particles with the total accumulated income obtained by each particle,
-        in negative since the objective is minimization
+        :return: Array of size num_particles with the objective function reached by each particle
         """
 
-        # The way the objective function is calculated depends on what the particles represent,
-        # so this method must be implemented in the child classes
-        raise NotImplementedError()
+        # Update river basin with current particles and get income
+        income = self.get_income(swarm)
+
+        # Calculate penalty or bonus because of volume shortage or exceedence
+        volume_shortage = np.zeros(self.num_particles)
+        volume_exceedance = np.zeros(self.num_particles)
+        for dam_index, dam in enumerate(self.river_basin.dams):
+            volume_shortage += np.maximum(0, self.config.volume_objectives[dam_index] - dam.volume)
+            volume_exceedance += np.maximum(0, dam.volume - self.config.volume_objectives[dam_index])
+        penalty = self.config.volume_shortage_penalty * volume_shortage
+        bonus = self.config.volume_exceedance_bonus * volume_exceedance
+
+        return - income - bonus + penalty
 
     def optimize(
         self, options: dict[str, float], num_iters: int = 100
@@ -151,10 +190,20 @@ class PSO(Experiment):
         :return: The value of the current solution, given by the total income it provides
         """
 
+        # Update river basin with a single scenario and get income
         self.river_basin.reset(num_scenarios=1)
-        total_income = self.river_basin.deep_update_flows(self.solution.to_nestedlist())
+        income = self.river_basin.deep_update_flows(self.solution.to_nestedlist())
 
-        return total_income
+        # Calculate penalty or bonus for volume shortage or excedence
+        volume_shortage = 0
+        volume_exceedance = 0
+        for dam_index, dam in enumerate(self.river_basin.dams):
+            volume_shortage += max(0, self.config.volume_objectives[dam_index] - dam.volume)
+            volume_exceedance += max(0, dam.volume - self.config.volume_objectives[dam_index])
+        penalty = self.config.volume_shortage_penalty * volume_shortage
+        bonus = self.config.volume_exceedance_bonus * volume_exceedance
+
+        return - income - bonus + penalty
 
     def get_descriptive_filename(self, path: str) -> str:
 
@@ -197,26 +246,24 @@ class PSOFlowVariations(PSO):
         self,
         instance: Instance,
         paths_power_models: dict[str, str],
-        num_particles: int,
+        config: PSOConfiguration,
         solution: Solution = None,
-        keep_direction: int = 0,
-        max_relvar: float = 0.5,
     ):
 
         super().__init__(
             instance=instance,
             paths_power_models=paths_power_models,
-            num_particles=num_particles,
+            config=config,
             solution=solution,
         )
 
-        self.keep_direction = keep_direction
+        self.keep_direction = self.config.keep_direction
 
-        max_bound = max_relvar * np.ones(self.num_dimensions)
+        max_bound = self.config.max_relvar * np.ones(self.num_dimensions)
         min_bound = -max_bound
         self.bounds = (min_bound, max_bound)
 
-        self.metadata.update({"k": self.keep_direction, "m": max_relvar})
+        self.metadata.update({"k": self.keep_direction, "m": self.config.max_relvar})
 
     def particle_to_relvar(self, particle: np.ndarray) -> list[list[float]]:
 
@@ -260,19 +307,18 @@ class PSOFlowVariations(PSO):
 
         return self.relvar_to_flows(self.particle_to_relvar(particle))
 
-    def objective_function(self, swarm: np.ndarray) -> np.ndarray:
+    def get_income(self, swarm: np.ndarray) -> np.ndarray:
 
         """
         :param swarm: Array of shape num_particles x num_dimensions
-        :return: Array of size num_particles with the total accumulated income obtained by each particle,
-        in negative since the objective is minimization
+        :return: Array of size num_particles with the total accumulated income obtained by each particle
         """
 
         self.river_basin.reset(num_scenarios=self.num_particles)
         relvars = self.swarm_to_input(swarm)
         accumulated_income = self.river_basin.deep_update_relvars(relvars, keep_direction=self.keep_direction)
 
-        return -accumulated_income
+        return accumulated_income
 
 
 class PSOFlows(PSO):
@@ -280,14 +326,14 @@ class PSOFlows(PSO):
         self,
         instance: Instance,
         paths_power_models: dict[str, str],
-        num_particles: int,
+        config: PSOConfiguration,
         solution: Solution = None,
     ):
 
         super().__init__(
             instance=instance,
             paths_power_models=paths_power_models,
-            num_particles=num_particles,
+            config=config,
             solution=solution,
         )
 
@@ -322,16 +368,15 @@ class PSOFlows(PSO):
 
         return flows
 
-    def objective_function(self, swarm: np.ndarray) -> np.ndarray:
+    def get_income(self, swarm: np.ndarray) -> np.ndarray:
 
         """
         :param swarm: Array of shape num_particles x num_dimensions
-        :return: Array of size num_particles with the total accumulated income obtained by each particle,
-        in negative since the objective is minimization
+        :return: Array of size num_particles with the total accumulated income obtained by each particle
         """
 
         self.river_basin.reset(num_scenarios=self.num_particles)
         flows = self.swarm_to_input(swarm)
         accumulated_income = self.river_basin.deep_update_flows(flows)
 
-        return -accumulated_income
+        return accumulated_income

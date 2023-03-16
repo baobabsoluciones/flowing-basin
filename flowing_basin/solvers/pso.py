@@ -2,9 +2,15 @@ from flowing_basin.core import Instance, Solution, Experiment
 from flowing_basin.tools import RiverBasin
 from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
+import scipy
 import pyswarms as ps
-import os
+from pyswarms.utils.plotters import plot_cost_history
+from pyswarms.utils.search import RandomSearch
+from matplotlib import pyplot as plt
 from dataclasses import dataclass
+import time
+import os
+import warnings
 
 
 @dataclass
@@ -41,6 +47,15 @@ class PSO(Experiment):
             self.instance.get_num_dams() * self.instance.get_num_time_steps()
         )
         self.metadata = dict()
+        self.metadata.update(
+            {
+                "v": int(
+                    self.config.volume_shortage_penalty != 0
+                    and self.config.volume_exceedance_bonus != 0
+                )
+            }
+        )
+        self.objective_function_history = None
 
         # The upper and lower bounds for the position of the particles depend on what they represent,
         # so this attribute must be assigned in the child classes
@@ -132,12 +147,16 @@ class PSO(Experiment):
         volume_shortage = np.zeros(self.num_particles)
         volume_exceedance = np.zeros(self.num_particles)
         for dam_index, dam in enumerate(self.river_basin.dams):
-            volume_shortage += np.maximum(0, self.config.volume_objectives[dam_index] - dam.volume)
-            volume_exceedance += np.maximum(0, dam.volume - self.config.volume_objectives[dam_index])
+            volume_shortage += np.maximum(
+                0, self.config.volume_objectives[dam_index] - dam.volume
+            )
+            volume_exceedance += np.maximum(
+                0, dam.volume - self.config.volume_objectives[dam_index]
+            )
         penalty = self.config.volume_shortage_penalty * volume_shortage
         bonus = self.config.volume_exceedance_bonus * volume_exceedance
 
-        return - income - bonus + penalty
+        return -income - bonus + penalty
 
     def optimize(
         self, options: dict[str, float], num_iters: int = 100
@@ -161,6 +180,8 @@ class PSO(Experiment):
 
         cost, position = optimizer.optimize(self.objective_function, iters=num_iters)
 
+        self.objective_function_history = optimizer.cost_history
+
         return cost, position
 
     def solve(self, options: dict[str, float], num_iters: int = 100) -> dict:
@@ -173,37 +194,149 @@ class PSO(Experiment):
         """
 
         self.metadata.update({"i": num_iters, "p": self.num_particles})
-        self.metadata.update(options)
+        self.metadata.update(options)  # noqa (suppres PyCharm inspection)
 
-        _, optimal_particle = self.optimize(options=options, num_iters=num_iters)
+        start_time = time.time()
+        cost, optimal_particle = self.optimize(options=options, num_iters=num_iters)
+        end_time = time.time()
+        execution_time = end_time - start_time
+
         optimal_flows = self.particle_to_flows(optimal_particle)
-
         self.solution = Solution.from_nestedlist(
             optimal_flows, dam_ids=self.instance.get_ids_of_dams()
         )
 
-        return dict(status_sol=SOLUTION_STATUS_FEASIBLE, status=STATUS_UNDEFINED)
+        return dict(
+            status_sol=SOLUTION_STATUS_FEASIBLE,
+            status=STATUS_UNDEFINED,
+            execution_time=execution_time,
+            objective=-cost,
+        )
 
-    def get_objective(self) -> float:
+    def study_configuration(
+        self,
+        options: dict[str, float],
+        num_iters_each_test: int = 100,
+        num_replications: int = 20,
+        confidence: float = 0.95,
+    ):
 
         """
-        :return: The value of the current solution, given by the total income it provides
+        Get the mean and confidence interval of
+        the income, objective function and final volume exceedances
+        that the current PSO configuration gives
         """
+
+        # Dictionaries that will store the data and the results
+        data = results = {
+            "execution_times": [],
+            "objectives": [],
+            "incomes": [],
+            **{
+                "volume_exceedances_" + dam_id: []
+                for dam_id in self.instance.get_ids_of_dams()
+            },
+        }
+
+        # Execute `solve` multiple times to fill data
+        for i in range(num_replications):
+
+            info = self.solve(options=options, num_iters=num_iters_each_test)
+            data["execution_times"].append(info["execution_time"])
+            data["objectives"].append(info["objective"])
+
+            obj_values = self.get_objective_values()
+            data["incomes"].append(obj_values["income"])
+            for dam_id in self.instance.get_ids_of_dams():
+                data["volume_exceedances_" + dam_id].append(
+                    obj_values["exceedances"][dam_id] - obj_values["shortages"][dam_id]
+                )
+        print(data)
+
+        # Get mean and confidence interval of each variable (assuming it follows a normal distribution)
+        alfa = 1 - confidence
+        for variable, values in data.items():
+            a = np.array(values)
+            n = a.size
+            mean, std_error = np.mean(a), scipy.stats.sem(a)
+            h = std_error * scipy.stats.t.ppf(1 - alfa / 2., n - 1)
+            results[variable] = [mean, mean - h, mean + h]
+
+        return results
+
+    def search_best_options(
+        self,
+        options: dict[str, list[float]],
+        num_iters_selection: int = 100,
+        num_iters_each_test: int = 10,
+    ):
+
+        """
+        Use PySwarm's RandomSearch method to find the best options
+        """
+
+        g = RandomSearch(
+            ps.single.GlobalBestPSO,
+            n_particles=self.num_particles,
+            dimensions=self.num_dimensions,
+            bounds=self.bounds,
+            objective_func=self.objective_function,
+            options=options,
+            iters=num_iters_each_test,
+            n_selection_iters=num_iters_selection,
+        )
+        best_score, best_options = g.search()
+
+        return best_score, best_options
+
+    def get_objective_values(self, solution: Solution = None) -> dict:
+
+        """
+        :return: The objective function values of the current solution (income and volume penalties/bonuses)
+        Summing these values gives the full objective function value
+        """
+
+        # Get objective function values of current/given solution
+        if solution is None:
+            assert self.solution is not None, "Cannot get objective function values if `solve` has not been called yet."
+            flows = self.solution.to_nestedlist()
+        else:
+            flows = solution.to_nestedlist()
 
         # Update river basin with a single scenario and get income
         self.river_basin.reset(num_scenarios=1)
-        income = self.river_basin.deep_update_flows(self.solution.to_nestedlist())
+        income = self.river_basin.deep_update_flows(flows)
 
         # Calculate penalty or bonus for volume shortage or excedence
-        volume_shortage = 0
-        volume_exceedance = 0
+        volume_shortages = {dam_id: [] for dam_id in self.instance.get_ids_of_dams()}
+        volume_exceedances = {dam_id: [] for dam_id in self.instance.get_ids_of_dams()}
         for dam_index, dam in enumerate(self.river_basin.dams):
-            volume_shortage += max(0, self.config.volume_objectives[dam_index] - dam.volume)
-            volume_exceedance += max(0, dam.volume - self.config.volume_objectives[dam_index])
-        penalty = self.config.volume_shortage_penalty * volume_shortage
-        bonus = self.config.volume_exceedance_bonus * volume_exceedance
+            volume_shortages[dam.idx] = self.config.volume_shortage_penalty * max(
+                0, self.config.volume_objectives[dam_index] - dam.volume
+            )
+            volume_exceedances[dam.idx] = self.config.volume_exceedance_bonus * max(
+                0, dam.volume - self.config.volume_objectives[dam_index]
+            )
 
-        return - income - bonus + penalty
+        return {
+            "income": income,
+            "shortages": volume_shortages,
+            "exceedances": volume_exceedances,
+        }
+
+    def get_objective(self, solution: Solution = None) -> float:
+
+        """
+        :return: The full objective function value of the current solution
+        """
+
+        obj_dict = self.get_objective_values(solution)
+        full_obj_value = obj_dict["income"] + sum(
+            obj_dict["exceedances"][dam_id] - obj_dict["shortages"][dam_id]
+            for dam_id in self.instance.get_ids_of_dams()
+        )
+
+        return full_obj_value
 
     def get_descriptive_filename(self, path: str) -> str:
 
@@ -239,6 +372,28 @@ class PSO(Experiment):
         self.river_basin.reset(num_scenarios=1)
         self.river_basin.deep_update_flows(self.solution.to_nestedlist())
         self.river_basin.plot_history(path=self.get_descriptive_filename(path))
+
+    def plot_objective_function_history(self, show: bool = True, path: str = None):
+
+        """
+        Plot the value of the best solution throughout every iteration of the PSO
+        """
+
+        if self.objective_function_history is not None:
+            plot_cost_history(cost_history=self.objective_function_history)
+        else:
+            warnings.warn(
+                "Cannot plot objective function history if `solve` has not been called yet."
+            )
+
+        if path is not None:
+            plt.savefig(self.get_descriptive_filename(path))
+
+        # This instruction must be AFTER we save the plot, otherwise nothing will be saved
+        if show:
+            plt.show()
+
+        plt.close()
 
 
 class PSOFlowVariations(PSO):
@@ -316,7 +471,9 @@ class PSOFlowVariations(PSO):
 
         self.river_basin.reset(num_scenarios=self.num_particles)
         relvars = self.swarm_to_input(swarm)
-        accumulated_income = self.river_basin.deep_update_relvars(relvars, keep_direction=self.keep_direction)
+        accumulated_income = self.river_basin.deep_update_relvars(
+            relvars, keep_direction=self.keep_direction
+        )
 
         return accumulated_income
 

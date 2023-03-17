@@ -2,6 +2,7 @@ from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import PSOConfiguration, PSOFlowVariations, PSOFlows
 from flowing_basin.tools import RiverBasin
 import pandas as pd
+import numpy as np
 
 # Instance we want to solve
 instance = Instance.from_json("../data/input_example1.json")
@@ -61,6 +62,7 @@ decisions = [
 # Study original solution ---- #
 
 print("original solution:", decisions)
+print(len(decisions))
 income = river_basin.deep_update_flows(decisions)
 # river_basin.plot_history()
 print("original solution's income:", income)
@@ -92,4 +94,21 @@ options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.44241134590
 # pso.plot_objective_function_history(path=path_obj_history_plot)
 
 # Study configuration ---- #
-print(pso.study_configuration(options))
+# print(pso.study_configuration(options))
+
+# Study LP model solution ---- #
+flows = [[15.15, 14.95, 14.75, 13.66, 13.57, 13.37, 13.17, 12.97, 12.77, 12.57, 12.37, 12.17, 11.97, 11.77, 11.57, 11.37, 11.17, 10.97, 10.77, 10.57, 10.41, 10.61, 10.81, 11.01, 10.81, 10.61, 10.41, 10.21, 10.01, 9.81, 9.61, 9.52, 9.52, 9.52, 9.61, 9.61, 9.61, 9.44, 9.24, 9.04, 8.84, 8.64, 8.8, 9, 9.2, 9.4, 5.12, 4.98, 4.98, 4.98, 4.98, 4.98, 4.98, 4.98, 4.98, 4.78, 4.98, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4.78, 4.98, 5.05, 5.25, 5.45, 5.65, 5.58, 5.38, 5.18, 4.98, 4.98, 5.18, 4.98, 5.18, 4.98, 5.18, 5.18, 4.98, 4.98, 4.98, 5.18, 5.38, 5.18, 4.98, 5.1, 5.3, 13.66, 0], [6.19, 6.28, 7.69, 7.88, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.82, 9.77, 9.7, 9.61, 9.5, 9.43, 9.4, 9.41, 9.44, 7.46, 7.26, 7.13, 7.33, 7.13, 6.93, 7.03, 0.22, 0.02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.06, 5.21, 5.28, 5.48, 5.68, 5.88, 5.81, 5.89, 6.09, 6.29, 6.49, 6.69, 6.89, 7.09, 7.29, 7.39, 7.19, 7.07, 6.87, 6.67, 6.47, 6.67, 0.4, 0.2, 0, 0, 0]]
+flows = np.array(flows)
+flows = np.transpose(flows)
+flows = flows.tolist()
+print("LP model solution:", flows)
+print(len(flows))
+sol_lp = Solution.from_nestedlist(flows, dam_ids=instance.get_ids_of_dams())
+print("LP model solution's objective function values:", pso.get_objective_values(sol_lp))
+print("LP model solution's full objective function value:", pso.get_objective(sol_lp))
+river_basin.reset(num_scenarios=1)
+income_lp = river_basin.deep_update_flows(flows)
+river_basin.plot_history(path="../data/output_example1_LPmodel.png")
+print("LP model solution's income:", income_lp)
+print(river_basin.log)
+

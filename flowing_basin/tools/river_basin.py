@@ -222,6 +222,13 @@ class RiverBasin:
          - OR Array of size num_scenarios with the income obtained in every scenario (€)
         """
 
+        # Check instance is not finished already
+        assert self.time < self.instance.get_num_time_steps(), (
+            "The final time horizon has already been reached. "
+            "You should reset the environment before doing another update."
+        )
+
+        # Sanitize input
         if isinstance(flows, list):
             assert (
                 len(flows) == self.instance.get_num_dams()

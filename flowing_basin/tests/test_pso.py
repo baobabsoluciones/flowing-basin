@@ -93,14 +93,8 @@ print("optimal solution's objective function values:", pso.get_objective_values(
 print("optimal solution's full objective function value:", pso.get_objective())
 print(pso.river_basin.log)
 pso.save_solution(path_solution)
-
-pso.plot_history()
-plt.savefig(pso.get_descriptive_filename(path_history_plot))
-plt.show()
-
-pso.plot_objective_function_history()
-plt.savefig(pso.get_descriptive_filename(path_obj_history_plot))
-plt.show()
+pso.save_plot_history(path_history_plot)
+pso.save_plot_objective_function_history(path_obj_history_plot)
 
 # Study configuration ---- #
 # print(pso.study_configuration(options))

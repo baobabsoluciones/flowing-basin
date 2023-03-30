@@ -10,7 +10,6 @@ from matplotlib import pyplot as plt
 from dataclasses import dataclass
 import time
 import os
-import warnings
 
 
 @dataclass
@@ -40,6 +39,8 @@ class PSO(Experiment):
     ):
 
         super().__init__(instance=instance, solution=solution)
+        if solution is None:
+            self.solution = None
 
         self.config = config
         self.num_particles = self.config.num_particles
@@ -298,7 +299,9 @@ class PSO(Experiment):
 
         # Get objective function values of current/given solution
         if solution is None:
-            assert self.solution is not None, "Cannot get objective function values if `solve` has not been called yet."
+            assert self.solution is not None, (
+                "Cannot plot solution history if no solution has been given and `solve` has not been called yet."
+            )
             flows = self.solution.to_nestedlist()
         else:
             flows = solution.to_nestedlist()
@@ -360,13 +363,21 @@ class PSO(Experiment):
         Save the current solution using a descriptive filename
         """
 
+        assert self.solution is not None, (
+            "Cannot save solution if no solution has been given and `solve` has not been called yet."
+        )
+
         self.solution.to_json(self.get_descriptive_filename(path))
 
     def plot_history(self) -> plt.Axes:
 
         """
-        Save the history plot of the river basin updated with the current solution
+        Plot the history of the river basin updated with the current solution
         """
+
+        assert self.solution is not None, (
+            "Cannot plot solution history if no solution has been given and `solve` has not been called yet."
+        )
 
         self.river_basin.reset(num_scenarios=1)
         self.river_basin.deep_update_flows(self.solution.to_nestedlist())
@@ -374,19 +385,42 @@ class PSO(Experiment):
 
         return axs
 
+    def save_plot_history(self, path: str, show: bool = True):
+
+        """
+        Save the history plot using a descriptive filename
+        """
+
+        self.plot_history()
+        plt.savefig(self.get_descriptive_filename(path))
+        if show:
+            plt.show()
+        plt.close()
+
     def plot_objective_function_history(self) -> plt.Axes:
 
         """
         Plot the value of the best solution throughout every iteration of the PSO
         """
 
-        if self.objective_function_history is None:
-            raise RuntimeError(
-                "Cannot plot objective function history if `solve` has not been called yet."
-            )
+        assert self.objective_function_history is not None, (
+            "Cannot plot objective function history if `solve` has not been called yet."
+        )
 
         ax = plot_cost_history(cost_history=self.objective_function_history)
         return ax
+
+    def save_plot_objective_function_history(self, path: str, show: bool = True):
+
+        """
+        Save the objective function's history plot using a descriptive filename
+        """
+
+        self.plot_objective_function_history()
+        plt.savefig(self.get_descriptive_filename(path))
+        if show:
+            plt.show()
+        plt.close()
 
 
 class PSOFlowVariations(PSO):

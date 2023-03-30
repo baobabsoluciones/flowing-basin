@@ -102,12 +102,10 @@ class RiverBasin:
             ignore_index=True,
         )
 
-    def plot_history(self, show: bool = True, path: str = None):
+    def plot_history(self) -> plt.Axes:
 
         """
         Plot the series saved in history
-        :param show: Show plot
-        :param path: Save plot in given path
         """
 
         fig, axs = plt.subplots(1, 3)
@@ -136,22 +134,7 @@ class RiverBasin:
             axs[i].legend()
         twinax.legend()
 
-        # Failed attempt using Pandas' plot method:
-        # subplots = [
-        #     [f"{dam_id}_vol" for dam_id in self.instance.get_ids_of_dams()],
-        #     [f"{dam_id}_flow" for dam_id in self.instance.get_ids_of_dams()],
-        #     ["price", *[f"{dam_id}_power" for dam_id in self.instance.get_ids_of_dams()]]
-        # ]
-        # self.history.plot(ax=axs, subplots=subplots, secondary_y=["price"])
-
-        if path is not None:
-            plt.savefig(path)
-
-        # This instruction must be AFTER we save the plot, otherwise nothing will be saved
-        if show:
-            plt.show()
-
-        plt.close()
+        return axs
 
     def create_log(self) -> str:
 

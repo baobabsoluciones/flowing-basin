@@ -346,7 +346,7 @@ class PSO(Experiment):
 
         filename, extension = os.path.splitext(path)
         filename += "_"
-        filename += "_".join([f"{k}={v}" for k, v in self.metadata.items()])
+        filename += "_".join([f"{k}={round(v, 2)}" for k, v in self.metadata.items()])
 
         version = 0
         while os.path.exists(filename + f"_v{version}" + extension):
@@ -362,38 +362,31 @@ class PSO(Experiment):
 
         self.solution.to_json(self.get_descriptive_filename(path))
 
-    def save_history_plot(self, path: str):
+    def plot_history(self) -> plt.Axes:
 
         """
         Save the history plot of the river basin updated with the current solution
-        using a descriptive filename
         """
 
         self.river_basin.reset(num_scenarios=1)
         self.river_basin.deep_update_flows(self.solution.to_nestedlist())
-        self.river_basin.plot_history(path=self.get_descriptive_filename(path))
+        axs = self.river_basin.plot_history()
 
-    def plot_objective_function_history(self, show: bool = True, path: str = None):
+        return axs
+
+    def plot_objective_function_history(self) -> plt.Axes:
 
         """
         Plot the value of the best solution throughout every iteration of the PSO
         """
 
-        if self.objective_function_history is not None:
-            plot_cost_history(cost_history=self.objective_function_history)
-        else:
-            warnings.warn(
+        if self.objective_function_history is None:
+            raise RuntimeError(
                 "Cannot plot objective function history if `solve` has not been called yet."
             )
 
-        if path is not None:
-            plt.savefig(self.get_descriptive_filename(path))
-
-        # This instruction must be AFTER we save the plot, otherwise nothing will be saved
-        if show:
-            plt.show()
-
-        plt.close()
+        ax = plot_cost_history(cost_history=self.objective_function_history)
+        return ax
 
 
 class PSOFlowVariations(PSO):

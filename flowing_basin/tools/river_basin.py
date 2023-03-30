@@ -190,22 +190,22 @@ class RiverBasin:
             return
 
         # Add current time and incoming flow to the first dam
-        self.log += f"\n{self.time: ^6}{round(self.instance.get_incoming_flow(self.time), 2): ^13}"
+        self.log += f"\n{self.time: ^6}{self.instance.get_incoming_flow(self.time): ^13.2f}"
 
         # Add dam information
         for dam in self.dams:
             net_flow = dam.flow_contribution + dam.unregulated_flow - dam.flow_out_clipped_vol
             self.log += (
-                f"{round(dam.unregulated_flow, 4): ^13}{round(dam.flow_out, 4): ^13}"
-                f"{round(dam.flow_out_clipped_channel, 4): ^14}{round(dam.flow_out_clipped_vol, 4): ^14}"
-                f"{round(net_flow, 4): ^14}{round(net_flow * self.instance.get_time_step(), 5): ^15}"
-                f"{round(dam.volume, 2): ^13}{round(dam.channel.power_group.power, 2): ^13}"
+                f"{dam.unregulated_flow: ^13.4f}{dam.flow_out: ^13.4f}"
+                f"{dam.flow_out_clipped_channel: ^14.4f}{dam.flow_out_clipped_vol: ^14.4f}"
+                f"{net_flow: ^14.4f}{net_flow * self.instance.get_time_step(): ^15.5f}"
+                f"{dam.volume: ^13.2f}{dam.channel.power_group.power: ^13.2f}"
                 f"|\t"
-                f"{round(dam.channel.power_group.turbined_flow, 5): ^15}"
+                f"{dam.channel.power_group.turbined_flow: ^15.5f}"
             )
 
         # Add current price and income values
-        self.log += f"{round(self.instance.get_price(self.time), 2): ^13}{round(self.calculate_income(), 2): ^13}"
+        self.log += f"{self.instance.get_price(self.time): ^13.2f}{self.calculate_income(): ^13.2f}"
 
     def calculate_income(self) -> float | np.ndarray:
 

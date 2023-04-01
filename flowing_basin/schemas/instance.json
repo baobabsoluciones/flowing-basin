@@ -106,6 +106,18 @@
                             "observed_powers"
                         ]
                     },
+                    "startup_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "shutdown_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
                     "initial_vol": {
                         "type": "number"
                     },
@@ -133,6 +145,8 @@
                     "initial_vol",
                     "order",
                     "relevant_lags",
+                    "startup_flows",
+                    "shutdown_flows",
                     "unregulated_flow_max",
                     "unregulated_flows",
                     "vol_max",

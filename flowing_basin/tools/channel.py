@@ -33,7 +33,7 @@ class Channel:
 
         self.power_group = PowerGroup(
             idx=self.idx,
-            flows_over_time=self.past_flows,
+            past_flows=self.past_flows,
             instance=instance,
             paths_power_models=paths_power_models,
             num_scenarios=self.num_scenarios,

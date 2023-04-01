@@ -94,8 +94,23 @@ class Instance(InstanceCore):
                 inconsistencies.update(
                     {
                         "In the turbined flow data of " + dam_id + ", "
-                                                                "the number of given flows is not the same as "
-                                                                "the number of observed powers": f"{num_observed_flows} vs. {num_observed_powers}"
+                        "the number of given flows is not the same as "
+                        "the number of observed powers": f"{num_observed_flows} vs. {num_observed_powers}"
+                    }
+                )
+
+        # Number of startup and shutdown flows ---- #
+
+        # The number of given startup flows must be equal to the number of given shutdown flows
+        for dam_id in self.get_ids_of_dams():
+            num_startup_flows = len(self.get_startup_flows_of_power_group(dam_id))
+            num_shutdown_flows = len(self.get_shutdown_flows_of_power_group(dam_id))
+            if num_startup_flows != num_shutdown_flows:
+                inconsistencies.update(
+                    {
+                        "In the power group data of " + dam_id + ", "
+                        "the number of startup flows is not the same as "
+                        "the number of shutdown flows": f"{num_startup_flows} vs. {num_shutdown_flows}"
                     }
                 )
 
@@ -291,6 +306,28 @@ class Instance(InstanceCore):
         }
 
         return points
+
+    def get_startup_flows_of_power_group(self, idx: str) -> list[float]:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: List with the startup flows of the power group (m3/s)
+        When the turbined flow exceeds one of these flows, an additional power group unit is activated
+        """
+
+        return self.data["dams"][idx]["startup_flows"]
+
+    def get_shutdown_flows_of_power_group(self, idx: str) -> list[float]:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: List with the shutdown flows of the power group (m3/s)
+        When the turbined flow falls behind one of these flows,one of the power group units is deactivated
+        """
+
+        return self.data["dams"][idx]["shutdown_flows"]
 
     def get_unregulated_flow_of_dam(
         self, time: int, idx: str, num_steps: int = 1

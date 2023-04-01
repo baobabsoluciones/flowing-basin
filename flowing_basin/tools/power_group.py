@@ -10,7 +10,7 @@ class PowerGroup:
     def __init__(
         self,
         idx: str,
-        flows_over_time: np.ndarray,
+        past_flows: np.ndarray,
         instance: Instance,
         paths_power_models: dict[str, str],
         num_scenarios: int,
@@ -22,9 +22,11 @@ class PowerGroup:
         self.power_model = self.get_power_model(paths_power_models[self.idx])
         self.relevant_lags = instance.get_relevant_lags_of_dam(self.idx)
         self.turbined_flow_points = instance.get_turbined_flow_obs_for_power_group(self.idx)
+        self.startup_flows = instance.get_startup_flows_of_power_group(self.idx)
+        self.shutdown_flows = instance.get_shutdown_flows_of_power_group(self.idx)
 
         # Power generated (MW) and turbined flow (m3/s)
-        self.power = self.get_power(flows_over_time)
+        self.power = self.get_power(past_flows)
         self.turbined_flow = self.get_turbined_flow(self.power)
 
     def reset(self, flows_over_time: np.ndarray, num_scenarios: int):
@@ -99,6 +101,41 @@ class PowerGroup:
         )
 
         return turbined_flow
+
+    def get_num_active_power_groups(self, flow: float | np.ndarray) -> float | np.ndarray:
+
+        """
+        Get the number of active power groups
+        1 = one power group active (flow above one start-up flow)
+        1.5 = uncertain (flow between start-up and shutdown flows)
+        2 = two power groups active (flow above two start-up flows)
+        ...
+        """
+
+        # Turn flow into a single-element array if it is a float
+        if self.num_scenarios == 1:
+            flow = np.array([flow])
+
+        # Obtain the number of exceeded startup flows for every scenario
+        # - Turn the FLOW 1D array into a 2D array, repeating the 1D array in as many ROWS as there are STARTUP FLOWS
+        # - Turn the STARTUP FLOWS 1D array into a 2D array, repeating the 1D array in as many COLS as there are FLOWS
+        # - Comparing both 2D arrays, determine, for each flow, the startup flows are exceeded, and sum them
+        flow_broadcast_to_startup_flows = np.tile(flow, (len(self.startup_flows), 1))
+        startup_flows_broadcast_to_flows = np.transpose(np.tile(self.startup_flows, (len(flow), 1)))
+        exceeded_startup_flows = np.sum(flow_broadcast_to_startup_flows > startup_flows_broadcast_to_flows, axis=0)
+
+        # Obtain the number of exceeded shutdown flows for every scenario
+        # This will only be different for flows in between a startup and shutdown flow
+        flow_broadcast_to_shutdown_flows = np.tile(flow, (len(self.shutdown_flows), 1))
+        shutdown_flows_broadcast_to_flows = np.transpose(np.tile(self.shutdown_flows, (len(flow), 1)))
+        exceeded_shutdown_flows = np.sum(flow_broadcast_to_shutdown_flows > shutdown_flows_broadcast_to_flows, axis=0)
+
+        # Get the average of the number of exceeded startup flows and the number of exceeded shutdown flows
+        num_active_power_groups = (exceeded_startup_flows + exceeded_shutdown_flows) / 2
+        if self.num_scenarios == 1:
+            num_active_power_groups = num_active_power_groups.item()
+
+        return num_active_power_groups
 
     def update(self, past_flows: np.ndarray) -> float | np.ndarray:
 

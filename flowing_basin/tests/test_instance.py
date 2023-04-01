@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance
 
 # "../" means "go one step up"; in this case, to the flowing-basin directory
-instance = Instance.from_json("../data/input_example1.json")
+instance = Instance.from_json("../data/input_example3.json")
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = instance.check()
@@ -31,6 +31,8 @@ for dam in instance.get_ids_of_dams():
     print("max flow:", instance.get_max_flow_of_channel(dam))
     print("flow limit observations:", instance.get_flow_limit_obs_for_channel(dam))
     print("turbined flow observations:", instance.get_turbined_flow_obs_for_power_group(dam))
+    print("startup and shutdown flows:", instance.get_startup_flows_of_power_group(dam))
+    print("shutdown flows:", instance.get_shutdown_flows_of_power_group(dam))
     print("unregulated flow:", instance.get_unregulated_flow_of_dam(time, dam))
     print("unregulated flows (next 12 steps):", instance.get_unregulated_flow_of_dam(time, dam, num_steps=12))
     print("maximum unregulated flow:", instance.get_max_unregulated_flow_of_dam(dam))

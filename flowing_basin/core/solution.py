@@ -11,15 +11,23 @@ class Solution(SolutionCore):
     )
 
     @classmethod
-    def from_nestedlist(cls, flows: list[list[float]], dam_ids: list[str]) -> "Solution":
+    def from_flows(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
 
         """
-        Create solution from a nested list that represents
-        the flows that should go through each channel in every time step
+        Create solution from an array that represents
+        the flows that should go through each channel in every time step.
+
+        :param flows:
+            Array of shape num_time_steps x num_dams x 1 with
+            the flows that should go through each channel in every time step (m3/s)
+        :param dam_ids: List with the IDs of the dams of the river basin (e.g. ["dam1", "dam2"])
         """
 
-        # Reshape nested list from num_time_steps x num_dams to num_dams x num_time_steps
+        # Transpose array, reshaping it from num_time_steps x num_dams x 1, to 1 x num_dams x num_time_steps
         flows_p = np.transpose(flows)
+
+        # Remove first dimension
+        flows_p = flows_p[0]
 
         return cls(
             dict(
@@ -30,9 +38,22 @@ class Solution(SolutionCore):
             )
         )
 
-    def to_nestedlist(self) -> list[list[float]]:
+    def to_flows(self) -> np.ndarray:
+
+        """
+        Turn solution into an array containing the assigned flows.
+
+        :return:
+            Array of shape num_time_steps x num_dams x 1 with
+            the flows that should go through each channel in every time step (m3/s)
+        """
 
         flows_p = [el["flows"] for el in self.data["dams"]]
+
+        # Transpose array, reshaping it from num_dams x num_time_steps, to num_time_steps x num_dams
         flows = np.transpose(flows_p)
 
-        return flows.tolist()  # noqa (suppres PyCharm inspection)
+        # Reshape array from num_time_steps x num_dams, to num_time_steps x num_dams x 1
+        flows = flows.reshape((-1, len(self.data["dams"]), 1))
+
+        return flows

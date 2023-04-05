@@ -109,9 +109,9 @@ class RiverBasin:
         with values from the current state of the river basin.
         """
 
-        new_row = dict()
         income = self.get_income()
         for i in range(self.num_scenarios):
+            new_row = dict()
             new_row.update({"scenario": i, "time": self.time, "incoming": self.instance.get_incoming_flow(self.time)})
             for dam in self.dams:
                 net_flow = (
@@ -132,11 +132,10 @@ class RiverBasin:
                     }
                 )
             new_row.update({"price": self.instance.get_price(self.time), "income": income[i]})
-
-        self.history = pd.concat(
-            [self.history, pd.DataFrame([new_row])],
-            ignore_index=True,
-        )
+            self.history = pd.concat(
+                [self.history, pd.DataFrame([new_row])],
+                ignore_index=True,
+            )
 
         return
 
@@ -307,10 +306,33 @@ class RiverBasin:
 
         return
 
+    def deep_update(self, flows_or_relvars: np.ndarray, is_relvars: bool):
+
+        """
+        Reset the river basin and update it for the whole planning horizon
+        with the solutions represented by the given array.
+
+        :param flows_or_relvars:
+            Array of shape num_time_steps x num_dams x num_particles with
+            the flows or relvars assigned for the whole planning horizon
+        :param is_relvars: Whether the given array represents relvars or flows
+        """
+
+        num_scenarios = flows_or_relvars.shape[-1]
+        self.reset(num_scenarios=num_scenarios)
+
+        if is_relvars:
+            self.deep_update_relvars(relvars=flows_or_relvars)
+            return
+
+        self.deep_update_flows(flows=flows_or_relvars)
+        return
+
     def get_state(self) -> dict:
 
         """
-        Returns the state of the river basin
+        Returns the state of the river basin (DEPRECATED METHOD, USED ONLY IN TESTS).
+
         :return: Dictionary with:
          - the incoming flow (m3)
          - the price (EUR/MWh)

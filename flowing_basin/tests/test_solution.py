@@ -8,5 +8,5 @@ paths_power_models = {
 }
 river_basin = RiverBasin(instance=instance, paths_power_models=paths_power_models)
 
-solution = Solution.from_json("../data/output_example1_PSO_k=1_m=0.2_i=100_p=20_c1=0.5_c2=0.3_w=0.9_v0.json")
+solution = Solution.from_json("../data/output_example1_original-real-decisions/solution.json")
 print(river_basin.deep_update_flows(solution.to_flows()))

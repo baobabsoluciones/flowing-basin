@@ -1,9 +1,9 @@
 from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import PSOConfiguration, PSO
-from flowing_basin.tools import RiverBasin
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from datetime import datetime
 
 # Instance we want to solve
 instance = Instance.from_json("../data/input_example1.json")
@@ -13,28 +13,18 @@ paths_power_models = {
 }
 
 # PSO object to find the solution
-path_solution = "../data/output_example1_PSO.json"
-path_history_plot = "../data/output_example1_PSO.png"
-path_obj_history_plot = "../data/output_example1_PSO.jpeg"
-use_variations = True
 config = PSOConfiguration(
-    max_relvar=0.5,
-    flow_smoothing=1,
     volume_shortage_penalty=3,
     volume_exceedance_bonus=0.1,
     volume_objectives=[59627.42324, 31010.43613642857],
+    use_relvars=True,
+    max_relvar=0.5,
+    flow_smoothing=0,
 )
 pso = PSO(
     instance=instance,
     paths_power_models=paths_power_models,
     config=config,
-    use_relvars=True
-)
-
-# River basin object to study the solutions
-river_basin = RiverBasin(
-    instance=instance,
-    paths_power_models=paths_power_models
 )
 
 # Test particle and flows equivalence ---- #
@@ -52,7 +42,8 @@ river_basin = RiverBasin(
 # print("ABC first particle history", pso.river_basin.history.to_string())
 
 # Test objective function
-# print(pso.objective_function(swarmABC, relvars=False))
+# pso.river_basin.deep_update(pso.reshape_as_flows_or_relvars(swarmABC), relvars=False)
+# print(pso.objective_function_env())
 # print(pso.river_basin.get_state())
 
 # Test particle and relvars equivalence ---- #
@@ -81,11 +72,12 @@ river_basin = RiverBasin(
 # for i in range(swarmVABC.shape[0]):
 #     print(f"VABC particle {i}:", swarmVABC[i])
 #     print(f"VABC particle {i} -> relvars:", pso.reshape_as_flows_or_relvars(swarmVABC[i].reshape(1, -1)))
-#     print(f"VABC particle {i} -> flows:", pso.turn_into_flows(swarmVABC[i].reshape(1, -1), relvars=True))
+#     pso.river_basin.deep_update(pso.reshape_as_flows_or_relvars(swarmVABC[i].reshape(1, -1)), relvars=True)
+#     print(f"VABC particle {i} -> flows:", pso.river_basin.all_flows)
 #     print(f"VABC particle {i} history", pso.river_basin.history.to_string())
 
 # Test objective function
-# print(pso.objective_function(swarmVABC, relvars=True))
+# print(pso.objective_function_env(swarmVABC, relvars=True))
 # print(pso.river_basin.get_state())
 
 # Original solution taken in data ---- #
@@ -101,45 +93,9 @@ river_basin = RiverBasin(
 #         df["dam2_flow"].loc[initial_row:last_row],
 #     )
 # ]
-# sol = Solution.from_flows(decisions, dam_ids=instance.get_ids_of_dams())
-# sol.to_json("../data/output_example1_original-real-decisions.json")
-
-# Study original solution ---- #
-# sol = Solution.from_json("../data/output_example1_original-real-decisions.json")
-# print("original solution's objective function values:", pso.objective_function_values(sol))
-# print("original solution's full objective function value:", pso.get_objective(sol))
-# print("original solution (repeat):", sol.to_flows())
-# decisions = sol.to_flows()
-# income = river_basin.deep_update_flows(decisions)
-# river_basin.plot_history()
-# plt.savefig("../data/output_example1_original-real-decisions.png")
-# plt.show()
-# print("original solution's income:", income)
-
-# Search for best PSO parameters ---- #
-# options_search = {"c1": [0.1, 5], "c2": [0.1, 5], "w": [0.3, 0.9], "k": [1, 2], "p": 1}
-# # We need to put "k": [1, 2], "p": 1 for the method to work,
-# # even though "k" and "p" are not used in GlobalBestPSO
-# print(pso.search_best_options(options_search, num_iters_selection=30, num_iters_each_test=20))
-# Result: 'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113 | cost=-10114.100850959443
-
-# Optimal solution found by PSO ---- #
-# options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113}
-# status = pso.solve(options, num_particles=200, num_iters=2)
-# print("status:", status)
-# solution_inconsistencies = pso.solution.check_schema()
-# if solution_inconsistencies:
-#     print("inconsistencies with schema:", solution_inconsistencies)
-# print("optimal solution:", pso.solution.data)
-# print("optimal solution's objective function values:", pso.objective_function_values(swarm=pso.reshape_as_swarm(pso.solution.to_flows()), relvars=False))
-# print("optimal solution's full objective function value:", pso.get_objective())
-# print(pso.river_basin.history.to_string())
-# pso.save_solution(path_solution)
-# pso.save_plot_history(path_history_plot)
-# pso.save_plot_objective_function_history(path_obj_history_plot)
-
-# Study configuration ---- #
-# print(pso.study_configuration(options))
+# sol_original = Solution.from_flows(decisions, dam_ids=instance.get_ids_of_dams())
+# sol_original.to_json("../data/output_example1_original-real-decisions/solution.json")
+sol_original = Solution.from_json("../data/output_example1_original-real-decisions/solution.json")
 
 # Study LP model solution ---- #
 # sol_lp = Solution.from_dict(
@@ -157,16 +113,42 @@ river_basin = RiverBasin(
 #      }
 # )
 # print(sol_lp.to_flows())
-# print("LP model solution's objective function values:", pso.objective_function_values(pso.reshape_as_swarm(sol_lp.to_flows()), relvars=False))
-# print("LP model solution's full objective function value:", pso.get_objective(sol_lp))
-# sol_lp.to_json("../data/output_example1_LPmodel_gap2.json")
+# sol_lp.to_json("../data/output_example1_LPmodel_gap2/solution.json")
+sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap2/solution.json")
 
-sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap2.json")
-river_basin.reset(num_scenarios=1)
-income_lp = river_basin.deep_update_flows(sol_lp.to_flows())
-river_basin.plot_history()
-plt.savefig("../data/output_example1_LPmodel_gap2.png")
-plt.show()
-print("LP model solution's income:", income_lp)
-print(river_basin.history.to_string())
+# Optimal solution found by PSO ---- #
 
+# path_parent = "../data"
+# dir_name = f"output_example1_PSO_{datetime.now().strftime('%Y-%m-%d %H.%M')}"
+# options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113}
+# status = pso.solve(options, num_particles=2, num_iters=2)
+# print("status:", status)
+
+# path_parent = "../data"
+# dir_name = f"output_example1_original-real-decisions"
+# pso.solution = sol_original
+
+path_parent = "../data"
+dir_name = f"output_example1_LPmodel_gap2"
+pso.solution = sol_lp
+
+solution_inconsistencies = pso.solution.check_schema()
+if solution_inconsistencies:
+    print("inconsistencies with schema:", solution_inconsistencies)
+print("optimal solution:", pso.solution.data)
+pso.river_basin.deep_update(pso.solution.to_flows(), is_relvars=False)
+print("optimal solution's objective function values:", pso.objective_function_values_env())
+print("optimal solution's full objective function value:", pso.objective_function_env())
+print("optimal solution's full objective function value (cornflow method):", pso.get_objective())
+print(pso.river_basin.history.to_string())
+pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
+
+# Search for best PSO parameters ---- #
+# options_search = {"c1": [0.1, 5], "c2": [0.1, 5], "w": [0.3, 0.9], "k": [1, 2], "p": 1}
+# # We need to put "k": [1, 2], "p": 1 for the method to work,
+# # even though "k" and "p" are not used in GlobalBestPSO
+# print(pso.search_best_options(options_search, num_iters_selection=30, num_iters_each_test=20))
+# Result: 'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113 | cost=-10114.100850959443
+
+# Study configuration ---- #
+# print(pso.study_configuration(options))

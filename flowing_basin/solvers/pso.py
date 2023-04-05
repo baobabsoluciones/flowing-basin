@@ -7,9 +7,13 @@ import pyswarms as ps
 from pyswarms.utils.plotters import plot_cost_history
 from pyswarms.utils.search import RandomSearch
 from matplotlib import pyplot as plt
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+import warnings
+import json
 import time
+from datetime import datetime
 import os
+import typing
 
 
 @dataclass
@@ -21,8 +25,9 @@ class PSOConfiguration:
     volume_exceedance_bonus: float
 
     # Other parameters
-    flow_smoothing: int = 0
+    use_relvars: bool
     max_relvar: float = 0.5  # Used only when use_relvars=True
+    flow_smoothing: int = 0
 
 
 class PSO(Experiment):
@@ -31,7 +36,6 @@ class PSO(Experiment):
         instance: Instance,
         paths_power_models: dict[str, str],
         config: PSOConfiguration,
-        use_relvars: bool,
         solution: Solution = None,
     ):
 
@@ -39,30 +43,21 @@ class PSO(Experiment):
         if solution is None:
             self.solution = None
 
+        # Information of how the solution was found
+        self.solver_info = dict()
+
         self.config = config
-        self.use_relvars = use_relvars
         self.num_dimensions = (
             self.instance.get_num_dams() * self.instance.get_num_time_steps()
         )
-        self.metadata = dict()
-        self.metadata.update(
-            {
-                "k": self.config.flow_smoothing,
-                "v": int(
-                    self.config.volume_shortage_penalty != 0
-                    and self.config.volume_exceedance_bonus != 0
-                )
-            }
-        )
         self.objective_function_history = None
 
-        if self.use_relvars:
+        if self.config.use_relvars:
 
             # Each element of a particle represents a relvar, bounded between -max_relvar and max_relvar
             max_bound = self.config.max_relvar * np.ones(self.num_dimensions)
             min_bound = -max_bound
             self.bounds = (min_bound, max_bound)
-            self.metadata.update({"m": self.config.max_relvar})
 
         else:
 
@@ -145,67 +140,30 @@ class PSO(Experiment):
         )
         return flows_or_relvars
 
-    def deep_update_river_basin(self, swarm: np.ndarray, relvars: bool):
+    def objective_function_values_env(self) -> dict:
 
         """
-        Update the river basin for the whole planning horizon with the solutions represented by the given swarm.
+        Objective function values of the environment (river basin) in its current state (presumably updated).
 
-        :param swarm:
-            Array of shape num_particles x num_dimensions with
-            candidate solutions (particles)
-        :param relvars: Whether the particles represent relvars or flows
-        """
-
-        num_particles = swarm.shape[0]
-        self.river_basin.reset(num_scenarios=num_particles)
-        flows_or_relvars = self.reshape_as_flows_or_relvars(swarm)
-
-        if relvars:
-            self.river_basin.deep_update_relvars(relvars=flows_or_relvars)
-            return
-
-        self.river_basin.deep_update_flows(flows=flows_or_relvars)
-        return
-
-    def turn_into_flows(self, swarm: np.ndarray, relvars: bool) -> np.ndarray:
-
-        """
-        Turn particle (solution) into the corresponding array of flows.
-
-        :param swarm:
-            Array of shape num_particles x num_dimensions with
-            candidate solutions (particles)
-        :param relvars: Whether the particles represent relvars or flows
-        :return:
-            Array of shape num_time_steps x num_dams x num_particles with
-            the actual flows that exit the dams in the whole planning horizon
-        """
-
-        self.deep_update_river_basin(swarm=swarm, relvars=relvars)
-        return self.river_basin.all_flows
-
-    def objective_function_values(self, swarm: np.ndarray, relvars: bool) -> dict:
-
-        """
-
-        :param swarm:
-            Array of shape num_particles x num_dimensions with
-            candidate solutions (particles)
-        :param relvars: Whether the particles represent relvars or flows
         :return:
             Dictionary formed by arrays of size num_particles with
             the objective function values reached by each particle
         """
 
-        # Update river basin with current particles
-        self.deep_update_river_basin(swarm=swarm, relvars=relvars)
+        # Make sure river basin has been fully updated; give a warning otherwise
+        if self.river_basin.time != self.instance.get_num_time_steps() - 1:
+            warnings.warn(
+                f"Calculated objective function values when the river basin is not fully updated: "
+                f"{self.river_basin.time=}, when it should be {self.instance.get_num_time_steps() - 1=}"
+            )
+
         obj_values = dict()
 
         # Get accumulated income
         income = self.river_basin.accumulated_income
         obj_values.update({"income": income})
 
-        # Get penalty or bonus because of volume shortage or exceedence
+        # Get penalty or bonus because of volume shortage or exceedance
         for dam_index, dam in enumerate(self.river_basin.dams):
             obj_values.update(
                 {
@@ -216,20 +174,17 @@ class PSO(Experiment):
 
         return obj_values
 
-    def objective_function(self, swarm: np.ndarray, relvars: bool) -> np.ndarray:
+    def objective_function_env(self) -> np.ndarray:
 
         """
+        Objective function of the environment (river basin) in its current state (presumably updated).
 
-        :param swarm:
-            Array of shape num_particles x num_dimensions with
-            candidate solutions (particles)
-        :param relvars: Whether the particles represent relvars or flows
         :return:
             Array of size num_particles with
             the objective function reached by each particle
         """
 
-        obj_values = self.objective_function_values(swarm=swarm, relvars=relvars)
+        obj_values = self.objective_function_values_env()
 
         income = obj_values["income"]
         volume_shortage = np.array([obj_values[f"{dam_id}_shortage"] for dam_id in self.instance.get_ids_of_dams()]).sum(axis=0)
@@ -239,6 +194,15 @@ class PSO(Experiment):
         bonus = self.config.volume_exceedance_bonus * volume_exceedance
 
         return -income - bonus + penalty
+
+    def calculate_objective_function(self, swarm: np.ndarray, is_relvars: bool) -> np.ndarray:
+
+        """
+        Function that gives the objective function of the given swarm, as required by PySwarms.
+        """
+
+        self.river_basin.deep_update(self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars)
+        return self.objective_function_env()
 
     def optimize(
         self, options: dict[str, float], num_particles: int, num_iters: int
@@ -261,8 +225,8 @@ class PSO(Experiment):
             bounds=self.bounds,
         )
 
-        kwargs = {"relvars": self.use_relvars}  # Argument of `self.objective_function`
-        cost, position = optimizer.optimize(self.objective_function, iters=num_iters, **kwargs)
+        kwargs = {"is_relvars": self.config.use_relvars}  # Argument of `self.calculate_objective_function`
+        cost, position = optimizer.optimize(self.calculate_objective_function, iters=num_iters, **kwargs)
 
         self.objective_function_history = optimizer.cost_history
 
@@ -276,27 +240,34 @@ class PSO(Experiment):
         :param options: Dictionary with options given to the PySwarms optimizer (see 'optimize' method for more info)
         :param num_particles: Number of particles of the swarm
         :param num_iters: Number of iterations with which to run the optimization algorithm
-        :return: A dictionary with status codes and other information
+        :return: A dictionary with status codes
         """
 
-        self.metadata.update({"i": num_iters, "p": num_particles})
-        self.metadata.update(options)
-
-        start_time = time.time()
+        start_time = time.perf_counter()
         cost, optimal_particle = self.optimize(options=options, num_particles=num_particles, num_iters=num_iters)
-        end_time = time.time()
+        end_time = time.perf_counter()
         execution_time = end_time - start_time
 
-        optimal_flows = self.turn_into_flows(swarm=optimal_particle.reshape(1, -1), relvars=self.use_relvars)
+        self.river_basin.deep_update(
+            self.reshape_as_flows_or_relvars(swarm=optimal_particle.reshape(1, -1)),
+            is_relvars=self.config.use_relvars
+        )
+        optimal_flows = self.river_basin.all_flows
         self.solution = Solution.from_flows(
             optimal_flows, dam_ids=self.instance.get_ids_of_dams()
+        )
+
+        self.solver_info = dict(
+            num_iters=num_iters,
+            num_particles=num_particles,
+            **options,
+            execution_time=execution_time,
+            objective=-cost,
         )
 
         return dict(
             status_sol=SOLUTION_STATUS_FEASIBLE,
             status=STATUS_UNDEFINED,
-            execution_time=execution_time,
-            objective=-cost,
         )
 
     def study_configuration(
@@ -327,11 +298,12 @@ class PSO(Experiment):
         # Execute `solve` multiple times to fill data
         for i in range(num_replications):
 
-            info = self.solve(options=options, num_iters=num_iters_each_test)
-            data["execution_times"].append(info["execution_time"])
-            data["objectives"].append(info["objective"])
+            self.solve(options=options, num_iters=num_iters_each_test)
+            data["execution_times"].append(self.solver_info["execution_time"])
+            data["objectives"].append(self.solver_info["objective"])
 
-            obj_values = self.objective_function_values(swarm=self.reshape_as_swarm(self.solution.to_flows()), relvars=False)
+            self.river_basin.deep_update(self.solution.to_flows(), is_relvars=False)
+            obj_values = self.objective_function_values_env()
             data["incomes"].append(obj_values["income"])
             for dam_id in self.instance.get_ids_of_dams():
                 data[f"volume_exceedances_{dam_id}"].append(
@@ -356,10 +328,16 @@ class PSO(Experiment):
         num_particles: int = 200,
         num_iters_selection: int = 100,
         num_iters_each_test: int = 10,
-    ):
+    ) -> tuple[float, dict]:
 
         """
         Use PySwarm's RandomSearch method to find the best options.
+
+        :param options: Dictionary with the combinations of options to try
+        :param num_particles: Number of particles of the swarm in every execution
+        :param num_iters_selection: Number of different combinations tried
+        :param num_iters_each_test: Number of iterations with which every combination is tried
+        :return: Best cost and the parameter configuration with which it was achieved.
         """
 
         g = RandomSearch(
@@ -367,7 +345,7 @@ class PSO(Experiment):
             n_particles=num_particles,
             dimensions=self.num_dimensions,
             bounds=self.bounds,
-            objective_func=self.objective_function,
+            objective_func=self.calculate_objective_function,
             options=options,
             iters=num_iters_each_test,
             n_selection_iters=num_iters_selection,
@@ -379,98 +357,123 @@ class PSO(Experiment):
     def get_objective(self, solution: Solution = None) -> float:
 
         """
-        :return: The full objective function value of the current solution
+
+        :return: The full objective function value of the current or given solution
         """
 
-        # Get objective function values of current/given solution
         if solution is None:
             assert self.solution is not None, (
                 "Cannot plot solution history if no solution has been given and `solve` has not been called yet."
             )
             solution = self.solution
 
-        swarm = self.reshape_as_swarm(solution.to_flows())
-        obj = self.objective_function(swarm, relvars=False)
+        self.river_basin.deep_update(solution.to_flows(), is_relvars=False)
+        obj = self.objective_function_env()
 
         return obj.item()
 
-    def get_descriptive_filename(self, path: str) -> str:
+    def write_details_sol(self, details: typing.TextIO):
 
         """
-        Append useful information to the given path
+        Write details about the current solution in the given TextIO object.
         """
 
-        filename, extension = os.path.splitext(path)
-        filename += "_"
-        filename += "_".join([f"{k}={round(v, 2)}" for k, v in self.metadata.items()])
-
-        version = 0
-        while os.path.exists(filename + f"_v{version}" + extension):
-            version += 1
-
-        return filename + f"_v{version}" + extension
-
-    def save_solution(self, path: str):
-
-        """
-        Save the current solution using a descriptive filename
-        """
-
-        assert self.solution is not None, (
-            "Cannot save solution if no solution has been given and `solve` has not been called yet."
+        # Information about the instance
+        format_datetime = "%Y-%m-%d %H:%M"
+        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
+        start = start_datetime.strftime(format_datetime)
+        end = end_datetime.strftime(format_datetime)
+        solved = datetime.now().strftime(format_datetime)
+        details.write(
+            f"==== Solution details ====\n\n"
+            f"Solved river basin instance between {start} and {end}.\n"
+            f"The instance was solved at {solved} with the PSO algorithm.\n\n"
         )
 
-        self.solution.to_json(self.get_descriptive_filename(path))
+        # Information about the solver
+        details.write("---- Solver configuration ----\n\n")
+        details.write("Configuration:\n")
+        details.write(json.dumps(asdict(self.config), indent=2))
+        details.write("\n\n")
+        details.write("Parameters and other information:\n")
+        details.write(json.dumps(self.solver_info, indent=2))
+        details.write("\n\n")
 
-    def plot_history(self) -> plt.Axes:
-
-        """
-        Plot the history of the river basin updated with the current solution
-        """
-
-        assert self.solution is not None, (
-            "Cannot plot solution history if no solution has been given and `solve` has not been called yet."
-        )
-
-        self.river_basin.reset(num_scenarios=1)
-        self.river_basin.deep_update_flows(self.solution.to_flows())
-        axs = self.river_basin.plot_history()
-
-        return axs
-
-    def save_plot_history(self, path: str, show: bool = True):
+    def write_details_env(self, details: typing.TextIO):
 
         """
-        Save the history plot using a descriptive filename
-        """
-
-        self.plot_history()
-        plt.savefig(self.get_descriptive_filename(path))
-        if show:
-            plt.show()
-        plt.close()
-
-    def plot_objective_function_history(self) -> plt.Axes:
+        Write details in the given TextIO object
+        about the environment (river basin) in its current state (presumably updated).
 
         """
-        Plot the value of the best solution throughout every iteration of the PSO
+
+        # Make sure river basin has been fully updated; give a warning otherwise
+        if self.river_basin.time != self.instance.get_num_time_steps() - 1:
+            warnings.warn(
+                f"Wrote details about river basin when it is not fully updated: "
+                f"{self.river_basin.time=}, when it should be {self.instance.get_num_time_steps() - 1=}"
+            )
+
+        details.write("---- Objective function ----\n\n")
+        details.write("Objective function values:\n")
+        obj_values = self.objective_function_values_env()
+        obj_values = {k: v.item() for k, v in obj_values.items()}
+        details.write(json.dumps(obj_values, indent=2))
+        details.write("\n\n")
+        details.write("Objective function:\n")
+        obj = self.objective_function_env()
+        details.write(str(obj.item()))
+        details.write("\n\n")
+
+        details.write("---- River basin history ----\n\n")
+        details.write(self.river_basin.history.to_string())
+
+    def plot_cost(self) -> plt.Axes:
+
+        """
+        Plot the value of the best solution throughout every iteration of the PSO.
+
+        :return: Axes object with the cost plot
         """
 
-        assert self.objective_function_history is not None, (
-            "Cannot plot objective function history if `solve` has not been called yet."
-        )
+        if self.objective_function_history is None:
+            warnings.warn("Cannot plot objective function history if `solve` has not been called yet.")
+            return  # noqa
 
         ax = plot_cost_history(cost_history=self.objective_function_history)
         return ax
 
-    def save_plot_objective_function_history(self, path: str, show: bool = True):
+    def save_solution_info(self, path_parent: str, dir_name: str):
 
         """
-        Save the objective function's history plot using a descriptive filename
+        Save current solution, cost plot, details, and history plot
         """
 
-        self.plot_objective_function_history()
-        plt.savefig(self.get_descriptive_filename(path))
-        if show:
-            plt.show()
-        plt.close()
+        path_dir = os.path.join(path_parent, dir_name)
+        os.mkdir(path_dir)
+        print(f"Directory {path_dir} created")
+
+        # Save current solution
+        path_sol = os.path.join(path_dir, "solution.json")
+        self.solution.to_json(path_sol)
+        print(f"JSON file {path_sol} created")
+
+        # Save cost plot
+        path_cost_plot = os.path.join(path_dir, "cost_plot.png")
+        self.plot_cost()
+        plt.savefig(path_cost_plot)
+        print(f"Figure {path_cost_plot} created")
+
+        # Save details and history of river basin updated with the current solution
+        self.river_basin.deep_update(self.solution.to_flows(), is_relvars=False)
+
+        path_details = os.path.join(path_dir, "details.txt")
+        with open(path_details, "w") as file:
+            self.write_details_sol(file)
+            self.write_details_env(file)
+        print(f"Text file {path_details} created")
+
+        path_history_plot = os.path.join(path_dir, "history_plot.png")
+        self.river_basin.plot_history()
+        plt.savefig(path_history_plot)
+        print(f"Figure {path_history_plot} created")

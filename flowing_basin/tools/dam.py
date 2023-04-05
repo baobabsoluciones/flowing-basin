@@ -127,9 +127,9 @@ class Dam:
         # Prevent change of direction among the last N = flow_smoothing periods:
         # Check all elements of the current variation have the same sign as the last N variations
         # Otherwise, set these flows to the previous flows
-        current_variation = self.flow_out_assigned - self.previous_flow_out
+        current_assigned_variation = self.flow_out_assigned - self.previous_flow_out
         previous_variations = self.all_previous_variations[-self.flow_smoothing:] if self.flow_smoothing > 0 else np.zeros(self.num_scenarios).reshape((1, -1))
-        sign_changes_each_period = previous_variations * current_variation < 0  # Broadcasting
+        sign_changes_each_period = previous_variations * current_assigned_variation < 0  # Broadcasting
         sign_changes_any_period = np.sum(sign_changes_each_period, axis=0) > 0
         self.flow_out_smoothed = np.where(sign_changes_any_period, self.previous_flow_out, self.flow_out_assigned)
 
@@ -162,8 +162,9 @@ class Dam:
 
         # Values to smooth flow in next time step ---- #
 
+        current_actual_variation = self.flow_out_clipped2 - self.previous_flow_out
+        self.all_previous_variations = np.concatenate([self.all_previous_variations, current_actual_variation.reshape(1, -1)], axis=0)
         self.previous_flow_out = self.flow_out_clipped2
-        self.all_previous_variations = np.concatenate([self.all_previous_variations, current_variation.reshape(1, -1)], axis=0)
 
         # Channel ---- #
 

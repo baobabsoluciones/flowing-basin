@@ -24,6 +24,11 @@ class PSOConfiguration:
     volume_shortage_penalty: float
     volume_exceedance_bonus: float
 
+    # The penalty for each power group startup, and
+    # for each time step with the turbined flow in a limit zone (in €/occurrence)
+    startups_penalty: float
+    limit_zones_penalty: float
+
     # Other parameters
     use_relvars: bool
     max_relvar: float = 0.5  # Used only when use_relvars=True
@@ -73,7 +78,9 @@ class PSO(Experiment):
             self.bounds = (min_bound, max_bound)
 
         self.river_basin = RiverBasin(
-            instance=self.instance, paths_power_models=paths_power_models, flow_smoothing=self.config.flow_smoothing
+            instance=self.instance,
+            paths_power_models=paths_power_models,
+            flow_smoothing=self.config.flow_smoothing,
         )
 
     def reshape_as_swarm(self, flows_or_relvars: np.ndarray) -> np.ndarray:
@@ -159,16 +166,23 @@ class PSO(Experiment):
 
         obj_values = dict()
 
-        # Get accumulated income
+        # Calculate accumulated income
         income = self.river_basin.accumulated_income
         obj_values.update({"income": income})
 
-        # Get penalty or bonus because of volume shortage or exceedance
         for dam_index, dam in enumerate(self.river_basin.dams):
             obj_values.update(
                 {
-                    f"{dam.idx}_shortage": np.maximum(0, self.config.volume_objectives[dam_index] - dam.volume),
-                    f"{dam.idx}_exceedance": np.maximum(0, dam.volume - self.config.volume_objectives[dam_index])
+                    # Calculate volume shortage and exceedance
+                    f"{dam.idx}_shortage": np.maximum(
+                        0, self.config.volume_objectives[dam_index] - dam.volume
+                    ),
+                    f"{dam.idx}_exceedance": np.maximum(
+                        0, dam.volume - self.config.volume_objectives[dam_index]
+                    ),
+                    # Calculate number of startups and of times in limit zones
+                    f"{dam.idx}_startups": dam.channel.power_group.acc_num_startups,
+                    f"{dam.idx}_limits": dam.channel.power_group.acc_num_times_in_limit,
                 }
             )
 
@@ -187,21 +201,53 @@ class PSO(Experiment):
         obj_values = self.objective_function_values_env()
 
         income = obj_values["income"]
-        volume_shortage = np.array([obj_values[f"{dam_id}_shortage"] for dam_id in self.instance.get_ids_of_dams()]).sum(axis=0)
-        volume_exceedance = np.array([obj_values[f"{dam_id}_exceedance"] for dam_id in self.instance.get_ids_of_dams()]).sum(axis=0)
 
-        penalty = self.config.volume_shortage_penalty * volume_shortage
+        volume_shortage = np.array(
+            [
+                obj_values[f"{dam_id}_shortage"]
+                for dam_id in self.instance.get_ids_of_dams()
+            ]
+        ).sum(axis=0)
+        volume_exceedance = np.array(
+            [
+                obj_values[f"{dam_id}_exceedance"]
+                for dam_id in self.instance.get_ids_of_dams()
+            ]
+        ).sum(axis=0)
+
+        num_startups = np.array(
+            [
+                obj_values[f"{dam_id}_startups"]
+                for dam_id in self.instance.get_ids_of_dams()
+            ]
+        ).sum(axis=0)
+        num_limits = np.array(
+            [
+                obj_values[f"{dam_id}_limits"]
+                for dam_id in self.instance.get_ids_of_dams()
+            ]
+        ).sum(axis=0)
+
+        penalty = (
+            self.config.volume_shortage_penalty * volume_shortage
+            + self.config.startups_penalty * num_startups
+            + self.config.limit_zones_penalty * num_limits
+        )
         bonus = self.config.volume_exceedance_bonus * volume_exceedance
 
         return -income - bonus + penalty
 
-    def calculate_objective_function(self, swarm: np.ndarray, is_relvars: bool) -> np.ndarray:
+    def calculate_objective_function(
+        self, swarm: np.ndarray, is_relvars: bool
+    ) -> np.ndarray:
 
         """
         Function that gives the objective function of the given swarm, as required by PySwarms.
         """
 
-        self.river_basin.deep_update(self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars)
+        self.river_basin.deep_update(
+            self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars
+        )
         return self.objective_function_env()
 
     def optimize(
@@ -225,14 +271,20 @@ class PSO(Experiment):
             bounds=self.bounds,
         )
 
-        kwargs = {"is_relvars": self.config.use_relvars}  # Argument of `self.calculate_objective_function`
-        cost, position = optimizer.optimize(self.calculate_objective_function, iters=num_iters, **kwargs)
+        kwargs = {
+            "is_relvars": self.config.use_relvars
+        }  # Argument of `self.calculate_objective_function`
+        cost, position = optimizer.optimize(
+            self.calculate_objective_function, iters=num_iters, **kwargs
+        )
 
         self.objective_function_history = optimizer.cost_history
 
         return cost, position
 
-    def solve(self, options: dict[str, float], num_particles: int = 200, num_iters: int = 100) -> dict:
+    def solve(
+        self, options: dict[str, float], num_particles: int = 200, num_iters: int = 100
+    ) -> dict:
 
         """
         Fill the 'solution' attribute of the object, with the optimal solution found by the PSO algorithm.
@@ -244,13 +296,15 @@ class PSO(Experiment):
         """
 
         start_time = time.perf_counter()
-        cost, optimal_particle = self.optimize(options=options, num_particles=num_particles, num_iters=num_iters)
+        cost, optimal_particle = self.optimize(
+            options=options, num_particles=num_particles, num_iters=num_iters
+        )
         end_time = time.perf_counter()
         execution_time = end_time - start_time
 
         self.river_basin.deep_update(
             self.reshape_as_flows_or_relvars(swarm=optimal_particle.reshape(1, -1)),
-            is_relvars=self.config.use_relvars
+            is_relvars=self.config.use_relvars,
         )
         optimal_flows = self.river_basin.all_flows
         self.solution = Solution.from_flows(
@@ -307,7 +361,8 @@ class PSO(Experiment):
             data["incomes"].append(obj_values["income"])
             for dam_id in self.instance.get_ids_of_dams():
                 data[f"volume_exceedances_{dam_id}"].append(
-                    obj_values[f"{dam_id}_exceedance"] - obj_values[f"{dam_id}_shortage"]
+                    obj_values[f"{dam_id}_exceedance"]
+                    - obj_values[f"{dam_id}_shortage"]
                 )
         print(data)
 
@@ -317,7 +372,7 @@ class PSO(Experiment):
             a = np.array(values)
             n = a.size
             mean, std_error = np.mean(a), scipy.stats.sem(a)
-            h = std_error * scipy.stats.t.ppf(1 - alfa / 2., n - 1)
+            h = std_error * scipy.stats.t.ppf(1 - alfa / 2.0, n - 1)
             results[variable] = [mean, mean - h, mean + h]
 
         return results
@@ -362,9 +417,9 @@ class PSO(Experiment):
         """
 
         if solution is None:
-            assert self.solution is not None, (
-                "Cannot plot solution history if no solution has been given and `solve` has not been called yet."
-            )
+            assert (
+                self.solution is not None
+            ), "Cannot get objective if no solution has been given and `solve` has not been called yet."
             solution = self.solution
 
         self.river_basin.deep_update(solution.to_flows(), is_relvars=False)
@@ -437,7 +492,9 @@ class PSO(Experiment):
         """
 
         if self.objective_function_history is None:
-            warnings.warn("Cannot plot objective function history if `solve` has not been called yet.")
+            warnings.warn(
+                "Cannot plot objective function history if `solve` has not been called yet."
+            )
             return  # noqa
 
         ax = plot_cost_history(cost_history=self.objective_function_history)

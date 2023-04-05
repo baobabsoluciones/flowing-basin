@@ -16,6 +16,8 @@ paths_power_models = {
 config = PSOConfiguration(
     volume_shortage_penalty=3,
     volume_exceedance_bonus=0.1,
+    startups_penalty=50,
+    limit_zones_penalty=50,
     volume_objectives=[59627.42324, 31010.43613642857],
     use_relvars=True,
     max_relvar=0.5,
@@ -95,7 +97,7 @@ pso = PSO(
 # ]
 # sol_original = Solution.from_flows(decisions, dam_ids=instance.get_ids_of_dams())
 # sol_original.to_json("../data/output_example1_original-real-decisions/solution.json")
-sol_original = Solution.from_json("../data/output_example1_original-real-decisions/solution.json")
+sol_original = Solution.from_json("../data/output_example1_original-real-decisions_solution.json")
 
 # Study LP model solution ---- #
 # sol_lp = Solution.from_dict(
@@ -114,7 +116,7 @@ sol_original = Solution.from_json("../data/output_example1_original-real-decisio
 # )
 # print(sol_lp.to_flows())
 # sol_lp.to_json("../data/output_example1_LPmodel_gap2/solution.json")
-sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap2/solution.json")
+sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap2_solution.json")
 
 # Optimal solution found by PSO ---- #
 
@@ -124,13 +126,13 @@ sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap2/solution.json"
 # status = pso.solve(options, num_particles=2, num_iters=2)
 # print("status:", status)
 
-path_parent = "../data"
-dir_name = f"output_example1_original-real-decisions"
-pso.solution = sol_original
-
 # path_parent = "../data"
-# dir_name = f"output_example1_LPmodel_gap2"
-# pso.solution = sol_lp
+# dir_name = f"output_example1_original-real-decisions"
+# pso.solution = sol_original
+
+path_parent = "../data"
+dir_name = f"output_example1_LPmodel_gap2"
+pso.solution = sol_lp
 
 solution_inconsistencies = pso.solution.check_schema()
 if solution_inconsistencies:
@@ -141,7 +143,7 @@ print("optimal solution's objective function values:", pso.objective_function_va
 print("optimal solution's full objective function value:", pso.objective_function_env())
 print("optimal solution's full objective function value (cornflow method):", pso.get_objective())
 print(pso.river_basin.history.to_string())
-# pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
+pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
 
 # Search for best PSO parameters ---- #
 # options_search = {"c1": [0.1, 5], "c2": [0.1, 5], "w": [0.3, 0.9], "k": [1, 2], "p": 1}

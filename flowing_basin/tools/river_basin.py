@@ -161,20 +161,13 @@ class RiverBasin:
                         f"{dam.idx}_flow_clipped1": dam.flow_out_clipped1[i],
                         f"{dam.idx}_flow_clipped2": dam.flow_out_clipped2[i],
                         f"{dam.idx}_netflow": net_flow,
-                        f"{dam.idx}_volchange": net_flow
-                        * self.instance.get_time_step(),
+                        f"{dam.idx}_volchange": net_flow * self.instance.get_time_step(),
                         f"{dam.idx}_vol": dam.volume[i],
                         f"{dam.idx}_power": dam.channel.power_group.power[i],
                         f"{dam.idx}_turbined": dam.channel.power_group.turbined_flow[i],
-                        f"{dam.idx}_groups": dam.channel.power_group.num_active_groups[
-                            i
-                        ],
-                        f"{dam.idx}_startups": dam.channel.power_group.num_startups_total[
-                            i
-                        ],
-                        f"{dam.idx}_limits": dam.channel.power_group.num_times_limit_total[
-                            i
-                        ],
+                        f"{dam.idx}_groups": dam.channel.power_group.num_active_groups[i],
+                        f"{dam.idx}_startups": dam.channel.power_group.acc_num_startups[i],
+                        f"{dam.idx}_limits": dam.channel.power_group.acc_num_times_in_limit[i],
                     }
                 )
             new_row.update(

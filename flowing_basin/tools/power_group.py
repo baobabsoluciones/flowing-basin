@@ -31,8 +31,8 @@ class PowerGroup:
         self.turbined_flow = None
         self.previous_num_active_groups = None
         self.num_active_groups = None
-        self.num_startups_total = None
-        self.num_times_limit_total = None
+        self.acc_num_startups = None
+        self.acc_num_times_in_limit = None
 
         # Initialize the time-dependent attributes (variables)
         self._reset_variables(past_flows)
@@ -41,8 +41,8 @@ class PowerGroup:
 
         """
         Reset all time-varying attributes of the power group:
-        power, turbined flow, number of active groups, and total number of startups and times in limit zones.
-        Power models and turbined flow observations are not reset as they are constant.
+        power, turbined flow, number of active groups, total number of startups, and number of times in limit zones.
+        Power models, turbined flow observations, and startup flows are not reset as they are constant.
         """
 
         # Power generated (MW), turbined flow (m3/s) and number of active groups
@@ -51,9 +51,9 @@ class PowerGroup:
         self.previous_num_active_groups = None
         self.num_active_groups = self.get_num_active_power_groups(self.turbined_flow)
 
-        # Total number of power group startups, and of times in limit zones
-        self.num_startups_total = np.zeros(self.num_scenarios)
-        self.num_times_limit_total = np.zeros(self.num_scenarios)
+        # Total (accumulated) number of power group startups, and of times in limit zones
+        self.acc_num_startups = np.zeros(self.num_scenarios)
+        self.acc_num_times_in_limit = np.zeros(self.num_scenarios)
 
         return
 
@@ -194,12 +194,12 @@ class PowerGroup:
         self.turbined_flow = self.get_turbined_flow(self.power)
         self.num_active_groups = self.get_num_active_power_groups(self.turbined_flow)
 
-        self.num_startups_total += np.maximum(
+        self.acc_num_startups += np.maximum(
             0,
             np.floor(self.num_active_groups)
             - np.floor(self.previous_num_active_groups),
         )
-        self.num_times_limit_total += np.invert(
+        self.acc_num_times_in_limit += np.invert(
             np.equal(self.num_active_groups, np.round(self.num_active_groups))
         )
 

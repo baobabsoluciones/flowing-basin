@@ -39,6 +39,21 @@ class RiverBasin:
             )
             self.dams.append(dam)
 
+        # Time-dependent attributes
+        self.time = None
+        self.accumulated_income = None
+        self.all_flows = None
+        self.history = None
+
+        # Initialize the time-dependent attributes (variables)
+        self._reset_variables()
+
+    def _reset_variables(self):
+
+        """
+        Reset all attributes that represent time-dependent (non-constant) values.
+        """
+
         # Identifier of the time step (increases with each update)
         self.time = -1
 
@@ -46,12 +61,21 @@ class RiverBasin:
         self.accumulated_income = np.zeros(self.num_scenarios)
 
         # Initialize the record of flows exiting the dams with an empty array of the correct shape
-        self.all_flows = np.array([]).reshape((0, self.instance.get_num_dams(), self.num_scenarios))
+        self.all_flows = np.array([]).reshape(
+            (0, self.instance.get_num_dams(), self.num_scenarios)
+        )
 
         # Create data frame that will contain all states of the river basin throughout time
         self.history = self.create_history()
 
-    def reset(self, instance: Instance = None, flow_smoothing: int = None, num_scenarios: int = None):
+        return
+
+    def reset(
+        self,
+        instance: Instance = None,
+        flow_smoothing: int = None,
+        num_scenarios: int = None,
+    ):
 
         """
         Resets the river basin.
@@ -66,13 +90,14 @@ class RiverBasin:
         if num_scenarios is not None:
             self.num_scenarios = num_scenarios
 
-        self.time = -1
-        self.accumulated_income = 0
-        self.all_flows = np.array([]).reshape((0, self.instance.get_num_dams(), self.num_scenarios))
-        self.history = self.create_history()
+        self._reset_variables()
 
         for dam in self.dams:
-            dam.reset(instance=self.instance, flow_smoothing=self.flow_smoothing, num_scenarios=self.num_scenarios)
+            dam.reset(
+                instance=self.instance,
+                flow_smoothing=self.flow_smoothing,
+                num_scenarios=self.num_scenarios,
+            )
 
         return
 
@@ -94,7 +119,10 @@ class RiverBasin:
                 f"{dam_id}_volchange",
                 f"{dam_id}_vol",
                 f"{dam_id}_power",
-                f"{dam_id}_turbined"
+                f"{dam_id}_turbined",
+                f"{dam_id}_groups",
+                f"{dam_id}_startups",
+                f"{dam_id}_limits",
             ]
         column_list += ["price", "income"]
 
@@ -112,10 +140,18 @@ class RiverBasin:
         income = self.get_income()
         for i in range(self.num_scenarios):
             new_row = dict()
-            new_row.update({"scenario": i, "time": self.time, "incoming": self.instance.get_incoming_flow(self.time)})
+            new_row.update(
+                {
+                    "scenario": i,
+                    "time": self.time,
+                    "incoming": self.instance.get_incoming_flow(self.time),
+                }
+            )
             for dam in self.dams:
                 net_flow = (
-                    dam.flow_contribution[i] + dam.unregulated_flow - dam.flow_out_clipped2[i]
+                    dam.flow_contribution[i]
+                    + dam.unregulated_flow
+                    - dam.flow_out_clipped2[i]
                 )
                 new_row.update(
                     {
@@ -125,13 +161,25 @@ class RiverBasin:
                         f"{dam.idx}_flow_clipped1": dam.flow_out_clipped1[i],
                         f"{dam.idx}_flow_clipped2": dam.flow_out_clipped2[i],
                         f"{dam.idx}_netflow": net_flow,
-                        f"{dam.idx}_volchange": net_flow * self.instance.get_time_step(),
+                        f"{dam.idx}_volchange": net_flow
+                        * self.instance.get_time_step(),
                         f"{dam.idx}_vol": dam.volume[i],
                         f"{dam.idx}_power": dam.channel.power_group.power[i],
                         f"{dam.idx}_turbined": dam.channel.power_group.turbined_flow[i],
+                        f"{dam.idx}_groups": dam.channel.power_group.num_active_groups[
+                            i
+                        ],
+                        f"{dam.idx}_startups": dam.channel.power_group.num_startups_total[
+                            i
+                        ],
+                        f"{dam.idx}_limits": dam.channel.power_group.num_times_limit_total[
+                            i
+                        ],
                     }
                 )
-            new_row.update({"price": self.instance.get_price(self.time), "income": income[i]})
+            new_row.update(
+                {"price": self.instance.get_price(self.time), "income": income[i]}
+            )
             self.history = pd.concat(
                 [self.history, pd.DataFrame([new_row])],
                 ignore_index=True,
@@ -184,7 +232,9 @@ class RiverBasin:
         """
 
         price = self.instance.get_price(self.time)
-        power = np.array([dam.channel.power_group.power for dam in self.dams]).sum(axis=0)
+        power = np.array([dam.channel.power_group.power for dam in self.dams]).sum(
+            axis=0
+        )
         time_step_hours = self.instance.get_time_step() / 3600
         income = price * power * time_step_hours
 
@@ -250,7 +300,13 @@ class RiverBasin:
             turbined_flow_of_preceding_dam = turbined_flow
 
         self.accumulated_income += self.get_income()
-        self.all_flows = np.concatenate([self.all_flows, self.get_clipped_flows().reshape((1, self.instance.get_num_dams(), -1))], axis=0)
+        self.all_flows = np.concatenate(
+            [
+                self.all_flows,
+                self.get_clipped_flows().reshape((1, self.instance.get_num_dams(), -1)),
+            ],
+            axis=0,
+        )
         self.update_history()
 
         return

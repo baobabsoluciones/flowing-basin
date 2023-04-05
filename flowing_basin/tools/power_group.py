@@ -6,7 +6,6 @@ import numpy as np
 
 
 class PowerGroup:
-
     def __init__(
         self,
         idx: str,
@@ -21,25 +20,54 @@ class PowerGroup:
         self.idx = idx
         self.power_model = self.get_power_model(paths_power_models[self.idx])
         self.relevant_lags = instance.get_relevant_lags_of_dam(self.idx)
-        self.turbined_flow_points = instance.get_turbined_flow_obs_for_power_group(self.idx)
+        self.turbined_flow_points = instance.get_turbined_flow_obs_for_power_group(
+            self.idx
+        )
         self.startup_flows = instance.get_startup_flows_of_power_group(self.idx)
         self.shutdown_flows = instance.get_shutdown_flows_of_power_group(self.idx)
 
-        # Power generated (MW) and turbined flow (m3/s)
+        # Time-dependent attributes
+        self.power = None
+        self.turbined_flow = None
+        self.previous_num_active_groups = None
+        self.num_active_groups = None
+        self.num_startups_total = None
+        self.num_times_limit_total = None
+
+        # Initialize the time-dependent attributes (variables)
+        self._reset_variables(past_flows)
+
+    def _reset_variables(self, past_flows: np.ndarray):
+
+        """
+        Reset all time-varying attributes of the power group:
+        power, turbined flow, number of active groups, and total number of startups and times in limit zones.
+        Power models and turbined flow observations are not reset as they are constant.
+        """
+
+        # Power generated (MW), turbined flow (m3/s) and number of active groups
         self.power = self.get_power(past_flows)
         self.turbined_flow = self.get_turbined_flow(self.power)
+        self.previous_num_active_groups = None
+        self.num_active_groups = self.get_num_active_power_groups(self.turbined_flow)
+
+        # Total number of power group startups, and of times in limit zones
+        self.num_startups_total = np.zeros(self.num_scenarios)
+        self.num_times_limit_total = np.zeros(self.num_scenarios)
+
+        return
 
     def reset(self, past_flows: np.ndarray, num_scenarios: int):
 
         """
-        Reset power and turbined flow
-        Power models and turbined flow observations are not reset as they are constant
+        Reset the power group.
         """
 
         self.num_scenarios = num_scenarios
 
-        self.power = self.get_power(past_flows)
-        self.turbined_flow = self.get_turbined_flow(self.power)
+        self._reset_variables(past_flows)
+
+        return
 
     @staticmethod
     def get_power_model(path_power_model: str) -> lightgbm.LGBMClassifier:
@@ -79,7 +107,7 @@ class PowerGroup:
         # Take only the relevant columns of the array
         first_lag = self.relevant_lags[0]
         last_lag = self.relevant_lags[-1]
-        power = self.power_model.predict(past_flows[:, first_lag - 1: last_lag])
+        power = self.power_model.predict(past_flows[:, first_lag - 1 : last_lag])
 
         return power
 
@@ -120,15 +148,27 @@ class PowerGroup:
         # - Turn the FLOW 1D array into a 2D array, repeating the 1D array in as many ROWS as there are STARTUP FLOWS
         # - Turn the STARTUP FLOWS 1D array into a 2D array, repeating the 1D array in as many COLS as there are FLOWS
         # - Comparing both 2D arrays, determine, for each flow, the startup flows are exceeded, and sum them
-        flow_broadcast_to_startup_flows = np.tile(turbined_flow, (len(self.startup_flows), 1))
-        startup_flows_broadcast_to_flows = np.transpose(np.tile(self.startup_flows, (len(turbined_flow), 1)))
-        exceeded_startup_flows = np.sum(flow_broadcast_to_startup_flows > startup_flows_broadcast_to_flows, axis=0)
+        flow_broadcast_to_startup_flows = np.tile(
+            turbined_flow, (len(self.startup_flows), 1)
+        )
+        startup_flows_broadcast_to_flows = np.transpose(
+            np.tile(self.startup_flows, (len(turbined_flow), 1))
+        )
+        exceeded_startup_flows = np.sum(
+            flow_broadcast_to_startup_flows > startup_flows_broadcast_to_flows, axis=0
+        )
 
         # Obtain the number of exceeded shutdown flows for every scenario
         # This will only be different for flows in between a startup and shutdown flow
-        flow_broadcast_to_shutdown_flows = np.tile(turbined_flow, (len(self.shutdown_flows), 1))
-        shutdown_flows_broadcast_to_flows = np.transpose(np.tile(self.shutdown_flows, (len(turbined_flow), 1)))
-        exceeded_shutdown_flows = np.sum(flow_broadcast_to_shutdown_flows > shutdown_flows_broadcast_to_flows, axis=0)
+        flow_broadcast_to_shutdown_flows = np.tile(
+            turbined_flow, (len(self.shutdown_flows), 1)
+        )
+        shutdown_flows_broadcast_to_flows = np.transpose(
+            np.tile(self.shutdown_flows, (len(turbined_flow), 1))
+        )
+        exceeded_shutdown_flows = np.sum(
+            flow_broadcast_to_shutdown_flows > shutdown_flows_broadcast_to_flows, axis=0
+        )
 
         # Get the average of the number of exceeded startup flows and the number of exceeded shutdown flows
         num_active_power_groups = (exceeded_startup_flows + exceeded_shutdown_flows) / 2
@@ -148,8 +188,20 @@ class PowerGroup:
             the turbined flow of every scenario (m3/s)
         """
 
+        self.previous_num_active_groups = self.num_active_groups.copy()
+
         self.power = self.get_power(past_flows)
         self.turbined_flow = self.get_turbined_flow(self.power)
+        self.num_active_groups = self.get_num_active_power_groups(self.turbined_flow)
+
+        self.num_startups_total += np.maximum(
+            0,
+            np.floor(self.num_active_groups)
+            - np.floor(self.previous_num_active_groups),
+        )
+        self.num_times_limit_total += np.invert(
+            np.equal(self.num_active_groups, np.round(self.num_active_groups))
+        )
 
         # Bring turbined flow upstream, since it is used to update the volume of the next dam
         return self.turbined_flow

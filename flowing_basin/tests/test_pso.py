@@ -124,13 +124,13 @@ sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap2/solution.json"
 # status = pso.solve(options, num_particles=2, num_iters=2)
 # print("status:", status)
 
-# path_parent = "../data"
-# dir_name = f"output_example1_original-real-decisions"
-# pso.solution = sol_original
-
 path_parent = "../data"
-dir_name = f"output_example1_LPmodel_gap2"
-pso.solution = sol_lp
+dir_name = f"output_example1_original-real-decisions"
+pso.solution = sol_original
+
+# path_parent = "../data"
+# dir_name = f"output_example1_LPmodel_gap2"
+# pso.solution = sol_lp
 
 solution_inconsistencies = pso.solution.check_schema()
 if solution_inconsistencies:
@@ -141,7 +141,7 @@ print("optimal solution's objective function values:", pso.objective_function_va
 print("optimal solution's full objective function value:", pso.objective_function_env())
 print("optimal solution's full objective function value (cornflow method):", pso.get_objective())
 print(pso.river_basin.history.to_string())
-pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
+# pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
 
 # Search for best PSO parameters ---- #
 # options_search = {"c1": [0.1, 5], "c2": [0.1, 5], "w": [0.3, 0.9], "k": [1, 2], "p": 1}

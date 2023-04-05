@@ -17,6 +17,29 @@ class Channel:
 
         self.idx = idx
         self.limit_flow_points = instance.get_flow_limit_obs_for_channel(self.idx)
+        self.flow_max = instance.get_max_flow_of_channel(self.idx)
+
+        # Time-dependent attributes
+        self.past_flows = None
+        self.flow_limit = None
+
+        # Initialize the time-dependent attributes (variables)
+        self._reset_variables(instance, dam_vol=dam_vol)
+
+        self.power_group = PowerGroup(
+            idx=self.idx,
+            past_flows=self.past_flows,  # noqa
+            instance=instance,
+            paths_power_models=paths_power_models,
+            num_scenarios=self.num_scenarios,
+        )
+
+    def _reset_variables(self, instance: Instance, dam_vol: np.ndarray):
+
+        """
+        Reset all time-varying attributes of the channel: past flows and flow limit.
+        Flow limit observations are not reset as they are constant.
+        """
 
         # Past flows (m3/s)
         # We save them as an array of shape num_scenarios x num_lags
@@ -26,40 +49,26 @@ class Channel:
             axis=0,
         )
 
-        # Maximum flow of channel (m3/s)
-        self.flow_max = instance.get_max_flow_of_channel(self.idx)
-
         # Initial flow limit (m3/s)
         self.flow_limit = self.get_flow_limit(dam_vol)
 
-        self.power_group = PowerGroup(
-            idx=self.idx,
-            past_flows=self.past_flows,
-            instance=instance,
-            paths_power_models=paths_power_models,
-            num_scenarios=self.num_scenarios,
-        )
+        return
 
     def reset(self, dam_vol: np.ndarray, instance: Instance, num_scenarios: int):
 
         """
-        Reset all time-varying attributes: past flows, max flow and flow limit
-        Flow limit observations are not reset as they are constant
+        Reset the channel and the power group within.
         """
 
         self.num_scenarios = num_scenarios
 
-        self.past_flows = np.repeat(
-            [instance.get_initial_lags_of_channel(self.idx)],
-            repeats=self.num_scenarios,
-            axis=0,
-        )
-        self.flow_max = instance.get_max_flow_of_channel(self.idx)
-        self.flow_limit = self.get_flow_limit(dam_vol)
+        self._reset_variables(instance, dam_vol=dam_vol)
 
         self.power_group.reset(
             past_flows=self.past_flows, num_scenarios=self.num_scenarios
         )
+
+        return
 
     def get_flow_limit(self, dam_vol: np.ndarray) -> np.ndarray:
 

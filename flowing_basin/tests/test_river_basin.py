@@ -139,18 +139,19 @@ if __name__ == "__main__":
     river_basin = RiverBasin(instance=instance, paths_power_models=paths_power_models)
 
     print("---- SCENARIO A ----")
-    river_basin.reset(num_scenarios=1)
     decisionsA = np.array([[[6.79], [6.58]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]]])
     test_river_basin(river_basin, decisions=decisionsA)
     print("--- history")
     print(river_basin.history.to_string())
 
-    print("---- SCENARIO A, WITH DEEP UPDATE ----")
-    river_basin.reset(num_scenarios=1)
-    river_basin.deep_update_flows(decisionsA)
-    print(">>>> deep update")
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.accumulated_income}")
+    # print("---- SCENARIO A, WITH DEEP UPDATE ----")
+    # river_basin.reset(num_scenarios=1)
+    # river_basin.deep_update_flows(decisionsA)
+    # print(">>>> deep update")
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    # print("--- history")
+    # print(river_basin.history.to_string())
 
     print("---- SCENARIO A, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
     river_basin.reset(num_scenarios=1)
@@ -161,6 +162,8 @@ if __name__ == "__main__":
     print(">>>> deep update")
     print(f"state after deep update: {river_basin.get_state()}")
     print(f"accumulated income: {river_basin.accumulated_income}")
+    print("--- history")
+    print(river_basin.history.to_string())
 
     print("---- SCENARIO B ----")
     river_basin.reset(num_scenarios=1)
@@ -178,125 +181,125 @@ if __name__ == "__main__":
         decisions=decisionsAB,
     )
 
-    print("---- SCENARIOS A and B, WITH DEEP UPDATE ----")
-    river_basin.reset(num_scenarios=2)
-    river_basin.deep_update_flows(decisionsAB)
-    print(">>>> deep update")
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.accumulated_income}")
-
-    print("---- SCENARIOS A and B, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
-    padding = np.array([[[0, 0], [0, 0]] for _ in range(instance.get_num_time_steps() - decisionsAB.shape[0])])
-    decisionsAB_all_periods = np.concatenate([decisionsAB, padding])
-    river_basin.reset(num_scenarios=2)
-    river_basin.deep_update_flows(decisionsAB_all_periods)
-    print(">>>> deep update")
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.accumulated_income}")
-
-    print("---- SCENARIOS A, B and C, WITH DEEP UPDATE ----")
-    decisionsABC = np.array(
-        [[[6.79, 8, 1], [6.58, 7, 1]], [[7.49, 9, 1], [6.73, 8.5, 1]]]
-    )
-    river_basin.reset(num_scenarios=3)
-    river_basin.deep_update_flows(decisionsABC)
-    print(">>>> deep update")
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.accumulated_income}")
-
-    print("---- SCENARIOS A, B and C, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
-    padding = np.array([[[0, 0, 0], [0, 0, 0]] for _ in range(instance.get_num_time_steps() - decisionsABC.shape[0])])
-    decisionsABC_all_periods = np.concatenate([decisionsABC, padding])
-    river_basin.reset(num_scenarios=3)
-    river_basin.deep_update_flows(decisionsABC_all_periods)
-    print(">>>> deep update")
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.accumulated_income}")
-
-    print("---- SCENARIO VA, DEEP UPDATE WITH VARIATIONS ----")
-    river_basin.reset(flow_smoothing=1, num_scenarios=1)
-    decisionsVA = np.array([
-        [[0.5], [0.5]],
-        [[-0.25], [-0.25]],
-        [[-0.25], [-0.25]],
-    ])
-    river_basin.deep_update_relvars(decisionsVA)
-    print(f"accumulated income: {river_basin.accumulated_income}")
-    equivalent_flows = river_basin.all_flows
-    print(f"equivalent flows: {equivalent_flows}")
-    print(river_basin.history.to_string())
-
-    print("---- SCENARIO VA, EQUIVALENT NORMAL DEEP UPDATE ----")
-    river_basin.reset(num_scenarios=1)
-    decisionsNVA = equivalent_flows
-    river_basin.deep_update_flows(decisionsNVA)
-    print(f"accumulated income: {river_basin.accumulated_income}")
-    print(river_basin.history.to_string())
-
-    print("---- SCENARIO VB, DEEP UPDATE WITH VARIATIONS ----")
-    river_basin.reset(num_scenarios=1)
-    decisionsVB = np.array([
-        [[-0.25], [-0.25]],
-        [[0.5], [0.5]],
-        [[0.5], [0.5]],
-    ])
-    river_basin.deep_update_relvars(decisionsVB)
-    print(f"accumulated income: {river_basin.accumulated_income}")
-    print(f"equivalent flows: {river_basin.all_flows}")
-    print(river_basin.history.to_string())
-
-    print("---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS ----")
-    river_basin.reset(num_scenarios=3)
-    decisionsVABC = np.array(
-        [
-            [
-                [0.5, -0.25, 0.25],
-                [0.5, -0.25, 0.5],
-            ],
-            [
-                [-0.25, 0.5, 0.5],
-                [-0.25, 0.5, 0.3],
-            ],
-            [
-                [-0.25, 0.5, 0.5],
-                [-0.25, 0.5, 0.3],
-            ],
-        ]
-    )
-    river_basin.deep_update_relvars(decisionsVABC)
-    print(f"accumulated income: {river_basin.accumulated_income}")
-    equivalent_flows = river_basin.all_flows
-    print(f"equivalent flows: {equivalent_flows}")
-
-    print("---- SCENARIOS VA, VB and VC, EQUIVALENT NORMAL DEEP UPDATE ----")
-    river_basin.reset(num_scenarios=3)
-    decisionsNVABC = equivalent_flows
-    river_basin.deep_update_flows(decisionsNVABC)
-    print(f"accumulated income: {river_basin.accumulated_income}")
-
-    print(
-        "---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS THROUGH ALL PERIODS ----"
-    )
-    river_basin.reset(num_scenarios=3)
-    padding = np.array(
-        [
-            [[0, 0, 0], [0, 0, 0]]
-            for _ in range(instance.get_num_time_steps() - decisionsVABC.shape[0])
-        ]
-    )
-    decisionsVABC_all_periods = np.concatenate([decisionsVABC, padding])
-    print(decisionsVABC_all_periods)
-    river_basin.deep_update_relvars(decisionsVABC_all_periods)
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.accumulated_income}")
-    equivalent_flows = river_basin.all_flows
-    print(f"equivalent flows: {equivalent_flows}")
-
-    print(
-        "---- SCENARIOS VA, VB and VC, EQUIVALENT NORMAL DEEP UPDATE THROUGH ALL PERIODS ----"
-    )
-    river_basin.reset(num_scenarios=3)
-    decisionsNVABC_all_periods = equivalent_flows
-    river_basin.deep_update_flows(decisionsNVABC_all_periods)
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.accumulated_income}")
+    # print("---- SCENARIOS A and B, WITH DEEP UPDATE ----")
+    # river_basin.reset(num_scenarios=2)
+    # river_basin.deep_update_flows(decisionsAB)
+    # print(">>>> deep update")
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    #
+    # print("---- SCENARIOS A and B, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
+    # padding = np.array([[[0, 0], [0, 0]] for _ in range(instance.get_num_time_steps() - decisionsAB.shape[0])])
+    # decisionsAB_all_periods = np.concatenate([decisionsAB, padding])
+    # river_basin.reset(num_scenarios=2)
+    # river_basin.deep_update_flows(decisionsAB_all_periods)
+    # print(">>>> deep update")
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    #
+    # print("---- SCENARIOS A, B and C, WITH DEEP UPDATE ----")
+    # decisionsABC = np.array(
+    #     [[[6.79, 8, 1], [6.58, 7, 1]], [[7.49, 9, 1], [6.73, 8.5, 1]]]
+    # )
+    # river_basin.reset(num_scenarios=3)
+    # river_basin.deep_update_flows(decisionsABC)
+    # print(">>>> deep update")
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    #
+    # print("---- SCENARIOS A, B and C, WITH DEEP UPDATE THROUGH ALL PERIODS ----")
+    # padding = np.array([[[0, 0, 0], [0, 0, 0]] for _ in range(instance.get_num_time_steps() - decisionsABC.shape[0])])
+    # decisionsABC_all_periods = np.concatenate([decisionsABC, padding])
+    # river_basin.reset(num_scenarios=3)
+    # river_basin.deep_update_flows(decisionsABC_all_periods)
+    # print(">>>> deep update")
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    #
+    # print("---- SCENARIO VA, DEEP UPDATE WITH VARIATIONS ----")
+    # river_basin.reset(flow_smoothing=1, num_scenarios=1)
+    # decisionsVA = np.array([
+    #     [[0.5], [0.5]],
+    #     [[-0.25], [-0.25]],
+    #     [[-0.25], [-0.25]],
+    # ])
+    # river_basin.deep_update_relvars(decisionsVA)
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    # equivalent_flows = river_basin.all_flows
+    # print(f"equivalent flows: {equivalent_flows}")
+    # print(river_basin.history.to_string())
+    #
+    # print("---- SCENARIO VA, EQUIVALENT NORMAL DEEP UPDATE ----")
+    # river_basin.reset(num_scenarios=1)
+    # decisionsNVA = equivalent_flows
+    # river_basin.deep_update_flows(decisionsNVA)
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    # print(river_basin.history.to_string())
+    #
+    # print("---- SCENARIO VB, DEEP UPDATE WITH VARIATIONS ----")
+    # river_basin.reset(num_scenarios=1)
+    # decisionsVB = np.array([
+    #     [[-0.25], [-0.25]],
+    #     [[0.5], [0.5]],
+    #     [[0.5], [0.5]],
+    # ])
+    # river_basin.deep_update_relvars(decisionsVB)
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    # print(f"equivalent flows: {river_basin.all_flows}")
+    # print(river_basin.history.to_string())
+    #
+    # print("---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS ----")
+    # river_basin.reset(num_scenarios=3)
+    # decisionsVABC = np.array(
+    #     [
+    #         [
+    #             [0.5, -0.25, 0.25],
+    #             [0.5, -0.25, 0.5],
+    #         ],
+    #         [
+    #             [-0.25, 0.5, 0.5],
+    #             [-0.25, 0.5, 0.3],
+    #         ],
+    #         [
+    #             [-0.25, 0.5, 0.5],
+    #             [-0.25, 0.5, 0.3],
+    #         ],
+    #     ]
+    # )
+    # river_basin.deep_update_relvars(decisionsVABC)
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    # equivalent_flows = river_basin.all_flows
+    # print(f"equivalent flows: {equivalent_flows}")
+    #
+    # print("---- SCENARIOS VA, VB and VC, EQUIVALENT NORMAL DEEP UPDATE ----")
+    # river_basin.reset(num_scenarios=3)
+    # decisionsNVABC = equivalent_flows
+    # river_basin.deep_update_flows(decisionsNVABC)
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    #
+    # print(
+    #     "---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS THROUGH ALL PERIODS ----"
+    # )
+    # river_basin.reset(num_scenarios=3)
+    # padding = np.array(
+    #     [
+    #         [[0, 0, 0], [0, 0, 0]]
+    #         for _ in range(instance.get_num_time_steps() - decisionsVABC.shape[0])
+    #     ]
+    # )
+    # decisionsVABC_all_periods = np.concatenate([decisionsVABC, padding])
+    # print(decisionsVABC_all_periods)
+    # river_basin.deep_update_relvars(decisionsVABC_all_periods)
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.accumulated_income}")
+    # equivalent_flows = river_basin.all_flows
+    # print(f"equivalent flows: {equivalent_flows}")
+    #
+    # print(
+    #     "---- SCENARIOS VA, VB and VC, EQUIVALENT NORMAL DEEP UPDATE THROUGH ALL PERIODS ----"
+    # )
+    # river_basin.reset(num_scenarios=3)
+    # decisionsNVABC_all_periods = equivalent_flows
+    # river_basin.deep_update_flows(decisionsNVABC_all_periods)
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.accumulated_income}")

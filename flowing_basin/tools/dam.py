@@ -14,6 +14,7 @@ class Dam:
     ):
 
         self.num_scenarios = num_scenarios
+        self.flow_smoothing = flow_smoothing
 
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
@@ -22,6 +23,35 @@ class Dam:
         self.time_step = instance.get_time_step()
         self.min_volume = instance.get_min_vol_of_dam(self.idx)
         self.max_volume = instance.get_max_vol_of_dam(self.idx)
+
+        # Time-dependent attributes
+        self.volume = None
+        self.previous_flow_out = None
+        self.all_previous_variations = None
+        self.flow_contribution = None
+        self.unregulated_flow = None
+        self.flow_out_assigned = None
+        self.flow_out_smoothed = None
+        self.flow_out_clipped1 = None
+        self.flow_out_clipped2 = None
+
+        # Initialize the time-dependent attributes (variables)
+        self._reset_variables(instance)
+
+        self.channel = Channel(
+            idx=self.idx,
+            dam_vol=self.volume,  # noqa
+            instance=instance,
+            paths_power_models=paths_power_models,
+            num_scenarios=self.num_scenarios,
+        )
+
+    def _reset_variables(self, instance: Instance):
+
+        """
+        Reset all time-varying attributes of the dam: volume and previous flows.
+        Min and max volumes are not reset as they are constant.
+        """
 
         # Initial volume of dam (m3) - the STARTING volume in this time step, or the FINAL volume of the previous one
         self.volume = np.repeat(
@@ -33,8 +63,9 @@ class Dam:
 
         # Number of periods in which we force to keep the direction (flow increasing OR decreasing) in the dam
         # Note that this rule may not apply if flows must be clipped
-        self.flow_smoothing = flow_smoothing
-        self.previous_flow_out = np.repeat(instance.get_initial_lags_of_channel(self.idx)[0], self.num_scenarios)
+        self.previous_flow_out = np.repeat(
+            instance.get_initial_lags_of_channel(self.idx)[0], self.num_scenarios
+        )
         self.all_previous_variations = np.zeros((1, self.num_scenarios))
 
         # Other relevant information for when decisions are made
@@ -45,38 +76,18 @@ class Dam:
         self.flow_out_clipped1 = None
         self.flow_out_clipped2 = None
 
-        self.channel = Channel(
-            idx=self.idx,
-            dam_vol=self.volume,
-            instance=instance,
-            paths_power_models=paths_power_models,
-            num_scenarios=self.num_scenarios,
-        )
+        return
 
     def reset(self, instance: Instance, flow_smoothing: int, num_scenarios: int):
 
         """
-        Reset volume to the initial volume of the given instance.
-        Min and max volumes are not reset as they are constant.
+        Reset dam and the channel within.
         """
 
         self.flow_smoothing = flow_smoothing
         self.num_scenarios = num_scenarios
 
-        self.volume = np.repeat(
-            instance.get_initial_vol_of_dam(self.idx), self.num_scenarios
-        )
-        self.volume = np.clip(self.volume, self.min_volume, self.max_volume)
-
-        self.flow_contribution = None
-        self.unregulated_flow = None
-        self.flow_out_smoothed = None
-        self.flow_out_assigned = None
-        self.flow_out_clipped1 = None
-        self.flow_out_clipped2 = None
-
-        self.previous_flow_out = np.repeat(instance.get_initial_lags_of_channel(self.idx)[0], self.num_scenarios)
-        self.all_previous_variations = np.zeros((1, self.num_scenarios))
+        self._reset_variables(instance)
 
         self.channel.reset(
             dam_vol=self.volume, instance=instance, num_scenarios=self.num_scenarios
@@ -128,10 +139,18 @@ class Dam:
         # Check all elements of the current variation have the same sign as the last N variations
         # Otherwise, set these flows to the previous flows
         current_assigned_variation = self.flow_out_assigned - self.previous_flow_out
-        previous_variations = self.all_previous_variations[-self.flow_smoothing:] if self.flow_smoothing > 0 else np.zeros(self.num_scenarios).reshape((1, -1))
-        sign_changes_each_period = previous_variations * current_assigned_variation < 0  # Broadcasting
+        previous_variations = (
+            self.all_previous_variations[-self.flow_smoothing :]
+            if self.flow_smoothing > 0
+            else np.zeros(self.num_scenarios).reshape((1, -1))
+        )
+        sign_changes_each_period = (
+            previous_variations * current_assigned_variation < 0
+        )  # Broadcasting
         sign_changes_any_period = np.sum(sign_changes_each_period, axis=0) > 0
-        self.flow_out_smoothed = np.where(sign_changes_any_period, self.previous_flow_out, self.flow_out_assigned)
+        self.flow_out_smoothed = np.where(
+            sign_changes_any_period, self.previous_flow_out, self.flow_out_assigned
+        )
 
         # Flow clipped according to the flow limit of the channel
         self.flow_out_clipped1 = np.clip(
@@ -163,8 +182,11 @@ class Dam:
         # Values to smooth flow in next time step ---- #
 
         current_actual_variation = self.flow_out_clipped2 - self.previous_flow_out
-        self.all_previous_variations = np.concatenate([self.all_previous_variations, current_actual_variation.reshape(1, -1)], axis=0)
-        self.previous_flow_out = self.flow_out_clipped2
+        self.all_previous_variations = np.concatenate(
+            [self.all_previous_variations, current_actual_variation.reshape(1, -1)],
+            axis=0,
+        )
+        self.previous_flow_out = self.flow_out_clipped2.copy()
 
         # Channel ---- #
 

@@ -44,7 +44,7 @@ class Instance(InstanceCore):
         # Number of time steps ---- #
 
         # Get number of time steps
-        num_time_steps = self.get_num_time_steps()
+        num_time_steps = self.get_largest_impact_horizon()
 
         # Calculate the number of each time-dependent variable
         num_time_dep_var_values = {
@@ -151,15 +151,15 @@ class Instance(InstanceCore):
 
         """
 
-        :return: Starting datetime and final datetime
+        :return: Starting datetime and final datetime (decision horizon)
         """
 
         start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
-        end = datetime.strptime(self.data["datetime"]["end"], "%Y-%m-%d %H:%M")
+        end_decisions = datetime.strptime(self.data["datetime"]["end_decisions"], "%Y-%m-%d %H:%M")
 
-        return start, end
+        return start, end_decisions
 
-    def get_time_step(self) -> float:
+    def get_time_step_seconds(self) -> float:
 
         """
 
@@ -168,19 +168,44 @@ class Instance(InstanceCore):
 
         return self.data["time_step_minutes"] * 60
 
-    def get_num_time_steps(self) -> int:
+    def get_decision_horizon(self) -> int:
 
         """
+        Get the number of time steps up to the decision horizon
+        (number of time steps in which we have to choose the flows).
 
-        :return: Total number of time steps
-        For example, if the instance spans one day, and we consider steps of 15min, this will be 24*4 = 96
+        For example, if the instance spans one day, and we consider steps of 1/4 hour,
+        this will be 24*4 = 96.
+
+        :return: Number of time steps up to the decision horizon
         """
 
-        start, end = self.get_start_end_datetimes()
-        difference = end - start
-        num_time_steps = difference.total_seconds() // self.get_time_step() + 1
+        start, end_decisions = self.get_start_end_datetimes()
+        difference = end_decisions - start
+        num_time_steps_decisions = difference.total_seconds() // self.get_time_step_seconds() + 1
 
-        return int(num_time_steps)
+        return int(num_time_steps_decisions)
+
+    def get_largest_impact_horizon(self) -> int:
+
+        """
+        Get the number of time steps up to the largest impact horizon
+        (maximum number of time steps in which the chosen flows have an impact in the income obtained).
+        This should be equal to the total number of time steps of the instance
+        (that is, the number of time steps for which we have data on the energy price, the unregulated flows, etc.).
+
+        For example, if the instance spans one day, we consider steps of 1/4 hour, and
+        the longest channel has a maximum delay of 3/4 hour, this will be (24 + 3/4) * 4 = 99.
+
+        :return: Number of time steps up to the largest impact horizon
+        """
+
+        decision_horizon = self.get_decision_horizon()
+        max_lag = max([self.get_relevant_lags_of_dam(dam_id)[0] for dam_id in self.get_ids_of_dams()])
+        # TODO: Shouldn't we take self.get_relevant_lags_of_dam(dam_id)[-1],
+        #  to get the max delay of each channel, and not the min?
+
+        return decision_horizon + max_lag
 
     def get_num_dams(self) -> int:
 
@@ -342,10 +367,10 @@ class Instance(InstanceCore):
         :return: Unregulated flow that enters the dam (flow that comes from the river) in all of these time steps (m3/s)
         """
 
-        if time >= self.get_num_time_steps():
+        if time >= self.get_largest_impact_horizon():
             warnings.warn(
                 f"Tried to access unregulated flow for {time=}, "
-                f"which is equal or greater than {self.get_num_time_steps()=}. "
+                f"which is equal or greater than {self.get_largest_impact_horizon()=}. "
                 f"None was returned"
             )
             return None
@@ -379,10 +404,10 @@ class Instance(InstanceCore):
         :return: FLow entering the first dam in all of these time steps (m3/s)
         """
 
-        if time >= self.get_num_time_steps():
+        if time >= self.get_largest_impact_horizon():
             warnings.warn(
                 f"Tried to access incoming flow for {time=}, "
-                f"which is equal or greater than {self.get_num_time_steps()=}. "
+                f"which is equal or greater than {self.get_largest_impact_horizon()=}. "
                 f"None was returned"
             )
             return None
@@ -411,10 +436,10 @@ class Instance(InstanceCore):
         :return: Price of energy in all of these time steps (EUR/MWh)
         """
 
-        if time >= self.get_num_time_steps():
+        if time >= self.get_largest_impact_horizon():
             warnings.warn(
                 f"Tried to access price for {time=}, "
-                f"which is equal or greater than {self.get_num_time_steps()=}. "
+                f"which is equal or greater than {self.get_largest_impact_horizon()=}. "
                 f"None was returned"
             )
             return None

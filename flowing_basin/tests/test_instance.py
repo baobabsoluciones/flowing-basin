@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance
 
 # "../" means "go one step up"; in this case, to the flowing-basin directory
-instance = Instance.from_json("../data/input_example3.json")
+instance = Instance.from_json("../data/input_example1.json")
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = instance.check()
@@ -12,7 +12,8 @@ if inconsistencies:
 time = 0
 print("data property:", instance.data)
 print("dictionary:", instance.to_dict())
-print("number of time steps:", instance.get_num_time_steps())
+print("decision horizon:", instance.get_decision_horizon())
+print("impact horizon:", instance.get_largest_impact_horizon())
 print("IDs of dams:", instance.get_ids_of_dams())
 print("incoming flow:", instance.get_incoming_flow(time))
 print("incoming flows (next 12 steps):", instance.get_incoming_flow(time, num_steps=12))

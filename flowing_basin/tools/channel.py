@@ -98,7 +98,7 @@ class Channel:
 
         return flow_limit
 
-    def update(self, flow: np.ndarray, dam_vol: np.ndarray) -> np.ndarray:
+    def update(self, flow: np.ndarray, price: float, dam_vol: np.ndarray) -> np.ndarray:
 
         """
         Update the record of flows through the channel, its current maximum flow,
@@ -107,6 +107,7 @@ class Channel:
         :param flow:
             Array of shape num_scenarios with
             the flow going through the channel in the current time step in every scenario (m3/s)
+        :param price: Price of energy in current time step (EUR/MWh)
         :param dam_vol:
             Array of shape num_scenario with
             the volume of the dam connected to the channel in every scenario (m3)
@@ -126,4 +127,4 @@ class Channel:
         self.flow_limit = self.get_flow_limit(dam_vol)
 
         # Update power group and get turbined flow
-        return self.power_group.update(past_flows=self.past_flows)
+        return self.power_group.update(price=price, past_flows=self.past_flows)

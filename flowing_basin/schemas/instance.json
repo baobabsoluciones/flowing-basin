@@ -11,12 +11,12 @@
                 "start": {
                     "type": "string"
                 },
-                "end": {
+                "end_decisions": {
                     "type": "string"
                 }
             },
             "required": [
-                "end",
+                "end_decisions",
                 "start"
             ]
         },

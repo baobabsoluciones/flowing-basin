@@ -8,5 +8,8 @@ paths_power_models = {
 }
 river_basin = RiverBasin(instance=instance, paths_power_models=paths_power_models)
 
-solution = Solution.from_json("../data/output_example1_original-real-decisions/solution.json")
-print(river_basin.deep_update_flows(solution.to_flows()))
+solution = Solution.from_json("../data/output_example1_original-real-decisions_solution.json")
+print(solution.check())
+
+river_basin.deep_update_flows(solution.to_flows())
+print(river_basin.history)

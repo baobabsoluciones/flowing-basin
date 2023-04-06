@@ -71,17 +71,25 @@ class Training:
             ].tolist()[0]
         if initial_row is None:
             initial_row = randint(min_row, max_row)
-        assert initial_row in range(min_row, max_row + 1), f"{initial_row=} should be between {min_row=} and {max_row=}"
+        assert initial_row in range(
+            min_row, max_row + 1
+        ), f"{initial_row=} should be between {min_row=} and {max_row=}"
         last_row = initial_row + length_episodes - 1
+        last_row_decisions = last_row - max(
+            [
+                instance_constants.get_relevant_lags_of_dam(dam_id)[0]
+                for dam_id in instance_constants.get_ids_of_dams()
+            ]
+        )
 
         # Add time-dependent values to the data
 
-        data["datetime"]["start"] = training_data.loc[initial_row, "datetime"].strftime(
-            "%Y-%m-%d %H:%M"
-        )
-        data["datetime"]["end"] = training_data.loc[last_row, "datetime"].strftime(
-            "%Y-%m-%d %H:%M"
-        )
+        data["datetime"]["start"] = training_data.loc[
+            initial_row, "datetime"
+        ].strftime("%Y-%m-%d %H:%M")
+        data["datetime"]["end_decisions"] = training_data.loc[
+            last_row_decisions, "datetime"
+        ].strftime("%Y-%m-%d %H:%M")
 
         data["incoming_flows"] = training_data.loc[
             initial_row:last_row, "incoming_flow"

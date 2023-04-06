@@ -121,7 +121,7 @@ for row, flows in enumerate(decisions):
         check_volume(
             old_state=old_state,
             state=state,
-            time_step=river_basin.instance.get_time_step(),
+            time_step=river_basin.instance.get_time_step_seconds(),
             min_vol_dam1=river_basin.instance.get_min_vol_of_dam("dam1"),
             max_vol_dam1=river_basin.instance.get_max_vol_of_dam("dam1"),
             min_vol_dam2=river_basin.instance.get_min_vol_of_dam("dam2"),
@@ -131,7 +131,7 @@ for row, flows in enumerate(decisions):
         check_income(
             old_state=old_state,
             state=state,
-            time_step=river_basin.instance.get_time_step(),
+            time_step=river_basin.instance.get_time_step_seconds(),
             income=income,
         )
     old_state = state
@@ -162,14 +162,14 @@ for row, flows in enumerate(decisions):
         log_real += (
             f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^14}"
             f"{round(flow_out, 4): ^14}{round(flow_out, 4): ^14}"
-            f"{round(net_flow, 4): ^13}{round(net_flow * instance.get_time_step(), 5): ^15}"
+            f"{round(net_flow, 4): ^13}{round(net_flow * instance.get_time_step_seconds(), 5): ^15}"
             f"{round(volume, 2): ^13}{round(power, 2): ^13}"
             f"|\t"
             f"{round(turbined_flow, 5): ^15}"
         )
         turbined_flow_of_preceding_dam = turbined_flow
     price = df['price'].loc[initial_row + row]
-    income_real = price * power_total * instance.get_time_step() / 3600
+    income_real = price * power_total * instance.get_time_step_seconds() / 3600
     log_real += f"{round(price, 2): ^13}{round(income_real, 2): ^13}"
 
 # Print river basin log and data (real) logs
@@ -219,7 +219,7 @@ for dam_id in instance.get_ids_of_dams():
 df1["price"] = np.array(df["price"].loc[initial_row - 1 : last_row])
 df1["income_REAL"] = np.array(
     (df1["dam1_power_REAL"] + df1["dam2_power_REAL"])
-    * instance.get_time_step()
+    * instance.get_time_step_seconds()
     / 3600
     * df1["price"]
 )

@@ -10,6 +10,39 @@ class Solution(SolutionCore):
         os.path.join(os.path.dirname(__file__), "../schemas/solution.json")
     )
 
+    def check_inconsistencies(self):
+
+        inconsistencies = dict()
+
+        # The number of flows given to all dams must be equal
+        first_dam = self.data["dams"][0]
+        num_flows_first_dam = len(first_dam["flows"])
+        if not all([len(dam["flows"]) == num_flows_first_dam for dam in self.data["dams"]]):
+            inconsistencies.update(
+                {
+                    "The number of flows given to each dam is not equal":
+                    [len(dam['flows']) for dam in self.data['dams']]
+                }
+            )
+
+        return inconsistencies
+
+    def check(self):
+
+        """
+        Method that checks if the data of the solution does not follow the schema or has inconsistencies
+        :return: A dictionary containing the schema noncompliance problems and inconsistencies found
+        """
+
+        inconsistencies = self.check_inconsistencies()
+        schema_errors = self.check_schema()
+        if schema_errors:
+            inconsistencies.update(
+                {"The given data does not follow the schema": schema_errors}
+            )
+
+        return inconsistencies
+
     @classmethod
     def from_flows(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
 

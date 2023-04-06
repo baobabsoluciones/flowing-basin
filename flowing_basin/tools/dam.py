@@ -19,13 +19,17 @@ class Dam:
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
 
+        self.decision_horizon = instance.get_decision_horizon()
+
         # Constant values for the whole period - time step (seconds, s), min/max volumes (m3)
-        self.time_step = instance.get_time_step()
+        self.time_step = instance.get_time_step_seconds()
         self.min_volume = instance.get_min_vol_of_dam(self.idx)
         self.max_volume = instance.get_max_vol_of_dam(self.idx)
 
         # Time-dependent attributes
+        self.time = None
         self.volume = None
+        self.final_volume = None
         self.previous_flow_out = None
         self.all_previous_variations = None
         self.flow_contribution = None
@@ -53,6 +57,10 @@ class Dam:
         Min and max volumes are not reset as they are constant.
         """
 
+        # Identifier of the time step
+        # It should be equal to the RiverBasin's time identifier at all times
+        self.time = -1
+
         # Initial volume of dam (m3) - the STARTING volume in this time step, or the FINAL volume of the previous one
         self.volume = np.repeat(
             instance.get_initial_vol_of_dam(self.idx), self.num_scenarios
@@ -60,6 +68,9 @@ class Dam:
 
         # Clip initial volume of dam
         self.volume = np.clip(self.volume, self.min_volume, self.max_volume)
+
+        # Volume at the end of the decision horizon
+        self.final_volume = None
 
         # Number of periods in which we force to keep the direction (flow increasing OR decreasing) in the dam
         # Note that this rule may not apply if flows must be clipped
@@ -96,6 +107,7 @@ class Dam:
     def update(
         self,
         flow_out: np.ndarray,
+        price: float,
         incoming_flow: float,
         unregulated_flow: float,
         turbined_flow_of_preceding_dam: np.ndarray,
@@ -107,6 +119,7 @@ class Dam:
         :param flow_out:
             Array of shape num_scenarios with
             the flow we want to have exiting the dam in every scenario (m3/s)
+        :param price: Price of energy in current time step (EUR/MWh)
         :param incoming_flow: Incoming flow to the river basin in the current time step (m3/s)
         :param unregulated_flow: Unregulated flow entering the dam in the current time step (m3/s)
         :param turbined_flow_of_preceding_dam:
@@ -116,6 +129,8 @@ class Dam:
             Array of shape num_scenarios with
             the turbined flow in the power group in every scenario (m3/s)
         """
+
+        self.time += 1
 
         # Flow IN ---- #
 
@@ -179,6 +194,11 @@ class Dam:
         # Volume clipped to max value
         self.volume = np.clip(self.volume, None, self.max_volume)
 
+        # Volume at the end of the decision horizon ---- #
+
+        if self.time == self.decision_horizon - 1:
+            self.final_volume = self.volume
+
         # Values to smooth flow in next time step ---- #
 
         current_actual_variation = self.flow_out_clipped2 - self.previous_flow_out
@@ -192,4 +212,4 @@ class Dam:
 
         # We update the channel with the new volume (the FINAL volume in this time step),
         # because the channel stores the FINAL maximum flow, which is calculated with this volume
-        return self.channel.update(flow=self.flow_out_clipped2, dam_vol=self.volume)
+        return self.channel.update(price=price, flow=self.flow_out_clipped2, dam_vol=self.volume)

@@ -19,12 +19,14 @@ import typing
 @dataclass
 class PSOConfiguration:
 
-    # Objective final volumes, the penalty for unfulfilling them, and the bonus for exceeding them (in €/m3)
-    volume_objectives: list[float]
+    # Objective final volumes
+    volume_objectives: dict[str, float]
+
+    # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
     volume_shortage_penalty: float
     volume_exceedance_bonus: float
 
-    # The penalty for each power group startup, and
+    # Penalty for each power group startup, and
     # for each time step with the turbined flow in a limit zone (in €/occurrence)
     startups_penalty: float
     limit_zones_penalty: float
@@ -53,7 +55,7 @@ class PSO(Experiment):
 
         self.config = config
         self.num_dimensions = (
-            self.instance.get_num_dams() * self.instance.get_num_time_steps()
+            self.instance.get_num_dams() * self.instance.get_largest_impact_horizon()
         )
         self.objective_function_history = None
 
@@ -72,7 +74,7 @@ class PSO(Experiment):
                     self.instance.get_max_flow_of_channel(dam_id)
                     for dam_id in self.instance.get_ids_of_dams()
                 ],
-                self.instance.get_num_time_steps(),
+                self.instance.get_largest_impact_horizon(),
             )
             min_bound = np.zeros(self.num_dimensions)
             self.bounds = (min_bound, max_bound)
@@ -100,10 +102,10 @@ class PSO(Experiment):
 
         # Assert we are given an array of shape num_time_steps x num_dams x num_particles (as required by RiverBasin)
         assert flows_or_relvars.shape == (
-            self.instance.get_num_time_steps(),
+            self.instance.get_largest_impact_horizon(),
             self.instance.get_num_dams(),
             num_scenarios,
-        ), f"{flows_or_relvars.shape=} should actually be {(self.instance.get_num_time_steps(), self.instance.get_num_dams(), num_scenarios)=}"
+        ), f"{flows_or_relvars.shape=} should actually be {(self.instance.get_largest_impact_horizon(), self.instance.get_num_dams(), num_scenarios)=}"
 
         # Reshape the array into num_dimensions x num_particles
         swarm_t = flows_or_relvars.reshape((self.num_dimensions, num_scenarios))
@@ -140,12 +142,25 @@ class PSO(Experiment):
         # Reshape the array into num_time_steps x num_dams x num_particles (as required by RiverBasin)
         flows_or_relvars = swarm_t.reshape(
             (
-                self.instance.get_num_time_steps(),
+                self.instance.get_largest_impact_horizon(),
                 self.instance.get_num_dams(),
                 num_particles,
             )
         )
         return flows_or_relvars
+
+    def check_env_updated(self):
+
+        """
+        Give a warning if environment (river basin) is not fully updated
+        """
+
+        # Make sure river basin has been fully updated; give a warning otherwise
+        if self.river_basin.time != self.instance.get_largest_impact_horizon() - 1:
+            warnings.warn(
+                f"Calculated objective function values when the river basin is not fully updated: "
+                f"{self.river_basin.time=}, when it should be {self.instance.get_largest_impact_horizon() - 1=}"
+            )
 
     def objective_function_values_env(self) -> dict:
 
@@ -157,32 +172,29 @@ class PSO(Experiment):
             the objective function values reached by each particle
         """
 
-        # Make sure river basin has been fully updated; give a warning otherwise
-        if self.river_basin.time != self.instance.get_num_time_steps() - 1:
-            warnings.warn(
-                f"Calculated objective function values when the river basin is not fully updated: "
-                f"{self.river_basin.time=}, when it should be {self.instance.get_num_time_steps() - 1=}"
-            )
+        self.check_env_updated()
 
         obj_values = dict()
 
-        # Calculate accumulated income
-        income = self.river_basin.accumulated_income
-        obj_values.update({"income": income})
+        obj_values.update(
+            {
+                "income": self.river_basin.get_acc_income(),
+                "startups": self.river_basin.get_acc_num_startups(),
+                "times_in_limit": self.river_basin.get_acc_num_times_in_limit()
+            }
+        )
 
-        for dam_index, dam in enumerate(self.river_basin.dams):
+        final_volumes = self.river_basin.get_final_volume_of_dams()
+        for dam_id in self.instance.get_ids_of_dams():
             obj_values.update(
                 {
-                    # Calculate volume shortage and exceedance
-                    f"{dam.idx}_shortage": np.maximum(
-                        0, self.config.volume_objectives[dam_index] - dam.volume
+                    # Calculate volume shortage and exceedance at the end of the decision horizon
+                    f"{dam_id}_shortage": np.maximum(
+                        0, self.config.volume_objectives[dam_id] - final_volumes[dam_id]
                     ),
-                    f"{dam.idx}_exceedance": np.maximum(
-                        0, dam.volume - self.config.volume_objectives[dam_index]
+                    f"{dam_id}_exceedance": np.maximum(
+                        0, final_volumes[dam_id] - self.config.volume_objectives[dam_id]
                     ),
-                    # Calculate number of startups and of times in limit zones
-                    f"{dam.idx}_startups": dam.channel.power_group.acc_num_startups,
-                    f"{dam.idx}_limits": dam.channel.power_group.acc_num_times_in_limit,
                 }
             )
 
@@ -192,48 +204,42 @@ class PSO(Experiment):
 
         """
         Objective function of the environment (river basin) in its current state (presumably updated).
+        This is the objective function to minimize, as PySwarm's default behaviour is minimization.
 
         :return:
             Array of size num_particles with
             the objective function reached by each particle
         """
 
-        obj_values = self.objective_function_values_env()
+        self.check_env_updated()
 
-        income = obj_values["income"]
-
-        volume_shortage = np.array(
+        income = self.river_basin.get_acc_income()
+        final_volumes = self.river_basin.get_final_volume_of_dams()
+        volume_shortages = np.array(
             [
-                obj_values[f"{dam_id}_shortage"]
+                np.maximum(
+                    0, self.config.volume_objectives[dam_id] - final_volumes[dam_id]
+                )
                 for dam_id in self.instance.get_ids_of_dams()
             ]
         ).sum(axis=0)
-        volume_exceedance = np.array(
+        volume_exceedances = np.array(
             [
-                obj_values[f"{dam_id}_exceedance"]
+                np.maximum(
+                    0, final_volumes[dam_id] - self.config.volume_objectives[dam_id]
+                )
                 for dam_id in self.instance.get_ids_of_dams()
             ]
         ).sum(axis=0)
-
-        num_startups = np.array(
-            [
-                obj_values[f"{dam_id}_startups"]
-                for dam_id in self.instance.get_ids_of_dams()
-            ]
-        ).sum(axis=0)
-        num_limits = np.array(
-            [
-                obj_values[f"{dam_id}_limits"]
-                for dam_id in self.instance.get_ids_of_dams()
-            ]
-        ).sum(axis=0)
+        num_startups = self.river_basin.get_acc_num_startups()
+        num_limit_zones = self.river_basin.get_acc_num_times_in_limit()
 
         penalty = (
-            self.config.volume_shortage_penalty * volume_shortage
+            self.config.volume_shortage_penalty * volume_shortages
             + self.config.startups_penalty * num_startups
-            + self.config.limit_zones_penalty * num_limits
+            + self.config.limit_zones_penalty * num_limit_zones
         )
-        bonus = self.config.volume_exceedance_bonus * volume_exceedance
+        bonus = self.config.volume_exceedance_bonus * volume_exceedances
 
         return -income - bonus + penalty
 
@@ -246,7 +252,7 @@ class PSO(Experiment):
         """
 
         self.river_basin.deep_update(
-            self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars
+            self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars, fast_mode=True
         )
         return self.objective_function_env()
 
@@ -306,7 +312,7 @@ class PSO(Experiment):
             self.reshape_as_flows_or_relvars(swarm=optimal_particle.reshape(1, -1)),
             is_relvars=self.config.use_relvars,
         )
-        optimal_flows = self.river_basin.all_flows
+        optimal_flows = self.river_basin.all_past_clipped_flows
         self.solution = Solution.from_flows(
             optimal_flows, dam_ids=self.instance.get_ids_of_dams()
         )
@@ -462,12 +468,7 @@ class PSO(Experiment):
 
         """
 
-        # Make sure river basin has been fully updated; give a warning otherwise
-        if self.river_basin.time != self.instance.get_num_time_steps() - 1:
-            warnings.warn(
-                f"Wrote details about river basin when it is not fully updated: "
-                f"{self.river_basin.time=}, when it should be {self.instance.get_num_time_steps() - 1=}"
-            )
+        self.check_env_updated()
 
         details.write("---- Objective function ----\n\n")
         details.write("Objective function values:\n")
@@ -475,13 +476,14 @@ class PSO(Experiment):
         obj_values = {k: v.item() for k, v in obj_values.items()}
         details.write(json.dumps(obj_values, indent=2))
         details.write("\n\n")
-        details.write("Objective function:\n")
-        obj = self.objective_function_env()
+        details.write("Objective function (to maximize):\n")
+        obj = - self.objective_function_env()
         details.write(str(obj.item()))
         details.write("\n\n")
 
         details.write("---- River basin history ----\n\n")
         details.write(self.river_basin.history.to_string())
+        details.write("\n\n")
 
     def plot_cost(self) -> plt.Axes:
 

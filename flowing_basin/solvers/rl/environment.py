@@ -125,7 +125,7 @@ class Environment:
             next_prices=[
                 max(
                     self.instance.get_price(
-                        0, num_steps=self.instance.get_num_time_steps()
+                        0, num_steps=self.instance.get_largest_impact_horizon()
                     )
                 )
             ]
@@ -191,6 +191,6 @@ class Environment:
         # (in which energy prices are normalized differently)
         reward = income / self.obs_high.next_prices[0]
         next_obs = self.get_observation()
-        done = self.river_basin.time >= self.instance.get_num_time_steps() - 1
+        done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
         return reward, next_obs, done

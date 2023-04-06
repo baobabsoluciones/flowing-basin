@@ -116,15 +116,18 @@ class Channel:
             the turbined flow in the power group in every scenario (m3/s)
         """
 
+        # Update power group and get turbined flow
+        turbined_flow = self.power_group.update(price=price, past_flows=self.past_flows)
+
+        # Update flow limit to get the flow limit at the END of this time step
+        # This is used in the next update() call of Dam to calculate flow_out_clipped1
+        self.flow_limit = self.get_flow_limit(dam_vol)
+
+        # Update the past flows for the next time step, adding the flow of this time step
         # Append a column to the left of the array with the assigned flow to the channel in every scenario
         self.past_flows = np.insert(self.past_flows, obj=0, values=flow, axis=1)
         self.past_flows = np.delete(
             self.past_flows, obj=self.past_flows.shape[1] - 1, axis=1
         )
 
-        # Update flow limit to get the flow limit at the END of this time step
-        # This is used in the next update() call of Dam to calculate flow_out_clipped1
-        self.flow_limit = self.get_flow_limit(dam_vol)
-
-        # Update power group and get turbined flow
-        return self.power_group.update(price=price, past_flows=self.past_flows)
+        return turbined_flow

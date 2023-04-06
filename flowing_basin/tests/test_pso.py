@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from datetime import datetime
+import os
 
 # Instance we want to solve
 instance = Instance.from_json("../data/input_example1.json")
@@ -22,9 +23,9 @@ config = PSOConfiguration(
         "dam1": 59627.42324,
         "dam2": 31010.43613642857
     },
-    use_relvars=True,
-    max_relvar=0.5,
-    flow_smoothing=0,
+    use_relvars=False,
+    # max_relvar=0.2,
+    flow_smoothing=2,
 )
 pso = PSO(
     instance=instance,
@@ -111,26 +112,26 @@ sol_original = Solution.from_json("../data/output_example1_original-real-decisio
 #         "dams": [
 #             {
 #                 "id": "dam1",
-#                 "flows": [15.15, 14.95, 14.75, 13.66, 13.57, 13.37, 13.17, 12.97, 12.77, 12.57, 12.37, 12.17, 11.97, 11.77, 11.57, 11.37, 11.17, 10.97, 10.77, 10.57, 10.41, 10.61, 10.81, 11.01, 10.81, 10.61, 10.41, 10.21, 10.01, 9.81, 9.61, 9.52, 9.52, 9.52, 9.61, 9.61, 9.61, 9.44, 9.24, 9.04, 8.84, 8.64, 8.8, 9, 9.2, 9.4, 5.12, 4.98, 4.98, 4.98, 4.98, 4.98, 4.98, 4.98, 4.98, 4.78, 4.98, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4.78, 4.98, 5.05, 5.25, 5.45, 5.65, 5.58, 5.38, 5.18, 4.98, 4.98, 5.18, 4.98, 5.18, 4.98, 5.18, 5.18, 4.98, 4.98, 4.98, 5.18, 5.38, 5.18, 4.98, 5.1, 5.3, 13.66, 0, 0, 0, 0],
+#                 "flows": [13.66, 13.66, 13.66, 13.66, 13.66, 13.66, 13.66, 13.66, 13.66, 13.66, 13.66, 9.61, 9.61, 9.61, 9.61, 9.61, 9.61, 9.61, 9.67, 9.87, 10.07, 10.27, 10.47, 13.66, 13.66, 13.66, 13.66, 13.66, 9.99, 9.79, 9.59, 9.39, 9.37, 9.37, 9.57, 9.65, 9.61, 9.61, 9.61, 9.61, 9.61, 9.61, 9.61, 9.6, 9.4, 5.32, 5.18, 4.98, 5.01, 5.21, 5.25, 5.1, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 4.63, 4.83, 4.98, 5.08, 4.98, 5.0, 5.02, 5.04, 5.04, 5.24, 5.44, 5.64, 5.84, 5.95, 5.88, 5.68, 5.48, 5.28, 5.08, 0.0, 0.0, 0.0, 0.0, 0.0, 15.24, 0.0, 0.0, 0.0, 0.0],
 #             },
 #             {
 #                 "id": "dam2",
-#                 "flows": [6.19, 6.28, 7.69, 7.88, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.82, 9.77, 9.7, 9.61, 9.5, 9.43, 9.4, 9.41, 9.44, 7.46, 7.26, 7.13, 7.33, 7.13, 6.93, 7.03, 0.22, 0.02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.06, 5.21, 5.28, 5.48, 5.68, 5.88, 5.81, 5.89, 6.09, 6.29, 6.49, 6.69, 6.89, 7.09, 7.29, 7.39, 7.19, 7.07, 6.87, 6.67, 6.47, 6.67, 0.4, 0.2, 0, 0, 0, 0, 0, 0],
+#                 "flows": [6.19, 6.28, 7.46, 8.12, 9.28, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.84, 9.85, 9.85, 9.85, 9.84, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.85, 9.84, 9.81, 8.89, 8.69, 4.28, 7.46, 7.26, 7.06, 6.86, 6.66, 0.4, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.03, 6.74, 8.58, 6.54, 6.74, 6.94, 7.14, 7.21, 7.25, 7.41, 7.21, 7.25, 7.41, 7.21, 7.25, 7.41, 7.21, 7.01, 6.81, 0.27, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 #             },
 #         ]
 #      }
 # )
 # print(sol_lp.check())
 # print(sol_lp.to_flows())
-# sol_lp.to_json("../data/output_example1_LPmodel_gap2_solution.json")
-sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap2_solution.json")
+# sol_lp.to_json("../data/output_example1_LPmodel_gap0_solution.json")
+sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap0_solution.json")
 
 # Optimal solution found by PSO ---- #
 
 path_parent = "../data"
 dir_name = f"output_example1_PSO_{datetime.now().strftime('%Y-%m-%d %H.%M')}"
 options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113}
-status = pso.solve(options, num_particles=100, num_iters=2)
+status = pso.solve(options, num_particles=200, num_iters=100)
 print("status:", status)
 print("solver info:", pso.solver_info)
 
@@ -139,7 +140,7 @@ print("solver info:", pso.solver_info)
 # pso.solution = sol_original
 
 # path_parent = "../data"
-# dir_name = "output_example1_LPmodel_gap2"
+# dir_name = "output_example1_LPmodel_gap0"
 # pso.solution = sol_lp
 
 print(pso.solution.check())
@@ -153,6 +154,7 @@ dam2_income = pso.river_basin.history["dam2_income"].loc[0:98].sum()
 print("optimal solution's income (from history):", dam1_income + dam2_income)
 print(pso.river_basin.history.to_string())
 pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
+pso.river_basin.history.to_excel(os.path.join(path_parent, dir_name, "history.xlsx"))
 
 # Search for best PSO parameters ---- #
 # options_search = {"c1": [0.1, 5], "c2": [0.1, 5], "w": [0.3, 0.9], "k": [1, 2], "p": 1}

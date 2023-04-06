@@ -312,6 +312,8 @@ class PSO(Experiment):
             self.reshape_as_flows_or_relvars(swarm=optimal_particle.reshape(1, -1)),
             is_relvars=self.config.use_relvars,
         )
+        # print("DEBUG - optimal particle's original unclipped flows' history")
+        # print(self.river_basin.history.to_string())
         optimal_flows = self.river_basin.all_past_clipped_flows
         self.solution = Solution.from_flows(
             optimal_flows, dam_ids=self.instance.get_ids_of_dams()

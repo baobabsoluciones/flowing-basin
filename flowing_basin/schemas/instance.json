@@ -43,6 +43,12 @@
                             "type": "integer"
                         }
                     },
+                    "verification_lags": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
                     "flow_max": {
                         "type": "number"
                     },

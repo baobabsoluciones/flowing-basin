@@ -29,6 +29,7 @@ for dam in instance.get_ids_of_dams():
     print("max volume:", instance.get_max_vol_of_dam(dam))
     print("initial lags:", instance.get_initial_lags_of_channel(dam))
     print("relevant lags:", instance.get_relevant_lags_of_dam(dam))
+    print("verification lags:", instance.get_verification_lags_of_dam(dam))
     print("max flow:", instance.get_max_flow_of_channel(dam))
     print("flow limit observations:", instance.get_flow_limit_obs_for_channel(dam))
     print("turbined flow observations:", instance.get_turbined_flow_obs_for_power_group(dam))

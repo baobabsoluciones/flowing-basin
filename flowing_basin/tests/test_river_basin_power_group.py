@@ -19,7 +19,7 @@ flows = np.array(
 )
 
 num_scenarios = flows.shape[-1]
-dam = instance.get_ids_of_dams()[0]
+dam = instance.get_ids_of_dams()[1]
 print(dam)
 initial_lags = instance.get_initial_lags_of_channel(dam)
 past_flows = np.repeat([initial_lags], repeats=num_scenarios, axis=0)
@@ -46,7 +46,10 @@ for flow in flows:
     past_flows = np.delete(past_flows, obj=past_flows.shape[1] - 1, axis=1)
     print(f"{past_flows=}")
 
-    power_group.update(past_flows)
+    price = instance.get_price(power_group.time + 1)
+    print(power_group.time + 1, price)
+
+    power_group.update(price=price, past_flows=past_flows)
     print(f"{power_group.power=}")
     print(f"{power_group.turbined_flow=}")
     print(f"{power_group.previous_num_active_groups=}")

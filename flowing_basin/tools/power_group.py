@@ -20,6 +20,7 @@ class PowerGroup:
         self.idx = idx
         self.power_model = self.get_power_model(paths_power_models[self.idx])
         self.relevant_lags = instance.get_relevant_lags_of_dam(self.idx)
+        self.verification_lags = instance.get_verification_lags_of_dam(self.idx)
         self.turbined_flow_points = instance.get_turbined_flow_obs_for_power_group(
             self.idx
         )
@@ -36,6 +37,7 @@ class PowerGroup:
         self.time = None
         self.power = None
         self.turbined_flow = None
+        self.turbined_flow_aprox = None
         self.previous_num_active_groups = None
         self.num_active_groups = None
         self.income = None
@@ -63,6 +65,7 @@ class PowerGroup:
         # Power generated (MW), turbined flow (m3/s) and number of active groups
         self.power = self.get_power(past_flows)
         self.turbined_flow = self.get_turbined_flow(self.power)
+        self.turbined_flow_aprox = self.get_approximate_turbined_flow(past_flows)
         self.previous_num_active_groups = None
         self.num_active_groups = self.get_num_active_power_groups(self.turbined_flow)
 
@@ -117,7 +120,7 @@ class PowerGroup:
 
         :param past_flows:
             Array of shape num_scenarios x num_lags with
-            all past flows of the channel (m3/s)
+            the relevant past flows of the channel (m3/s)
         :return:
             Array of shape num_scenarios with
             the power generated in this time step in every scenario (MW)
@@ -129,6 +132,25 @@ class PowerGroup:
         power = self.power_model.predict(past_flows[:, first_lag - 1 : last_lag])
 
         return power
+
+    def get_approximate_turbined_flow(self, past_flows: np.ndarray) -> np.ndarray:
+
+        """
+        Approximate the current turbined flow by averaging the verification lags.
+
+        :param past_flows:
+            Array of shape num_scenarios x num_lags with
+            the relevant past flows of the channel (m3/s)
+        :return:
+            Array of shape num_scenarios with
+            the approximate turbined flow in every scenario (m3/s)
+        """
+
+        first_lag = self.verification_lags[0]
+        last_lag = self.verification_lags[-1]
+        turbined_flow_aprox = np.mean(past_flows[:, first_lag - 1: last_lag], axis=1)
+
+        return turbined_flow_aprox
 
     def get_turbined_flow(self, power: np.ndarray) -> np.ndarray:
 
@@ -213,7 +235,10 @@ class PowerGroup:
 
         self.power = self.get_power(past_flows)
         self.turbined_flow = self.get_turbined_flow(self.power)
+        self.turbined_flow_aprox = self.get_approximate_turbined_flow(past_flows)
         self.num_active_groups = self.get_num_active_power_groups(self.turbined_flow)
+
+
 
         self.income = self.power * self.time_step_hours * price  # MW * h * EUR/MWh
         self.num_startups = np.maximum(

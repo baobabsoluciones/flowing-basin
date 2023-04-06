@@ -285,6 +285,18 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["relevant_lags"]
 
+    def get_verification_lags_of_dam(self, idx: str) -> list[int]:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: List of the verification lags of the dam (1 lag = 15 minutes of time delay)
+        This must be a subset of the relevant lags, containing only the most important lags
+        At each time step, the turbined flow should be roughly equal to the average of the verification lags
+        """
+
+        return self.data["dams"][idx]["verification_lags"]
+
     def get_max_flow_of_channel(self, idx: str) -> float:
 
         """

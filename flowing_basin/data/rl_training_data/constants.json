@@ -2,7 +2,7 @@
     "time_step_minutes": 15,
     "datetime": {
         "start": null,
-        "end": null
+        "end_decisions": null
     },
     "dams": [
         {
@@ -14,10 +14,37 @@
                 1,
                 2
             ],
+            "verification_lags": [
+                1
+            ],
             "flow_max": 14.15,
             "flow_limit": {
                 "exists": false
             },
+            "turbined_flow": {
+                "observed_flows": [
+                    1.43,
+                    2.82,
+                    4.98,
+                    5.95,
+                    7.62,
+                    9.4,
+                    13.66,
+                    15.24
+                ],
+                "observed_powers": [
+                    0.0,
+                    0.4,
+                    1.79,
+                    2.14,
+                    2.35,
+                    3.38,
+                    4.6,
+                    4.6
+                ]
+            },
+            "startup_flows": [1.428571429, 7.619047619],
+            "shutdown_flows": [1.428571429, 5.952380952],
             "initial_vol": null,
             "initial_lags": null,
             "unregulated_flow_max": 14.670018869093832,
@@ -33,6 +60,11 @@
                 4,
                 5,
                 6
+            ],
+            "verification_lags": [
+                3,
+                4,
+                5
             ],
             "flow_max": 11.27,
             "flow_limit": {
@@ -56,6 +88,28 @@
                     19.048
                 ]
             },
+            "turbined_flow": {
+                "observed_flows": [
+                    2.42,
+                    4.52,
+                    5.11,
+                    7.29,
+                    8.04,
+                    11.28,
+                    11.43
+                ],
+                "observed_powers": [
+                    0.0,
+                    3.48,
+                    3.48,
+                    5.6,
+                    5.6,
+                    8.48,
+                    8.48
+                ]
+            },
+            "startup_flows": [2.423809524, 5.114285714, 8.038095238],
+            "shutdown_flows": [2.423809524, 4.519047619, 7.285714286],
             "initial_vol": null,
             "initial_lags": null,
             "unregulated_flow_max": 5.701345855787728,

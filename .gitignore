@@ -134,6 +134,7 @@ dmypy.json
 
 # Training data
 /flowing_basin/data/rl_training_data/training_data.pickle
+/flowing_basin/data/rl_training_data/training_data_NO_NA.pickle
 
 # Images to check river basin code
 /flowing_basin/tests/river_basin_checks/*.png

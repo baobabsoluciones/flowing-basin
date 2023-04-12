@@ -11,12 +11,12 @@
                 "start": {
                     "type": "string"
                 },
-                "end": {
+                "end_decisions": {
                     "type": "string"
                 }
             },
             "required": [
-                "end",
+                "end_decisions",
                 "start"
             ]
         },
@@ -38,6 +38,12 @@
                         "type": "number"
                     },
                     "relevant_lags": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "verification_lags": {
                         "type": "array",
                         "items": {
                             "type": "integer"
@@ -85,6 +91,39 @@
                             ]
                         }
                     },
+                    "turbined_flow": {
+                        "type": "object",
+                        "properties": {
+                            "observed_flows": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            },
+                            "observed_powers": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            }
+                        },
+                        "required": [
+                            "observed_flows",
+                            "observed_powers"
+                        ]
+                    },
+                    "startup_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "shutdown_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
                     "initial_vol": {
                         "type": "number"
                     },
@@ -112,6 +151,8 @@
                     "initial_vol",
                     "order",
                     "relevant_lags",
+                    "startup_flows",
+                    "shutdown_flows",
                     "unregulated_flow_max",
                     "unregulated_flows",
                     "vol_max",

@@ -125,7 +125,7 @@ class Environment:
             next_prices=[
                 max(
                     self.instance.get_price(
-                        0, num_steps=self.instance.get_num_time_steps()
+                        0, num_steps=self.instance.get_largest_impact_horizon()
                     )
                 )
             ]
@@ -152,17 +152,17 @@ class Environment:
 
         obs = Observation(
             next_prices=self.instance.get_price(
-                self.river_basin.time, num_steps=self.num_prices
+                self.river_basin.time + 1, num_steps=self.num_prices
             ),
             next_incoming_flows=self.instance.get_incoming_flow(
-                self.river_basin.time, num_steps=self.num_incoming_flows
+                self.river_basin.time + 1, num_steps=self.num_incoming_flows
             ),
             dams=[
                 DamObservation(
-                    vol=dam.volume,
+                    vol=dam.volume.item(),
                     lags=dam.channel.past_flows.squeeze().tolist(),
                     next_unreg_flows=self.instance.get_unregulated_flow_of_dam(
-                        self.river_basin.time, dam.idx, num_steps=self.num_unreg_flows
+                        self.river_basin.time + 1, dam.idx, num_steps=self.num_unreg_flows
                     ),
                 )
                 for dam in self.river_basin.dams
@@ -182,14 +182,15 @@ class Environment:
 
         assert list(action.size()) == [self.instance.get_num_dams()]
 
-        flows = action.tolist()
-        income = self.river_basin.update(flows)
+        flows = action.numpy().reshape(-1, 1)
+        self.river_basin.update(flows)
+        income = self.river_basin.get_income()
 
         # The reward is proportional to the income obtained
         # However, the normalized energy price is used, to avoid inconsistencies throughout several episodes
         # (in which energy prices are normalized differently)
         reward = income / self.obs_high.next_prices[0]
         next_obs = self.get_observation()
-        done = self.river_basin.time >= self.instance.get_num_time_steps()
+        done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
         return reward, next_obs, done

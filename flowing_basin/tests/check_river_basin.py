@@ -14,14 +14,15 @@ CHECK_INCOMES = True
 CHECK_VOLUMES = True
 
 # Path and extension in which to save the generated graphs
-PATH_START = "river_basin_checks/check_"
+SAVE_PLOT = False
+PATH_START = "river_basin_checks/check_NO-NA_"
 PATH_END = ""
 EXTENSION = ".png"
 
 # Episode length and starting date
 LENGTH_EPISODE = 24 * 4  # One day
-START = datetime.strptime("2020-04-09 03:15", "%Y-%m-%d %H:%M")
-# START = None
+# START = datetime.strptime("2021-01-21 12:45", "%Y-%m-%d %H:%M")
+START = None
 # Use None if you want a random starting datetime
 
 # Number of log lines (of the river basin and of the data) that should be printed
@@ -45,6 +46,9 @@ LOG_LINES = LENGTH_EPISODE
 # - Like in 2021-09-29 01:00, in this episode the real volume of dam2 keeps steady,
 #   when it should actually be increasing with the unregulated and turbined flow it gets (as seen in our model)
 #   Something similar (although less striking) happens with the volume of dam1
+# NOTE: These problems arise both with training_data.pickle
+# and with training_data_NO_NA.pickle (in which rows with unknown unregulated flows were eliminated and not set to 0)
+# Although the inconsistency problem is less often (actually, very uncommon) with the second dataset
 
 # ---- CODE ---- #
 
@@ -52,7 +56,7 @@ LOG_LINES = LENGTH_EPISODE
 
 # Create instance
 path_constants = "../data/rl_training_data/constants.json"
-path_training_data = "../data/rl_training_data/training_data.pickle"
+path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"
 df = pd.read_pickle(path_training_data)
 instance = Training.create_instance(
     length_episodes=LENGTH_EPISODE,
@@ -111,14 +115,13 @@ log_real = river_basin.create_log()
 
 for row, flows in enumerate(decisions):
 
-    # Check consistency
     income = river_basin.update(flows)
     state = river_basin.get_state()
     if CHECK_VOLUMES:
         check_volume(
             old_state=old_state,
             state=state,
-            time_step=river_basin.instance.get_time_step(),
+            time_step=river_basin.instance.get_time_step_seconds(),
             min_vol_dam1=river_basin.instance.get_min_vol_of_dam("dam1"),
             max_vol_dam1=river_basin.instance.get_max_vol_of_dam("dam1"),
             min_vol_dam2=river_basin.instance.get_min_vol_of_dam("dam2"),
@@ -128,7 +131,7 @@ for row, flows in enumerate(decisions):
         check_income(
             old_state=old_state,
             state=state,
-            time_step=river_basin.instance.get_time_step(),
+            time_step=river_basin.instance.get_time_step_seconds(),
             income=income,
         )
     old_state = state
@@ -157,15 +160,16 @@ for row, flows in enumerate(decisions):
             turbined_flow_of_preceding_dam + unregulated_flow - flow_out
         )
         log_real += (
-            f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^13}"
-            f"{round(net_flow, 4): ^13}{round(net_flow * instance.get_time_step(), 5): ^15}"
+            f"{round(unregulated_flow, 4): ^13}{round(flow_out, 4): ^14}"
+            f"{round(flow_out, 4): ^14}{round(flow_out, 4): ^14}"
+            f"{round(net_flow, 4): ^13}{round(net_flow * instance.get_time_step_seconds(), 5): ^15}"
             f"{round(volume, 2): ^13}{round(power, 2): ^13}"
             f"|\t"
             f"{round(turbined_flow, 5): ^15}"
         )
         turbined_flow_of_preceding_dam = turbined_flow
     price = df['price'].loc[initial_row + row]
-    income_real = price * power_total * instance.get_time_step() / 3600
+    income_real = price * power_total * instance.get_time_step_seconds() / 3600
     log_real += f"{round(price, 2): ^13}{round(income_real, 2): ^13}"
 
 # Print river basin log and data (real) logs
@@ -215,7 +219,7 @@ for dam_id in instance.get_ids_of_dams():
 df1["price"] = np.array(df["price"].loc[initial_row - 1 : last_row])
 df1["income_REAL"] = np.array(
     (df1["dam1_power_REAL"] + df1["dam2_power_REAL"])
-    * instance.get_time_step()
+    * instance.get_time_step_seconds()
     / 3600
     * df1["price"]
 )
@@ -235,11 +239,12 @@ for i, dam in enumerate(["dam1", "dam2"]):
 plt.show()
 
 # Save plot
-version = 0
-path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M')) + PATH_END + EXTENSION
-while os.path.exists(path):
-    version += 1
-    path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M'))+ PATH_END + f"_v{version}" + EXTENSION
-print(path)
-fig.savefig(fname=path)
-plt.close()
+if SAVE_PLOT:
+    version = 0
+    path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M')) + PATH_END + EXTENSION
+    while os.path.exists(path):
+        version += 1
+        path = PATH_START + str(start.strftime('%Y-%m-%d_%H-%M')) + PATH_END + f"_v{version}" + EXTENSION
+    print(path)
+    fig.savefig(fname=path)
+    plt.close()

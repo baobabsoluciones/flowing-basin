@@ -1,72 +1,215 @@
 from flowing_basin.core import Instance
 from .channel import Channel
+import numpy as np
 
 
 class Dam:
     def __init__(
-        self, idx: str, instance: Instance, paths_power_models: dict[str, str]
+        self,
+        idx: str,
+        instance: Instance,
+        paths_power_models: dict[str, str],
+        flow_smoothing: int,
+        num_scenarios: int,
     ):
 
-        # Identifier and order of the dam
+        self.num_scenarios = num_scenarios
+        self.flow_smoothing = flow_smoothing
+
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
 
-        # Initial volume of dam (m3)
-        self.volume = instance.get_initial_vol_of_dam(self.idx)
+        self.decision_horizon = instance.get_decision_horizon()
 
         # Constant values for the whole period - time step (seconds, s), min/max volumes (m3)
-        self.time_step = instance.get_time_step()
+        self.time_step = instance.get_time_step_seconds()
         self.min_volume = instance.get_min_vol_of_dam(self.idx)
         self.max_volume = instance.get_max_vol_of_dam(self.idx)
 
+        # Time-dependent attributes
+        self.time = None
+        self.volume = None
+        self.final_volume = None
+        self.previous_flow_out = None
+        self.all_previous_variations = None
+        self.flow_contribution = None
+        self.unregulated_flow = None
+        self.flow_out_assigned = None
+        self.flow_out_smoothed = None
+        self.flow_out_clipped1 = None
+        self.flow_out_clipped2 = None
+
+        # Initialize the time-dependent attributes (variables)
+        self._reset_variables(instance)
+
         self.channel = Channel(
             idx=self.idx,
-            dam_vol=self.volume,
+            dam_vol=self.volume,  # noqa
             instance=instance,
             paths_power_models=paths_power_models,
+            num_scenarios=self.num_scenarios,
+        )
+
+    def _reset_variables(self, instance: Instance):
+
+        """
+        Reset all time-varying attributes of the dam: volume and previous flows.
+        Min and max volumes are not reset as they are constant.
+        """
+
+        # Identifier of the time step
+        # It should be equal to the RiverBasin's time identifier at all times
+        self.time = -1
+
+        # Initial volume of dam (m3) - the STARTING volume in this time step, or the FINAL volume of the previous one
+        self.volume = np.repeat(
+            instance.get_initial_vol_of_dam(self.idx), self.num_scenarios
+        )
+
+        # Clip initial volume of dam
+        self.volume = np.clip(self.volume, self.min_volume, self.max_volume)
+
+        # Volume at the end of the decision horizon
+        self.final_volume = None
+
+        # Number of periods in which we force to keep the direction (flow increasing OR decreasing) in the dam
+        # Note that this rule may not apply if flows must be clipped
+        self.previous_flow_out = np.repeat(
+            instance.get_initial_lags_of_channel(self.idx)[0], self.num_scenarios
+        )
+        self.all_previous_variations = np.zeros((1, self.num_scenarios))
+
+        # Other relevant information for when decisions are made
+        self.flow_contribution = None
+        self.unregulated_flow = None
+        self.flow_out_assigned = None
+        self.flow_out_smoothed = None
+        self.flow_out_clipped1 = None
+        self.flow_out_clipped2 = None
+
+        return
+
+    def reset(self, instance: Instance, flow_smoothing: int, num_scenarios: int):
+
+        """
+        Reset dam and the channel within.
+        """
+
+        self.flow_smoothing = flow_smoothing
+        self.num_scenarios = num_scenarios
+
+        self._reset_variables(instance)
+
+        self.channel.reset(
+            dam_vol=self.volume, instance=instance, num_scenarios=self.num_scenarios
         )
 
     def update(
         self,
-        flows: dict[str, float],
+        flow_out: np.ndarray,
+        price: float,
         incoming_flow: float,
         unregulated_flow: float,
-        turbined_flow_of_preceding_dam: float,
-    ) -> float:
+        turbined_flow_of_preceding_dam: np.ndarray,
+    ) -> np.ndarray:
 
         """
-        Update the volume of the dam, and the state of its connected channel
-        :param flows: Dictionary of flows that should go through each channel, indexed by dam (m3/s)
-        :param incoming_flow: Incoming flow to the river basin (m3/s)
-        :param unregulated_flow: Unregulated flow entering the dam (m3/s)
-        :param turbined_flow_of_preceding_dam: Turbined flow of the previous dam, that is entering this dam (m3/s)
-        :return: Turbined flow produced by the power group of this dam (m3/s)
+        Update the volume of the dam, and the state of its connected channel.
+
+        :param flow_out:
+            Array of shape num_scenarios with
+            the flow we want to have exiting the dam in every scenario (m3/s)
+        :param price: Price of energy in current time step (EUR/MWh)
+        :param incoming_flow: Incoming flow to the river basin in the current time step (m3/s)
+        :param unregulated_flow: Unregulated flow entering the dam in the current time step (m3/s)
+        :param turbined_flow_of_preceding_dam:
+            Array of shape num_scenarios with
+            the turbined flow of the previous dam (that is entering this dam) in every scenario (m3/s)
+        :return:
+            Array of shape num_scenarios with
+            the turbined flow in the power group in every scenario (m3/s)
         """
+
+        self.time += 1
+
+        # Flow IN ---- #
 
         # Obtain flow coming into the dam from the river or the previous dam
-        if self.order == 1:
-            flow_contribution = incoming_flow
-        else:
-            flow_contribution = turbined_flow_of_preceding_dam
+        self.flow_contribution = (
+            np.repeat(incoming_flow, self.num_scenarios)
+            if self.order == 1
+            else turbined_flow_of_preceding_dam
+        )
 
-        # Obtain flow coming out of the dam
-        flow_out = flows[self.idx]
+        # Obtain unregulated flow coming into the dam
+        self.unregulated_flow = unregulated_flow
 
-        # Update volume to get the volume at the END of this time step
+        # Flow OUT ---- #
+
+        # Flow coming out of the dam
+        self.flow_out_assigned = flow_out
+
+        # Flow smoothed
+        # Prevent change of direction among the last N = flow_smoothing periods:
+        # Check all elements of the current variation have the same sign as the last N variations
+        # Otherwise, set these flows to the previous flows
+        current_assigned_variation = self.flow_out_assigned - self.previous_flow_out
+        previous_variations = (
+            self.all_previous_variations[-self.flow_smoothing :]
+            if self.flow_smoothing > 0
+            else np.zeros(self.num_scenarios).reshape((1, -1))
+        )
+        sign_changes_each_period = (
+            previous_variations * current_assigned_variation < 0
+        )  # Broadcasting
+        sign_changes_any_period = np.sum(sign_changes_each_period, axis=0) > 0
+        self.flow_out_smoothed = np.where(
+            sign_changes_any_period, self.previous_flow_out, self.flow_out_assigned
+        )
+
+        # Flow clipped according to the flow limit of the channel
+        self.flow_out_clipped1 = np.clip(
+            self.flow_out_smoothed, 0, self.channel.flow_limit
+        )
+
+        # Volume ---- #
+
+        # Volume at the END of this time step
         old_volume = self.volume
-        volume_increase = (unregulated_flow + flow_contribution) * self.time_step
-        volume_decrease = flow_out * self.time_step
+        volume_increase = (
+            self.unregulated_flow + self.flow_contribution
+        ) * self.time_step
+        volume_decrease = self.flow_out_clipped1 * self.time_step
         self.volume = old_volume + volume_increase - volume_decrease
 
-        # Clip volume to min and max values
-        flows_p = flows
-        if self.volume > self.max_volume:
-            self.volume = self.max_volume
-        if self.volume < self.min_volume:
-            # In this case, we must also clip the water that gets out of the dam
-            flows_p[self.idx] = (old_volume + volume_increase - self.min_volume) / self.time_step
-            self.volume = self.min_volume
+        # Volume clipped to min value
+        self.volume = np.clip(self.volume, self.min_volume, None)
+
+        # Flow clipped if volume was below minimum
+        # This only changes the value of the flow if the volume was increased to the minimum value
+        self.flow_out_clipped2 = (
+            old_volume + volume_increase - self.volume
+        ) / self.time_step
+
+        # Volume clipped to max value
+        self.volume = np.clip(self.volume, None, self.max_volume)
+
+        # Volume at the end of the decision horizon ---- #
+
+        if self.time == self.decision_horizon - 1:
+            self.final_volume = self.volume
+
+        # Values to smooth flow in next time step ---- #
+
+        current_actual_variation = self.flow_out_clipped2 - self.previous_flow_out
+        self.all_previous_variations = np.concatenate(
+            [self.all_previous_variations, current_actual_variation.reshape(1, -1)],
+            axis=0,
+        )
+        self.previous_flow_out = self.flow_out_clipped2.copy()
+
+        # Channel ---- #
 
         # We update the channel with the new volume (the FINAL volume in this time step),
         # because the channel stores the FINAL maximum flow, which is calculated with this volume
-        return self.channel.update(flows=flows_p, dam_vol=self.volume)
+        return self.channel.update(price=price, flow=self.flow_out_clipped2, dam_vol=self.volume)

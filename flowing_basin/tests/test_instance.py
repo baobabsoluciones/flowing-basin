@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance
 
 # "../" means "go one step up"; in this case, to the flowing-basin directory
-instance = Instance.from_json("../data/input_example2.json")
+instance = Instance.from_json("../data/input_example1.json")
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = instance.check()
@@ -12,9 +12,14 @@ if inconsistencies:
 time = 0
 print("data property:", instance.data)
 print("dictionary:", instance.to_dict())
+print("decision horizon:", instance.get_decision_horizon())
+print("impact horizon:", instance.get_largest_impact_horizon())
 print("IDs of dams:", instance.get_ids_of_dams())
 print("incoming flow:", instance.get_incoming_flow(time))
+print("incoming flows (next 12 steps):", instance.get_incoming_flow(time, num_steps=12))
+print("maximum incoming flow:", instance.get_max_incoming_flow())
 print("price:", instance.get_price(time))
+print("prices (next 12 steps):", instance.get_price(time, num_steps=12))
 
 # Print dam info
 for dam in instance.get_ids_of_dams():
@@ -24,9 +29,15 @@ for dam in instance.get_ids_of_dams():
     print("max volume:", instance.get_max_vol_of_dam(dam))
     print("initial lags:", instance.get_initial_lags_of_channel(dam))
     print("relevant lags:", instance.get_relevant_lags_of_dam(dam))
+    print("verification lags:", instance.get_verification_lags_of_dam(dam))
     print("max flow:", instance.get_max_flow_of_channel(dam))
     print("flow limit observations:", instance.get_flow_limit_obs_for_channel(dam))
+    print("turbined flow observations:", instance.get_turbined_flow_obs_for_power_group(dam))
+    print("startup flows:", instance.get_startup_flows_of_power_group(dam))
+    print("shutdown flows:", instance.get_shutdown_flows_of_power_group(dam))
     print("unregulated flow:", instance.get_unregulated_flow_of_dam(time, dam))
+    print("unregulated flows (next 12 steps):", instance.get_unregulated_flow_of_dam(time, dam, num_steps=12))
+    print("maximum unregulated flow:", instance.get_max_unregulated_flow_of_dam(dam))
 
 # Plot channel limit flow points
 # from matplotlib import pyplot as plt

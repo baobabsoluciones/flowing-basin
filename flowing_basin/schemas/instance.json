@@ -69,7 +69,13 @@
                                 "items": {
                                     "type": "number"
                                 }
-                            }
+                            },
+                            "coef_a": {
+                                "type": "number"
+                            },
+                            "coef_b": {
+                                "type": "number"
+                            },
                         },
                         "if": {
                             "properties": {
@@ -82,7 +88,9 @@
                             "required": [
                                 "exists",
                                 "observed_vols",
-                                "observed_flows"
+                                "observed_flows",
+                                "coef_a",
+                                "coef_b"
                             ]
                         },
                         "else": {
@@ -169,6 +177,9 @@
                 "type": "number"
             }
         },
+        "t_min": {
+            "type": "number"
+        },
         "energy_prices": {
             "type": "array",
             "items": {
@@ -182,6 +193,7 @@
         "energy_prices",
         "incoming_flow_max",
         "incoming_flows",
-        "time_step_minutes"
+        "time_step_minutes",
+        "t_min"
     ]
 }

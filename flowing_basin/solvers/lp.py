@@ -27,10 +27,6 @@ class LPModel(Experiment):
     # Método de prueba que posteriormente se eliminará
     def LPModel_print(self):
 
-        # Definimos el problema PL
-        pl24h = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
-
-        # Definimos los conjuntos
         I = self.instance.get_ids_of_dams()
         T = list(range(self.instance.get_largest_impact_horizon()))
         L = {
@@ -63,7 +59,6 @@ class LPModel(Experiment):
             for dam_id in self.instance.get_ids_of_dams()
         }
 
-        # Definimos los parámetros.
         D = self.instance.get_time_step_seconds()
         Qnr = {
             dam_id: self.instance.get_all_unregulated_flows_of_dam(dam_id)
@@ -143,15 +138,18 @@ class LPModel(Experiment):
         print(f"{VMin=}")
         print(f"{A=}")
         print(f"{B=}")
+        print(f"{Price=}")
         print(f"{IniLags=}")
         print(f"{TMin=}")
         print(f"{VolFinal=}")
         print(f"{Q0=}")
-
+        
+        print(len(Price), len(T), len(Q0))
+        
     def solve(self, options: dict) -> dict:
 
         # LP Problem
-        pl24h = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
+        lpproblem = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
 
         # Sets
         I = self.instance.get_ids_of_dams()
@@ -237,7 +235,7 @@ class LPModel(Experiment):
             for dam_id in self.instance.get_ids_of_dams()
         }
 
-        # Price = self.instance.get_all_prices()
+        Price = self.instance.get_all_prices()
 
         IniLags = {
             dam_id: self.instance.get_initial_lags_of_channel(dam_id)
@@ -308,160 +306,160 @@ class LPModel(Experiment):
         # Constraints
         for i in I:
             for t in T:
-                if t == 0:
-                    pl24h += vol[(i, t)] == V0[i] + D * (qe[(i, t)] - qs[(i, t)])
+                if t == T[0]:
+                    lpproblem += vol[(i, t)] == V0[t] + D * (qe[(i, t)] - qs[(i, t)])
                 else:
-                    pl24h += vol[(i, t)] == vol[(i, t - 1)] + D * (
+                    lpproblem += vol[(i, t)] == vol[(i, t - 1)] + D * (
                         qe[(i, t)] - qs[(i, t)]
                     )
 
         for i in I:
             for t in T:
-                if i == "dam1":
-                    pl24h += qe[(i, t)] == Q0[t] + Qnr[i][t]
+                if i == I[0]:
+                    lpproblem += qe[(i, t)] == Q0[t] + Qnr[i][t]
                 else:
-                    pl24h += qe[(i, t)] == qtb[("dam1", t)] + Qnr[i][t]
+                    lpproblem += qe[(i, t)] == qtb[(I[I.index(i)-1], t)] + Qnr[i][t]
 
-        # TODO: Improve this constraint
+        # TODO: improve this constraint
         for i in I:
             for t in T:
-                if i == "dam1":
-                    if t == 0:
-                        pl24h += qtb[(i, t)] == (IniLags[i][0] + IniLags[i][1]) / len(
+                if i == I[0]:
+                    if t == T[0]:
+                        lpproblem += qtb[(i, t)] == (IniLags[i][0] + IniLags[i][1]) / len(
                             L[i]
                         )
                     if t == 1:
-                        pl24h += qtb[(i, t)] == (IniLags[i][0] + qs[(i, 0)]) / len(L[i])
+                        lpproblem += qtb[(i, t)] == (IniLags[i][0] + qs[(i, 0)]) / len(L[i])
                     if t >= 2:
-                        pl24h += qtb[(i, t)] == lp.lpSum(
+                        lpproblem += qtb[(i, t)] == lp.lpSum(
                             (qs[(i, t - l)]) * (1 / len(L[i])) for l in L[i]
                         )
                 if i == "dam2":
-                    if t == 0:
-                        pl24h += qtb[(i, t)] == (
+                    if t == T[0]:
+                        lpproblem += qtb[(i, t)] == (
                             IniLags[i][2]
                             + IniLags[i][3]
                             + IniLags[i][4]
                             + IniLags[i][5]
                         ) / len(L[i])
                     if t == 1:
-                        pl24h += qtb[(i, t)] == (
+                        lpproblem += qtb[(i, t)] == (
                             IniLags[i][1]
                             + IniLags[i][2]
                             + IniLags[i][3]
                             + IniLags[i][4]
                         ) / len(L[i])
                     if t == 2:
-                        pl24h += qtb[(i, t)] == (
+                        lpproblem += qtb[(i, t)] == (
                             IniLags[i][0]
                             + IniLags[i][1]
                             + IniLags[i][2]
                             + IniLags[i][3]
                         ) / len(L[i])
                     if t == 3:
-                        pl24h += qtb[(i, t)] == (
+                        lpproblem += qtb[(i, t)] == (
                             qs[(i, 0)] + IniLags[i][0] + IniLags[i][1] + IniLags[i][2]
                         ) / len(L[i])
                     if t == 4:
-                        pl24h += qtb[(i, t)] == (
+                        lpproblem += qtb[(i, t)] == (
                             qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0] + IniLags[i][1]
                         ) / len(L[i])
                     if t == 5:
-                        pl24h += qtb[(i, t)] == (
+                        lpproblem += qtb[(i, t)] == (
                             qs[(i, 2)] + qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0]
                         ) / len(L[i])
                     if t >= 6:
-                        pl24h += qtb[(i, t)] == lp.lpSum(
+                        lpproblem += qtb[(i, t)] == lp.lpSum(
                             (qs[(i, t - l)]) * (1 / len(L[i])) for l in L[i]
                         )
 
         for i in I:
             for t in T:
-                pl24h += pot[(i, t)] == lp.lpSum(
+                lpproblem += pot[(i, t)] == lp.lpSum(
                     z[(i, t, bp)] * PotBP[i][bp - 1] for bp in BreakPoints[i]
                 )
 
         for i in I:
             for t in T:
-                pl24h += qtb[(i, t)] == lp.lpSum(
+                lpproblem += qtb[(i, t)] == lp.lpSum(
                     z[(i, t, bp)] * BP[i][bp - 1] for bp in BreakPoints[i]
                 )
 
         for i in I:
             for t in T:
-                pl24h += w[(i, t, 0)] == 0
-                pl24h += w[(i, t, BreakPoints[i][-1])] == 0
+                lpproblem += w[(i, t, 0)] == 0
+                lpproblem += w[(i, t, BreakPoints[i][-1])] == 0
 
         for i in I:
             for t in T:
                 for bp in BreakPoints[i]:
-                    pl24h += z[(i, t, bp)] <= lp.lpSum(
+                    lpproblem += z[(i, t, bp)] <= lp.lpSum(
                         w[(i, t, bp)] for bp in range(bp - 1, bp + 1)
                     )
 
         for i in I:
             for t in T:
-                pl24h += lp.lpSum(z[(i, t, bp)] for bp in BreakPoints[i]) == 1
+                lpproblem += lp.lpSum(z[(i, t, bp)] for bp in BreakPoints[i]) == 1
 
         for i in I:
             for t in T:
-                pl24h += lp.lpSum(w[(i, t, bp)] for bp in BreakPoints[i]) == 1
+                lpproblem += lp.lpSum(w[(i, t, bp)] for bp in BreakPoints[i]) == 1
 
         for i in I:
             for t in T:
-                if t == 0:
-                    pl24h += qch[(i, t)] == qs[(i, t)] - IniLags[i][0]
+                if t == T[0]:
+                    lpproblem += qch[(i, t)] == qs[(i, t)] - IniLags[i][0]
                 else:
-                    pl24h += qch[(i, t)] == qs[(i, t)] - qs[(i, t - 1)]
+                    lpproblem += qch[(i, t)] == qs[(i, t)] - qs[(i, t - 1)]
 
         for i in I:
             for t in T:
-                pl24h += qch[(i, t)] <= y[(i, t)] * QMax[i]
+                lpproblem += qch[(i, t)] <= y[(i, t)] * QMax[i]
 
         for i in I:
             for t in T:
-                pl24h += -qch[(i, t)] <= y[(i, t)] * QMax[i]
+                lpproblem += -qch[(i, t)] <= y[(i, t)] * QMax[i]
 
         for i in I:
             for t in T:
-                pl24h += (
-                    lp.lpSum(y[(i, t + t1)] for t1 in range(0, TMin) if t + t1 <= 95)
+                lpproblem += (
+                    lp.lpSum(y[(i, t + t1)] for t1 in range(0, TMin) if t + t1 <= len(T)-1)
                     <= 1
                 )
-                # TODO: Where does that 95 come from?
 
         for i in I:
             for t in T:
-                pl24h += vol[(i, t)] <= VMax[i]
+                lpproblem += vol[(i, t)] <= VMax[i]
 
         for i in I:
             for t in T:
-                pl24h += vol[(i, t)] >= VMin[i]
+                lpproblem += vol[(i, t)] >= VMin[i]
 
         for i in I:
             for t in T:
-                pl24h += qs[(i, t)] <= QMax[i]
+                lpproblem += qs[(i, t)] <= QMax[i]
 
         for i in I:
             for t in T:
-                pl24h += qs[(i, t)] <= A[i] * vol[(i, t)] + B[i]
+                lpproblem += qs[(i, t)] <= A[i] * vol[(i, t)] + B[i]
 
         for t in T:
-            pl24h += tpot[t] == lp.lpSum(pot[(i, t)] for i in I)
+            lpproblem += tpot[t] == lp.lpSum(pot[(i, t)] for i in I)
 
         for i in I:
             for t in T:
                 if t == T[-1]:
-                    pl24h += vol[(i, t)] >= VolFinal[i]
+                    lpproblem += vol[(i, t)] >= VolFinal[i]
 
         # Objective Function
-        pl24h += lp.lpSum(tpot[t] * Price[t] for t in T)
+        lpproblem += lp.lpSum(tpot[t] * Price[t] for t in T)
 
         # Solve
         solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=0.087)
-        pl24h.solve(solver)
+        lpproblem.solve(solver)
 
         # Flows
+        # TODO develope
         qsalida1 = [0, 0]
         qsalida2 = [0, 0]
         for var in qs.values():

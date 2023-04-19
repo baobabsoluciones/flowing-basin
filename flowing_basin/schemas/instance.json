@@ -75,7 +75,7 @@
                             },
                             "coef_b": {
                                 "type": "number"
-                            },
+                            }
                         },
                         "if": {
                             "properties": {

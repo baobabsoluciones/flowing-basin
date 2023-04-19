@@ -6,7 +6,7 @@ config = LPConfiguration(
         "dam1": 55000,
         "dam2": 30000
         },
-    step_min = 4
+    step_min=4
 )
 instance = Instance.from_json("../data/input_example1.json")
 lp = LPModel(config=config, instance=instance)

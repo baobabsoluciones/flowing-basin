@@ -308,7 +308,7 @@ class LPModel(Experiment):
                 (i, t, bp)
                 for i in I
                 for t in T
-                for bp in range(1, BreakPoints[i][-1] + 1)
+                for bp in range(0, BreakPoints[i][-1] + 1)
             ],
             cat=lp.LpBinary,
         )
@@ -406,6 +406,7 @@ class LPModel(Experiment):
 
         for i in I:
             for t in T:
+                lpproblem += w[(i, t, 0)] == 0
                 lpproblem += w[(i, t, BreakPoints[i][-1])] == 0
 
         for i in I:

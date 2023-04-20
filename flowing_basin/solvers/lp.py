@@ -11,6 +11,9 @@ class LPConfiguration:
 
     # Number of periods during which the flow through the channel may not undergo more than one variation
     step_min: int
+    
+    # Gap for the solution
+    MIPGap : float
 
 
 class LPModel(Experiment):
@@ -58,6 +61,14 @@ class LPModel(Experiment):
             )
             for dam_id in self.instance.get_ids_of_dams()
         }
+        
+        for key in BreakPoints:
+            for i in range(len(BreakPoints[key])):
+                BreakPoints[key][i] += 1
+                
+        for key in Tramos:
+            for i in range(len(Tramos[key])):
+                Tramos[key][i] += 1
 
         D = self.instance.get_time_step_seconds()
         Qnr = {
@@ -183,6 +194,14 @@ class LPModel(Experiment):
             )
             for dam_id in self.instance.get_ids_of_dams()
         }
+        
+        for key in BreakPoints:
+            for i in range(len(BreakPoints[key])):
+                BreakPoints[key][i] += 1
+                
+        for key in Tramos:
+            for i in range(len(Tramos[key])):
+                Tramos[key][i] += 1
 
         # Parameters
         D = self.instance.get_time_step_seconds()
@@ -289,7 +308,7 @@ class LPModel(Experiment):
                 (i, t, bp)
                 for i in I
                 for t in T
-                for bp in range(0, BreakPoints[i][-1] + 1)
+                for bp in range(1, BreakPoints[i][-1] + 1)
             ],
             cat=lp.LpBinary,
         )
@@ -387,7 +406,6 @@ class LPModel(Experiment):
 
         for i in I:
             for t in T:
-                lpproblem += w[(i, t, 0)] == 0
                 lpproblem += w[(i, t, BreakPoints[i][-1])] == 0
 
         for i in I:
@@ -441,7 +459,8 @@ class LPModel(Experiment):
 
         for i in I:
             for t in T:
-                lpproblem += qs[(i, t)] <= A[i] * vol[(i, t)] + B[i]
+                if A[i] != None:
+                    lpproblem += qs[(i, t)] <= A[i] * vol[(i, t)] + B[i]
 
         for t in T:
             lpproblem += tpot[t] == lp.lpSum(pot[(i, t)] for i in I)
@@ -449,13 +468,13 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 if t == T[-1]:
-                    lpproblem += vol[(i, t)] >= VolFinal[i]
+                    lpproblem += vol[(i, t)] >= self.config.volume_objectives[i]
 
         # Objective Function
         lpproblem += lp.lpSum(tpot[t] * Price[t] for t in T)
 
         # Solve
-        solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=0.087)
+        solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
         lpproblem.solve(solver)
 
         # Flows

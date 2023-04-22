@@ -34,6 +34,7 @@ ml_turbined_flows = np.interp(
     turbined_flow_points["observed_flows"],
 )
 ml_turbined_flows_mesh = ml_turbined_flows.reshape(lags1_mesh_t.shape)
+print("ML turbined, max:", ml_turbined_flows.max())
 print("ML turbined:", ml_turbined_flows_mesh.shape, ml_turbined_flows_mesh)
 
 # Linear turbined flows
@@ -42,7 +43,7 @@ print("Linear turbined:", linear_turbined_flows_mesh.shape, linear_turbined_flow
 
 # Compare
 ml_turbined_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, ml_turbined_flows_mesh)
-linear_turbined_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, linear_turbined_flows_mesh)
+linear_turbined_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, linear_turbined_flows_mesh, color=(0.6, 0.6, 0.6), opacity=0.75)
 mlab.axes(xlabel="lag1", ylabel="lag2", zlabel="Turbined flow")
 # mlab.savefig(filename='ml_models_graphs/model_E1_graph.png', size=(2000, 2000))  # <- Doesn't work
 mlab.show()
@@ -65,8 +66,8 @@ linear_powers_mesh = linear_powers.reshape(lags1_mesh_t.shape)
 print("Linear powers:", linear_powers_mesh.shape, linear_powers_mesh)
 
 # Compare
-ml_power_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, ml_powers_mesh)
-linear_power_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, linear_powers_mesh)
-mlab.axes(xlabel="lag1", ylabel="lag2", zlabel="Power")
+ml_power_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, ml_powers_mesh, warp_scale=2.)
+linear_power_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, linear_powers_mesh, warp_scale=2., color=(0.6, 0.6, 0.6), opacity=0.75)
+mlab.axes(xlabel="lag1", ylabel="lag2", zlabel="Power", ranges=[0, max_flow, 0, max_flow, 0, ml_powers.max()])
 mlab.show()
 

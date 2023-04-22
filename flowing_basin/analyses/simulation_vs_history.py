@@ -9,7 +9,7 @@ import os
 
 # Path and extension in which to save the generated graphs
 SAVE_PLOT = True
-PATH_START = "simulation_vs_history/sim_v_hist_NO-NA_"
+PATH_START = "simulation_vs_history_graphs/sim_v_hist_NO-NA_"
 PATH_END = ""
 EXTENSION = ".png"
 

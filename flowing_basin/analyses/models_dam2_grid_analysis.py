@@ -27,19 +27,75 @@ lags4_mesh_f = lags4_mesh.flatten()
 lags5_mesh_f = lags5_mesh.flatten()
 lags6_mesh_f = lags6_mesh.flatten()
 model_input = np.transpose(np.array([lags3_mesh_f, lags4_mesh_f, lags5_mesh_f, lags6_mesh_f]))
-print("ML model input:", model_input)
+print("ML model input:", model_input.shape, model_input)
 ml_powers = power_model.predict(model_input)
 ml_powers_mesh = ml_powers.reshape(lags3_mesh.shape)
 print("ML model powers:", ml_powers_mesh.shape, ml_powers_mesh)
 
-# Very different values for similar lags within the ML power values ---- #
+# ML model discontinuities: very different values for similar lags within the ML power values ---- #
 
-# model_input_mesh1, model_input_mesh2 = np.meshgrid(model_input, model_input)
-# lag_differences = model_input_mesh1 - model_input_mesh2
-# print("Lag differences:", lag_differences.shape, lag_differences)
-# small_differences = np.abs(lag_differences) < 0.75
-# This doesn't work; it needs more than 11.9 GiB of memory
-# TODO: do this analysis
+lags_threshold = 2
+power_threshold = 1
+
+# 1. Get the combinations of lags that are very similar (difference below threshold)
+
+lag_diffs = model_input[:, np.newaxis] - model_input
+# Here, we add a singleton dimension to model_input, so when we subtract the original model_input from it, both arrays
+# are copied along the first and second axes, respectively, providing all posible differences between lag combinations:
+# model_input[:, np.newaxis] (3d array): N x 1 x 4
+# model_input                (2d array):     N x 4
+# Broadcasting result        (3d array): N x N x 4
+# Where N is the number of lag combinations.
+# Source: https://numpy.org/doc/stable/user/basics.broadcasting.html#broadcastable-arrays
+
+lags_mask = np.sum(np.abs(lag_diffs), axis=2) < lags_threshold
+# Result (2d array): N x N
+
+# 2. Get the combinations of lags that are smooth (k=1)
+
+var_lags56 = model_input[:, 2] - model_input[:, 3]
+var_lags45 = model_input[:, 1] - model_input[:, 2]
+var_lags34 = model_input[:, 0] - model_input[:, 1]
+smooth_lags = np.logical_not(
+    np.logical_or(
+        var_lags56 * var_lags45 < 0,
+        var_lags45 * var_lags34 < 0,
+    )
+)
+
+smooth_mask = smooth_lags[:, np.newaxis] * smooth_lags
+# smooth_lags[:, np.newaxis] (2d array): N x 1
+# smooth_lags                (1d array):     N
+# Broadcasting result        (2d array): N x N
+
+# 3. Get the power values that are very different (difference above threshold)
+
+power_diffs = ml_powers[:, np.newaxis] - ml_powers
+# ml_powers[:, np.newaxis] (2d array): N x 1
+# ml_powers                (1d array):     N
+# Broadcasting result      (2d array): N x N
+
+power_mask = np.abs(power_diffs) > power_threshold
+# Result (2d array): N x N
+
+# 4. Take the lags and power values where lags are similar and smooth, but power values are different
+
+full_mask = lags_mask & smooth_mask & power_mask
+filtered_rows, filtered_cols = full_mask.nonzero()
+
+df_discont = pd.DataFrame({
+    "case1_power_ml": ml_powers[filtered_rows],
+    "case1_lag3": model_input[filtered_rows, 0],
+    "case1_lag4": model_input[filtered_rows, 1],
+    "case1_lag5": model_input[filtered_rows, 2],
+    "case1_lag6": model_input[filtered_rows, 3],
+    "case2_power_ml": ml_powers[filtered_cols],
+    "case2_lag3": model_input[filtered_cols, 0],
+    "case2_lag4": model_input[filtered_cols, 1],
+    "case2_lag5": model_input[filtered_cols, 2],
+    "case2_lag6": model_input[filtered_cols, 3]
+})
+print("Discontinuities:", df_discont.to_string())
 
 # Differences between ML and linear power values ---- #
 
@@ -60,23 +116,23 @@ print("Differences:", differences)
 # Filter
 # 1. Consider only dramatic differences
 threshold = 1.5
-mask1 = np.abs(differences) > threshold
+mask1_mesh = np.abs(differences) > threshold
 # 2. Consider only smooth combinations of lags (k=1)
-var_lags56 = lags5_mesh - lags6_mesh
-var_lags45 = lags4_mesh - lags5_mesh
-var_lags34 = lags3_mesh - lags4_mesh
-mask2 = np.logical_not(
+var_lags56_mesh = lags5_mesh - lags6_mesh
+var_lags45_mesh = lags4_mesh - lags5_mesh
+var_lags34_mesh = lags3_mesh - lags4_mesh
+mask2_mesh = np.logical_not(
     np.logical_or(
-        var_lags56 * var_lags45 < 0,
-        var_lags45 * var_lags34 < 0,
+        var_lags56_mesh * var_lags45_mesh < 0,
+        var_lags45_mesh * var_lags34_mesh < 0,
     )
 )
-mask = mask1 & mask2
-df = pd.DataFrame()
-df["power_ml"] = ml_powers_mesh[mask]
-df["power_linear"] = linear_powers_mesh[mask]
-df["lag3"] = lags3_mesh[mask]
-df["lag4"] = lags4_mesh[mask]
-df["lag5"] = lags5_mesh[mask]
-df["lag6"] = lags6_mesh[mask]
-print(df)
+mask_mesh = mask1_mesh & mask2_mesh
+df_diffs = pd.DataFrame()
+df_diffs["power_ml"] = ml_powers_mesh[mask_mesh]
+df_diffs["power_linear"] = linear_powers_mesh[mask_mesh]
+df_diffs["lag3"] = lags3_mesh[mask_mesh]
+df_diffs["lag4"] = lags4_mesh[mask_mesh]
+df_diffs["lag5"] = lags5_mesh[mask_mesh]
+df_diffs["lag6"] = lags6_mesh[mask_mesh]
+# print("Differences:", df_diffs.to_string())

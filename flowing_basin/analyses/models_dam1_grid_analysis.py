@@ -45,7 +45,7 @@ print("Linear turbined:", linear_turbined_flows_mesh.shape, linear_turbined_flow
 ml_turbined_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, ml_turbined_flows_mesh)
 linear_turbined_surface = mlab.surf(lags1_mesh_t, lags2_mesh_t, linear_turbined_flows_mesh, color=(0.6, 0.6, 0.6), opacity=0.75)
 mlab.axes(xlabel="lag1", ylabel="lag2", zlabel="Turbined flow")
-# mlab.savefig(filename='ml_models_graphs/model_E1_graph.png', size=(2000, 2000))  # <- Doesn't work
+# mlab.savefig(filename='ml_models_analyses_files/model_E1_graph.png', size=(2000, 2000))  # <- Doesn't work
 mlab.show()
 mlab.clf()
 

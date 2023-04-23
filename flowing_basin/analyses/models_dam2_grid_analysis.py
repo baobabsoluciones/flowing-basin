@@ -96,6 +96,7 @@ df_discont = pd.DataFrame({
     "case2_lag6": model_input[filtered_cols, 3]
 })
 print("Discontinuities:", df_discont.to_string())
+df_discont.to_excel("ml_models_analyses_files/dam2_MLModelDiscontinuities.xlsx")
 
 # Differences between ML and linear power values ---- #
 
@@ -136,3 +137,4 @@ df_diffs["lag4"] = lags4_mesh[mask_mesh]
 df_diffs["lag5"] = lags5_mesh[mask_mesh]
 df_diffs["lag6"] = lags6_mesh[mask_mesh]
 # print("Differences:", df_diffs.to_string())
+df_diffs.to_excel("ml_models_analyses_files/dam2_MLvsLinearModel.xlsx")

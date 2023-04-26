@@ -328,34 +328,6 @@ class Instance(InstanceCore):
 
         return points
     
-    def get_flow_limit_coef_a_of_channel(self, idx: str) -> float:
-        
-        """
-        
-        :return: Coefficient A of the equation maximum flow per channel A*vol + B for each dam (1/s)
-        """
-        
-        if self.data["dams"][idx]["flow_limit"]["exists"]:
-            coef = self.data["dams"][idx]["flow_limit"]["coef_a"]
-        else:
-            coef = None
-
-        return coef
-    
-    def get_flow_limit_coef_b_of_channel(self, idx: str) -> float:
-        
-        """
-        
-        :return: Coefficient B of the equation maximum flow per channel A*vol + B for each dam (m3/s)
-        """
-        
-        if self.data["dams"][idx]["flow_limit"]["exists"]:
-            coef = self.data["dams"][idx]["flow_limit"]["coef_b"]
-        else:
-            coef = None
-
-        return coef
-    
 
     def get_turbined_flow_obs_for_power_group(self, idx: str) -> dict[str, list]:
 

@@ -15,16 +15,37 @@
                         "items": {
                             "type": "number"
                         }
+                    },
+                    "power": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "volume": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
                     }
                 },
                 "required": [
                     "flows",
-                    "id"
+                    "id",
+                    "power",
+                    "volume"
                 ]
+            }
+        },
+        "price": {
+            "type": "array",
+            "items": {
+                "type": "number"
             }
         }
     },
     "required": [
-        "dams"
+        "dams",
+        "price"
     ]
 }

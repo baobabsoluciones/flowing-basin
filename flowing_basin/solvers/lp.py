@@ -686,20 +686,33 @@ class LPModel(Experiment):
 
         # Flows
         # TODO develope
-        qsalida1 = [0, 0]
-        qsalida2 = [0, 0]
+        qsalida1 = []
+        qsalida2 = []
         for var in qs.values():
             if "dam1" in var.name:
                 qsalida1.append(var.value())
-                print(f"{var.name}: {var.value()}")
             if "dam2" in var.name:
                 qsalida2.append(var.value())
-                print(f"{var.name}: {var.value()}")
+        potencia1 = []
+        potencia2 = []
+        for var in pot.values():
+            if "dam1" in var.name:
+                potencia1.append(var.value())
+            if "dam2" in var.name:
+                potencia2.append(var.value())
+        volumenes1 = []
+        volumenes2 = []
+        for var in vol.values():
+            if "dam1" in var.name:
+                volumenes1.append(var.value())
+            if "dam2" in var.name:
+                volumenes2.append(var.value())
         sol_dict = {
             "dams": [
-                {"flows": qsalida1, "id": "dam1"},
-                {"flows": qsalida2, "id": "dam2"},
-            ]
+                {"flows": qsalida1, "id": "dam1", "power": potencia1, "volume": volumenes1},
+                {"flows": qsalida2, "id": "dam2", "power": potencia2, "volume": volumenes2},
+            ],
+            "price": Price
         }
         self.solution = Solution.from_dict(sol_dict)
 

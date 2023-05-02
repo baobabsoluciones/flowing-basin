@@ -12,7 +12,9 @@ class LPConfiguration:
     volume_shortage_penalty: float
     volume_exceedance_bonus: float
 
-    # Penalty for each time step with the turbined flow in a limit zone (in €/occurrence)
+    # Penalty for each power group startup and for each time step with the turbined 
+    #flow in a limit zone (in €/occurrence)
+    startups_penalty: float
     limit_zones_penalty: float
 
     # Number of periods during which the flow through the channel may not undergo more than one variation
@@ -100,23 +102,14 @@ class LPModel(Experiment):
             for dam_id in self.instance.get_ids_of_dams()
         }
 
-        ZonaLimitePQ = {}
-        for dam_id in self.instance.get_ids_of_dams():
-            ZonaLimitePQ[dam_id] = []
-        for i in I:
-            for bp in BreakPointsPQ[i]:
-                if bp != BreakPointsPQ[i][-1]:
-                    if PotBP[i][bp - 1] == PotBP[i][bp]:
-                        ZonaLimitePQ[i].append(bp)
-
-        QMaxBP = {}
+        QmaxBP = {}
         for dam_id in self.instance.get_ids_of_dams():
             if self.instance.get_flow_limit_obs_for_channel(dam_id) != None:
-                QMaxBP[dam_id] = self.instance.get_flow_limit_obs_for_channel(
+                QmaxBP[dam_id] = self.instance.get_flow_limit_obs_for_channel(
                     dam_id
                 )["observed_flows"]
             else:
-                QMaxBP[dam_id] = None
+                QmaxBP[dam_id] = None
 
         VolBP = {}
         for dam_id in self.instance.get_ids_of_dams():
@@ -143,7 +136,6 @@ class LPModel(Experiment):
         }
 
         TMin = self.config.step_min
-        # TODO delete A and B in schema
 
         Price = self.instance.get_all_prices()
 
@@ -164,6 +156,57 @@ class LPModel(Experiment):
         PenVol = self.config.volume_shortage_penalty
 
         PenZL = self.config.limit_zones_penalty
+        
+        PenSU = self.config.startups_penalty
+        
+        shutdown_flows = {
+            dam_id: self.instance.get_startup_flows_of_power_group(dam_id)
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+        
+        startup_flows = {
+            dam_id: self.instance.get_shutdown_flows_of_power_group(dam_id)
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+        
+        for i in I:
+            for y in range(len(startup_flows[i])):
+                for w in range(len(QtBP[i])):
+                    if (startup_flows[i][y] - QtBP[i][w]) <= 0.1 and (startup_flows[i][y] - QtBP[i][w]) >= -0.1:
+                        startup_flows[i][y] = QtBP[i][w]
+                        
+        for i in I:
+            for y in range(len(shutdown_flows[i])):
+                for w in range(len(QtBP[i])):
+                    if (shutdown_flows[i][y] - QtBP[i][w]) <= 0.1 and (shutdown_flows[i][y] - QtBP[i][w]) >= -0.1:
+                        shutdown_flows[i][y] = QtBP[i][w]
+                        
+        ZonaLimitePQ = {}
+        for dam_id in self.instance.get_ids_of_dams():
+            ZonaLimitePQ[dam_id] = []
+        for i in I:
+            for bp in BreakPointsPQ[i]:
+                if bp != BreakPointsPQ[i][-1]:
+                    if PotBP[i][bp - 1] == PotBP[i][bp]:
+                        ZonaLimitePQ[i].append(bp)
+        
+        FranjasGrupos1 = {}
+        FranjasGrupos = {}
+        for i in I:
+            FranjasGrupos1[i] = {}
+            for gp in range(len(startup_flows[i])):
+                FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)] = []
+                for bp in QtBP[i]:
+                    if gp == (len(startup_flows[i])-1):
+                        if bp >= startup_flows[i][gp]:
+                            FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)].append(QtBP[i].index(bp)+1)
+                            if bp == QtBP[i][-1]:
+                                FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)].pop(-1)
+                    else:
+                        if bp >= startup_flows[i][gp] and bp < startup_flows[i][gp+1]:
+                            FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)].append(QtBP[i].index(bp)+1)
+            FranjasGrupos[i] = {"Grupo_potencia0": [1]}
+            FranjasGrupos[i].update(FranjasGrupos1[i])
 
         print(f"{I=}")
         print(f"{T=}")
@@ -175,20 +218,24 @@ class LPModel(Experiment):
         print(f"{QMax=}")
         print(f"{QtBP=}")
         print(f"{PotBP=}")
-        print(f"{ZonaLimitePQ=}")
-        print(f"{QMaxBP=}")
+        print(f"{QmaxBP=}")
         print(f"{VolBP=}")
         print(f"{V0=}")
         print(f"{VMax=}")
         print(f"{VMin=}")
+        print(f"{TMin=}")
         print(f"{Price=}")
         print(f"{IniLags=}")
-        print(f"{TMin=}")
         print(f"{VolFinal=}")
         print(f"{Q0=}")
         print(f"{BonusVol=}")
         print(f"{PenVol=}")
         print(f"{PenZL=}")
+        print(f"{PenSU=}")
+        print(f"{shutdown_flows=}")
+        print(f"{startup_flows=}")
+        print(f"{ZonaLimitePQ=}")
+        print(f"{FranjasGrupos=}")
 
         print(len(Price), len(T), len(Q0))
 
@@ -263,24 +310,15 @@ class LPModel(Experiment):
             )["observed_powers"]
             for dam_id in self.instance.get_ids_of_dams()
         }
-
-        ZonaLimitePQ = {}
-        for dam_id in self.instance.get_ids_of_dams():
-            ZonaLimitePQ[dam_id] = []
-        for i in I:
-            for bp in BreakPointsPQ[i]:
-                if bp != BreakPointsPQ[i][-1]:
-                    if PotBP[i][bp - 1] == PotBP[i][bp]:
-                        ZonaLimitePQ[i].append(bp)
-
-        QMaxBP = {}
+        
+        QmaxBP = {}
         for dam_id in self.instance.get_ids_of_dams():
             if self.instance.get_flow_limit_obs_for_channel(dam_id) != None:
-                QMaxBP[dam_id] = self.instance.get_flow_limit_obs_for_channel(
+                QmaxBP[dam_id] = self.instance.get_flow_limit_obs_for_channel(
                     dam_id
                 )["observed_flows"]
             else:
-                QMaxBP[dam_id] = None
+                QmaxBP[dam_id] = None
 
         VolBP = {}
         for dam_id in self.instance.get_ids_of_dams():
@@ -307,7 +345,6 @@ class LPModel(Experiment):
         }
 
         TMin = self.config.step_min
-        # TODO delete A and B in schema
 
         Price = self.instance.get_all_prices()
 
@@ -328,13 +365,62 @@ class LPModel(Experiment):
         PenVol = self.config.volume_shortage_penalty
 
         PenZL = self.config.limit_zones_penalty
+        
+        PenSU = self.config.startups_penalty
+        
+        shutdown_flows = {
+            dam_id: self.instance.get_startup_flows_of_power_group(dam_id)
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+        
+        startup_flows = {
+            dam_id: self.instance.get_shutdown_flows_of_power_group(dam_id)
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+        
+        # Primero hago un proceso para eliminar la desviación de decimales
+        for i in I:
+            for y in range(len(startup_flows[i])):
+                for w in range(len(QtBP[i])):
+                    if (startup_flows[i][y] - QtBP[i][w]) <= 0.1 and (startup_flows[i][y] - QtBP[i][w]) >= -0.1:
+                        startup_flows[i][y] = QtBP[i][w]
+                        
+        for i in I:
+            for y in range(len(shutdown_flows[i])):
+                for w in range(len(QtBP[i])):
+                    if (shutdown_flows[i][y] - QtBP[i][w]) <= 0.1 and (shutdown_flows[i][y] - QtBP[i][w]) >= -0.1:
+                        shutdown_flows[i][y] = QtBP[i][w]
+
+        ZonaLimitePQ = {}
+        for dam_id in self.instance.get_ids_of_dams():
+            ZonaLimitePQ[dam_id] = []
+        for i in I:
+            for bp in BreakPointsPQ[i]:
+                if bp != BreakPointsPQ[i][-1]:
+                    if PotBP[i][bp - 1] == PotBP[i][bp]:
+                        ZonaLimitePQ[i].append(bp)
+
+        FranjasGrupos1 = {}
+        FranjasGrupos = {}
+        for i in I:
+            FranjasGrupos1[i] = {}
+            for gp in range(len(startup_flows[i])):
+                FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)] = []
+                for bp in QtBP[i]:
+                    if gp == (len(startup_flows[i])-1):
+                        if bp >= startup_flows[i][gp]:
+                            FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)].append(QtBP[i].index(bp)+1)
+                            if bp == QtBP[i][-1]:
+                                FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)].pop(-1)
+                    else:
+                        if bp >= startup_flows[i][gp] and bp < startup_flows[i][gp+1]:
+                            FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)].append(QtBP[i].index(bp)+1)
+            FranjasGrupos[i] = {"Grupo_potencia0": [1]}
+            FranjasGrupos[i].update(FranjasGrupos1[i])
 
         # Variables
         vol = lp.LpVariable.dicts(
-            "Volumen ",
-            [(i, t) for i in I for t in T],
-            lowBound=0,
-            cat=lp.LpContinuous,
+            "Volumen ", [(i, t) for i in I for t in T], lowBound=0, cat=lp.LpContinuous
         )
         qe = lp.LpVariable.dicts(
             "Caudal entrada ",
@@ -361,9 +447,7 @@ class LPModel(Experiment):
             cat=lp.LpContinuous,
         )
         qch = lp.LpVariable.dicts(
-            "Cambio caudal ",
-            [(i, t) for i in I for t in T],
-            cat=lp.LpContinuous,
+            "Cambio caudal ", [(i, t) for i in I for t in T], cat=lp.LpContinuous
         )
         y = lp.LpVariable.dicts(
             "01Variacion ", [(i, t) for i in I for t in T], cat=lp.LpBinary
@@ -389,7 +473,7 @@ class LPModel(Experiment):
             [
                 (i, t, bp)
                 for i in I
-                if QMaxBP[i] != None
+                if QmaxBP[i] != None
                 for t in T
                 for bp in range(0, BreakPointsVQ[i][-1] + 1)
             ],
@@ -400,7 +484,7 @@ class LPModel(Experiment):
             [
                 (i, t, bp)
                 for i in I
-                if QMaxBP[i] != None
+                if QmaxBP[i] != None
                 for t in T
                 for bp in BreakPointsVQ[i]
             ],
@@ -409,7 +493,7 @@ class LPModel(Experiment):
         )
         q_max_vol = lp.LpVariable.dicts(
             "Caudal máximo volumen ",
-            [(i, t) for i in I if QMaxBP[i] != None for t in T],
+            [(i, t) for i in I if QmaxBP[i] != None for t in T],
             lowBound=0,
             cat=lp.LpContinuous,
         )
@@ -417,10 +501,7 @@ class LPModel(Experiment):
             "Potencia total ", [t for t in T], lowBound=0, cat=lp.LpContinuous
         )
         pos_desv = lp.LpVariable.dicts(
-            "Desviación positiva ",
-            [i for i in I],
-            lowBound=0,
-            cat=lp.LpContinuous,
+            "Desviación positiva ", [i for i in I], lowBound=0, cat=lp.LpContinuous
         )
         neg_desv = lp.LpVariable.dicts(
             "Desviación negativa ",
@@ -439,14 +520,20 @@ class LPModel(Experiment):
             [i for i in I],
             cat=lp.LpInteger,
         )
+        pwch = lp.LpVariable.dicts(
+            "01Arranque PG ", [(i, t, pg) for i in I for t in T for pg in FranjasGrupos[i]], cat=lp.LpBinary
+        )
+        pwch_tot = lp.LpVariable.dicts(
+            "Arranque totales ",
+            [i for i in I],
+            cat=lp.LpInteger,
+        )
 
         # Constraints
         for i in I:
             for t in T:
                 if t == T[0]:
-                    lpproblem += vol[(i, t)] == V0[i] + D * (
-                        qe[(i, t)] - qs[(i, t)]
-                    )
+                    lpproblem += vol[(i, t)] == V0[i] + D * (qe[(i, t)] - qs[(i, t)])
                 else:
                     lpproblem += vol[(i, t)] == vol[(i, t - 1)] + D * (
                         qe[(i, t)] - qs[(i, t)]
@@ -458,9 +545,7 @@ class LPModel(Experiment):
                 if i == I[0]:
                     lpproblem += qe[(i, t)] == Q0[t] + Qnr[i][t]
                 else:
-                    lpproblem += (
-                        qe[(i, t)] == qtb[(I[I.index(i) - 1], t)] + Qnr[i][t]
-                    )
+                    lpproblem += qe[(i, t)] == qtb[(I[I.index(i) - 1], t)] + Qnr[i][t]
 
         # TODO: improve this constraint
         for i in I:
@@ -471,9 +556,9 @@ class LPModel(Experiment):
                             IniLags[i][0] + IniLags[i][1]
                         ) / len(L[i])
                     if t == 1:
-                        lpproblem += qtb[(i, t)] == (
-                            IniLags[i][0] + qs[(i, 0)]
-                        ) / len(L[i])
+                        lpproblem += qtb[(i, t)] == (IniLags[i][0] + qs[(i, 0)]) / len(
+                            L[i]
+                        )
                     if t >= 2:
                         lpproblem += qtb[(i, t)] == lp.lpSum(
                             (qs[(i, t - l)]) * (1 / len(L[i])) for l in L[i]
@@ -502,24 +587,15 @@ class LPModel(Experiment):
                         ) / len(L[i])
                     if t == 3:
                         lpproblem += qtb[(i, t)] == (
-                            qs[(i, 0)]
-                            + IniLags[i][0]
-                            + IniLags[i][1]
-                            + IniLags[i][2]
+                            qs[(i, 0)] + IniLags[i][0] + IniLags[i][1] + IniLags[i][2]
                         ) / len(L[i])
                     if t == 4:
                         lpproblem += qtb[(i, t)] == (
-                            qs[(i, 1)]
-                            + qs[(i, 0)]
-                            + IniLags[i][0]
-                            + IniLags[i][1]
+                            qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0] + IniLags[i][1]
                         ) / len(L[i])
                     if t == 5:
                         lpproblem += qtb[(i, t)] == (
-                            qs[(i, 2)]
-                            + qs[(i, 1)]
-                            + qs[(i, 0)]
-                            + IniLags[i][0]
+                            qs[(i, 2)] + qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0]
                         ) / len(L[i])
                     if t >= 6:
                         lpproblem += qtb[(i, t)] == lp.lpSum(
@@ -529,15 +605,13 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 lpproblem += pot[(i, t)] == lp.lpSum(
-                    z_pq[(i, t, bp)] * PotBP[i][bp - 1]
-                    for bp in BreakPointsPQ[i]
+                    z_pq[(i, t, bp)] * PotBP[i][bp - 1] for bp in BreakPointsPQ[i]
                 )
 
         for i in I:
             for t in T:
                 lpproblem += qtb[(i, t)] == lp.lpSum(
-                    z_pq[(i, t, bp)] * QtBP[i][bp - 1]
-                    for bp in BreakPointsPQ[i]
+                    z_pq[(i, t, bp)] * QtBP[i][bp - 1] for bp in BreakPointsPQ[i]
                 )
 
         for i in I:
@@ -548,48 +622,40 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 for bp in BreakPointsPQ[i]:
-                    lpproblem += (
-                        z_pq[(i, t, bp)]
-                        <= w_pq[(i, t, bp - 1)] + w_pq[(i, t, bp)]
-                    )
+                    lpproblem += z_pq[(i, t, bp)] <= w_pq[(i, t, bp-1)] + w_pq[(i, t, bp)]
+
 
         for i in I:
             for t in T:
-                lpproblem += (
-                    lp.lpSum(z_pq[(i, t, bp)] for bp in BreakPointsPQ[i]) == 1
-                )
+                lpproblem += lp.lpSum(z_pq[(i, t, bp)] for bp in BreakPointsPQ[i]) == 1
 
         for i in I:
             for t in T:
-                lpproblem += (
-                    lp.lpSum(w_pq[(i, t, bp)] for bp in BreakPointsPQ[i]) == 1
-                )
+                lpproblem += lp.lpSum(w_pq[(i, t, bp)] for bp in BreakPointsPQ[i]) == 1
 
         for i in I:
             for t in T:
-                if QMaxBP[i] != None:
+                if QmaxBP[i] != None:
                     lpproblem += q_max_vol[(i, t)] == lp.lpSum(
-                        z_vq[(i, t, bp)] * QMaxBP[i][bp - 1]
-                        for bp in BreakPointsVQ[i]
+                        z_vq[(i, t, bp)] * QmaxBP[i][bp - 1] for bp in BreakPointsVQ[i]
                     )
 
         for i in I:
             for t in T:
-                if QMaxBP[i] != None:
+                if QmaxBP[i] != None:
                     lpproblem += vol[(i, t)] == lp.lpSum(
-                        z_vq[(i, t, bp)] * VolBP[i][bp - 1]
-                        for bp in BreakPointsVQ[i]
+                        z_vq[(i, t, bp)] * VolBP[i][bp - 1] for bp in BreakPointsVQ[i]
                     )
 
         for i in I:
             for t in T:
-                if QMaxBP[i] != None:
+                if QmaxBP[i] != None:
                     lpproblem += w_vq[(i, t, 0)] == 0
                     lpproblem += w_vq[(i, t, BreakPointsVQ[i][-1])] == 0
 
         for i in I:
             for t in T:
-                if QMaxBP[i] != None:
+                if QmaxBP[i] != None:
                     for bp in BreakPointsVQ[i]:
                         lpproblem += z_vq[(i, t, bp)] <= lp.lpSum(
                             w_vq[(i, t, tr)] for tr in range(bp - 1, bp + 1)
@@ -597,18 +663,16 @@ class LPModel(Experiment):
 
         for i in I:
             for t in T:
-                if QMaxBP[i] != None:
+                if QmaxBP[i] != None:
                     lpproblem += (
-                        lp.lpSum(z_vq[(i, t, bp)] for bp in BreakPointsVQ[i])
-                        == 1
+                        lp.lpSum(z_vq[(i, t, bp)] for bp in BreakPointsVQ[i]) == 1
                     )
 
         for i in I:
             for t in T:
-                if QMaxBP[i] != None:
+                if QmaxBP[i] != None:
                     lpproblem += (
-                        lp.lpSum(w_vq[(i, t, bp)] for bp in BreakPointsVQ[i])
-                        == 1
+                        lp.lpSum(w_vq[(i, t, bp)] for bp in BreakPointsVQ[i]) == 1
                     )
 
         for i in I:
@@ -625,14 +689,12 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 lpproblem += -qch[(i, t)] <= y[(i, t)] * QMax[i]
-
+                
         for i in I:
             for t in T:
                 lpproblem += (
                     lp.lpSum(
-                        y[(i, t + t1)]
-                        for t1 in range(0, TMin)
-                        if t + t1 <= len(T) - 1
+                        y[(i, t + t1)] for t1 in range(0, TMin) if t + t1 <= len(T) - 1
                     )
                     <= 1
                 )
@@ -651,7 +713,7 @@ class LPModel(Experiment):
 
         for i in I:
             for t in T:
-                if QMaxBP[i] != None:
+                if QmaxBP[i] != None:
                     lpproblem += qs[(i, t)] <= q_max_vol[(i, t)]
 
         for t in T:
@@ -660,22 +722,45 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 if t == T[-1]:
-                    lpproblem += (
-                        vol[i, t] == VolFinal[i] + pos_desv[i] - neg_desv[i]
-                    )
+                    lpproblem += vol[(i, t)] == VolFinal[i] + pos_desv[i] - neg_desv[i]
 
         for i in I:
-            lpproblem += (
-                cost_desv[i] == pos_desv[i] * BonusVol - neg_desv[i] * PenVol
-            )
+            lpproblem += cost_desv[i] == pos_desv[i] * BonusVol - neg_desv[i] * PenVol
         for i in I:
-            lpproblem += zl_tot[i] == lp.lpSum(
-                w_pq[(i, t, bp)] for t in T for bp in ZonaLimitePQ[i]
-            )
+            lpproblem += zl_tot[i] == lp.lpSum(w_pq[(i, t, bp)] for t in T for bp in ZonaLimitePQ[i])
+
+        def obtener_franjas_pw_mayores(diccionario, clave):
+            pw_posteriores = list(diccionario.keys())[list(diccionario.keys()).index(clave) + 1:]
+
+            franjas_posteriores = []
+            for pw_posterior in pw_posteriores:
+                franjas_posteriores += diccionario[pw_posterior]
+
+            return franjas_posteriores
+
+        for i in I:
+            for t in T:
+                if t != T[0]:
+                    for pg in FranjasGrupos[i]:
+                        if pg != list(FranjasGrupos[i].keys())[-1]:
+                            lista_keys = list(FranjasGrupos[i].keys())
+                            franjassuperiores = obtener_franjas_pw_mayores(FranjasGrupos[i], pg)
+                            lpproblem += lp.lpSum(w_pq[(i, t-1, franja)] for franja in FranjasGrupos[i][pg]) + lp.lpSum(w_pq[(i, t, franja_sup)]
+                                                                                                                        for franja_sup in franjassuperiores) - 1 <= pwch[(i, t, lista_keys[lista_keys.index(pg)+1])]
+                            lpproblem += lp.lpSum(w_pq[(i, t-1, franja)] for franja in FranjasGrupos[i][pg]) + lp.lpSum(w_pq[(i, t, franja_sup)]
+                                                                                                                        for franja_sup in franjassuperiores) >= 2* pwch[(i, t, lista_keys[lista_keys.index(pg)+1])]
+                        if t == 0:
+                            lpproblem += pwch[(i, t, pg)] == 0
+        
+        for i in I:
+            lpproblem += pwch_tot[i] == lp.lpSum(pwch[(i, t, pg)] for t in T for pg in FranjasGrupos[i])
 
         # Objective Function
         lpproblem += lp.lpSum(
-            tpot[t] * Price[t] + cost_desv[i] - zl_tot[i] * PenZL
+            tpot[t] * Price[t]
+            + cost_desv[i]
+            - zl_tot[i] * PenZL
+            - pwch_tot[i] * PenSU
             for t in T
             for i in I
         )

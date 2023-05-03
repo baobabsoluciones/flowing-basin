@@ -17,7 +17,7 @@ for dam in [1, 2]:
 
     # Load model of dam
     paths_power_model = f"../ml_models/model_E{dam}.sav"
-    power_model = PowerGroup.get_power_model(paths_power_model)
+    power_model = PowerGroup.get_nonlinear_power_model(paths_power_model)
 
     # Get necessary data of dam
     turbined_flow_points = instance.get_turbined_flow_obs_for_power_group(f"dam{dam}")

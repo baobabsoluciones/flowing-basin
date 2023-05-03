@@ -11,6 +11,7 @@ class Channel:
         instance: Instance,
         paths_power_models: dict[str, str],
         num_scenarios: int,
+        mode: str,
     ):
 
         self.num_scenarios = num_scenarios
@@ -32,6 +33,7 @@ class Channel:
             instance=instance,
             paths_power_models=paths_power_models,
             num_scenarios=self.num_scenarios,
+            mode=mode,
         )
 
     def _reset_variables(self, instance: Instance, dam_vol: np.ndarray):

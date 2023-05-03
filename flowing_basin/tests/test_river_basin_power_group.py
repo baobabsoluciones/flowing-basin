@@ -33,6 +33,7 @@ power_group = PowerGroup(
     instance=instance,
     paths_power_models=paths_power_models,
     num_scenarios=num_scenarios,
+    mode="nonlinear"
 )
 print(f"{power_group.power=}")
 print(f"{power_group.turbined_flow=}")

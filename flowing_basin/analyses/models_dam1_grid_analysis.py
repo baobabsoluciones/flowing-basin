@@ -5,7 +5,7 @@ from mayavi import mlab
 
 # Load model of first dam
 paths_power_model = "../ml_models/model_E1.sav"
-power_model = PowerGroup.get_power_model(paths_power_model)
+power_model = PowerGroup.get_nonlinear_power_model(paths_power_model)
 
 # Get necessary data of first dam
 instance = Instance.from_json("../data/rl_training_data/constants.json")

@@ -5,7 +5,7 @@ import pandas as pd
 
 # Load model of second dam
 paths_power_model = "../ml_models/model_E2.sav"
-power_model = PowerGroup.get_power_model(paths_power_model)
+power_model = PowerGroup.get_nonlinear_power_model(paths_power_model)
 
 # Get necessary data of second dam
 instance = Instance.from_json("../data/rl_training_data/constants.json")

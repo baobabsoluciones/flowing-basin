@@ -31,9 +31,7 @@
                 },
                 "required": [
                     "flows",
-                    "id",
-                    "power",
-                    "volume"
+                    "id"
                 ]
             }
         },
@@ -45,7 +43,6 @@
         }
     },
     "required": [
-        "dams",
-        "price"
+        "dams"
     ]
 }

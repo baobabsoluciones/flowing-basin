@@ -22,7 +22,7 @@ class RiverBasin:
 
         valid_modes = {"linear", "nonlinear"}
         if mode not in valid_modes:
-            raise ValueError(f"mode must be one of {valid_modes}")
+            raise ValueError(f"Invalid value for 'mode': {mode}. Allowed values are {valid_modes}")
 
         # Number of scenarios (e.g. candidate solutions) for which to do calculations at the same time
         self.num_scenarios = num_scenarios

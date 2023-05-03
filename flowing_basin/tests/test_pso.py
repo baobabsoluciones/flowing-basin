@@ -23,9 +23,10 @@ config = PSOConfiguration(
         "dam1": 59627.42324,
         "dam2": 31010.43613642857
     },
-    use_relvars=False,
-    # max_relvar=0.2,
+    use_relvars=True,
+    max_relvar=0.5,
     flow_smoothing=2,
+    mode="linear"
 )
 pso = PSO(
     instance=instance,
@@ -129,18 +130,18 @@ sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap0_solution.json"
 # Optimal solution found by PSO ---- #
 
 path_parent = "../data"
-dir_name = f"output_example1_PSO_{datetime.now().strftime('%Y-%m-%d %H.%M')}"
+dir_name = f"output_example1_PSO_{datetime.now().strftime('%Y-%m-%d %H.%M')}_mode={pso.config.mode}"
 options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113}
 status = pso.solve(options, num_particles=200, num_iters=100)
 print("status:", status)
 print("solver info:", pso.solver_info)
 
 # path_parent = "../data"
-# dir_name = "output_example1_original-real-decisions"
+# dir_name = f"output_example1_original-real-decisions_mode={pso.config.mode}"
 # pso.solution = sol_original
 
 # path_parent = "../data"
-# dir_name = "output_example1_LPmodel_gap0"
+# dir_name = f"output_example1_LPmodel_gap0_mode={pso.config.mode}"
 # pso.solution = sol_lp
 
 print(pso.solution.check())

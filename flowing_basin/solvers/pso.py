@@ -35,6 +35,12 @@ class PSOConfiguration:
     use_relvars: bool
     max_relvar: float = 0.5  # Used only when use_relvars=True
     flow_smoothing: int = 0
+    mode: str = "nonlinear"
+
+    def __post_init__(self):
+        valid_modes = {"linear", "nonlinear"}
+        if self.mode not in valid_modes:
+            raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
 
 class PSO(Experiment):
@@ -83,6 +89,7 @@ class PSO(Experiment):
             instance=self.instance,
             paths_power_models=paths_power_models,
             flow_smoothing=self.config.flow_smoothing,
+            mode=self.config.mode,
         )
 
     def reshape_as_swarm(self, flows_or_relvars: np.ndarray) -> np.ndarray:

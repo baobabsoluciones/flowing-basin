@@ -69,7 +69,7 @@
                                 "items": {
                                     "type": "number"
                                 }
-                            },
+                            }
                         },
                         "if": {
                             "properties": {
@@ -82,7 +82,7 @@
                             "required": [
                                 "exists",
                                 "observed_vols",
-                                "observed_flows",
+                                "observed_flows"
                             ]
                         },
                         "else": {
@@ -182,6 +182,6 @@
         "energy_prices",
         "incoming_flow_max",
         "incoming_flows",
-        "time_step_minutes",
+        "time_step_minutes"
     ]
 }

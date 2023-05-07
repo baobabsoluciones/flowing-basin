@@ -767,6 +767,7 @@ class LPModel(Experiment):
 
         # Solve
         solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
+        # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)
         lpproblem.solve(solver)
 
         # Flows

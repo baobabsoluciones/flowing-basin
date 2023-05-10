@@ -13,10 +13,10 @@ config = LPConfiguration(
     step_min=4,
     MIPGap=0.04
 )
-instance = Instance.from_json("../data/input_example1.json")
+instance = Instance.from_json("../data/input_example1_greater_max_vol.json")
 lp = LPModel(config=config, instance=instance)
 lp.LPModel_print()
 
 lp.solve(dict())
-path_sol = "../data/output_example1_LPmodel2.json"
+path_sol = "../data/output_example1_LPmodelCARLOS.json"
 lp.solution.to_json(path_sol)

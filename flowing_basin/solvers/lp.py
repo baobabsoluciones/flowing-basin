@@ -501,32 +501,39 @@ class LPModel(Experiment):
             "Potencia total ", [t for t in T], lowBound=0, cat=lp.LpContinuous
         )
         pos_desv = lp.LpVariable.dicts(
-            "Desviación positiva ", [i for i in I], lowBound=0, cat=lp.LpContinuous
+            "Desviación positiva del ", [i for i in I], lowBound=0, cat=lp.LpContinuous
         )
         neg_desv = lp.LpVariable.dicts(
-            "Desviación negativa ",
+            "Desviación negativa del ",
             [i for i in I],
             lowBound=0,
             cat=lp.LpContinuous,
         )
         cost_desv = lp.LpVariable.dicts(
-            "Coste desviación ",
+            "Beneficio por desviación volumen del ",
             [i for i in I],
             cat=lp.LpContinuous,
         )
 
         zl_tot = lp.LpVariable.dicts(
-            "Zonas límites totales ",
+            "Zonas límites totales del ",
             [i for i in I],
             cat=lp.LpInteger,
         )
         pwch = lp.LpVariable.dicts(
             "01Arranque PG ", [(i, t, pg) for i in I for t in T for pg in FranjasGrupos[i]], cat=lp.LpBinary
         )
+
         pwch_tot = lp.LpVariable.dicts(
-            "Arranque totales ",
+            "Arranque totales del ",
             [i for i in I],
             cat=lp.LpInteger,
+        )
+
+        pot_embalse = lp.LpVariable.dicts(
+            "Potencia total del ",
+            [i for i in I],
+            cat=lp.LpContinuous,
         )
 
         # Constraints
@@ -718,6 +725,9 @@ class LPModel(Experiment):
 
         for t in T:
             lpproblem += tpot[t] == lp.lpSum(pot[(i, t)] for i in I)
+            
+        for i in I:
+            lpproblem += pot_embalse[i] == lp.lpSum(pot[(i, t)] * Price[t] for t in T)
 
         for i in I:
             for t in T:
@@ -738,6 +748,8 @@ class LPModel(Experiment):
 
             return franjas_posteriores
 
+        print(obtener_franjas_pw_mayores(FranjasGrupos["dam2"], "Grupo_potencia1"))
+
         for i in I:
             for t in T:
                 if t != T[0]:
@@ -751,17 +763,18 @@ class LPModel(Experiment):
                                                                                                                         for franja_sup in franjassuperiores) >= 2* pwch[(i, t, lista_keys[lista_keys.index(pg)+1])]
                         if t == 0:
                             lpproblem += pwch[(i, t, pg)] == 0
-        
+                            
         for i in I:
             lpproblem += pwch_tot[i] == lp.lpSum(pwch[(i, t, pg)] for t in T for pg in FranjasGrupos[i])
+            
 
         # Objective Function
         lpproblem += lp.lpSum(
-            tpot[t] * Price[t]
+            #tpot[t] * Price[t]
+            pot_embalse[i]
             + cost_desv[i]
             - zl_tot[i] * PenZL
             - pwch_tot[i] * PenSU
-            for t in T
             for i in I
         )
 
@@ -769,6 +782,27 @@ class LPModel(Experiment):
         solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
         # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)
         lpproblem.solve(solver)
+        
+        # Caracterización de la solución
+        print("--------Función objetivo--------")
+        print("Estado de la solución: ", lp.LpStatus[lpproblem.status])
+        print("Valor de la función objetivo (€): ", lp.value(lpproblem.objective))
+        print("--------Potencia generada en cada embalse--------")
+        for var in pot_embalse.values():
+            print(f"{var.name} (€): {var.value()}")
+        print("--------Desviación en volumen--------")
+        for var in pos_desv.values():
+            print(f"{var.name} (m3): {var.value()}")
+        for var in neg_desv.values():
+            print(f"{var.name} (m3): {var.value()}")
+        for var in cost_desv.values():
+            print(f"{var.name} (€): {var.value()}")
+        print("--------Zonas límite--------")
+        for var in zl_tot.values():
+            print(f"{var.name}: {var.value()}")
+        print("--------Arranques grupos de potencia--------")
+        for var in pwch_tot.values():
+            print(f"{var.name}: {var.value()}")
 
         # Flows
         # TODO develope

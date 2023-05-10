@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 
 # Instance we want to solve
-instance = Instance.from_json("../data/input_example1.json")
+instance = Instance.from_json("../data/input_example1_greater_max_vol.json")
 paths_power_models = {
     "dam1": "../ml_models/model_E1.sav",
     "dam2": "../ml_models/model_E2.sav",

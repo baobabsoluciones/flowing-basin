@@ -1,58 +1,15 @@
 from flowing_basin.core import Instance
 from flowing_basin.tools import RiverBasin
-from dataclasses import dataclass, field
-import torch
+from cornflow_client.core.tools import load_json
+import numpy as np
+import gym
+import pandas as pd
+from datetime import datetime
+import pickle
+from random import randint
 
 
-@dataclass
-class DamObservation:
-
-    """
-    Class representing the observation of the agent for each dam
-    After initialization, the values are flattened into a `list` attribute
-    """
-
-    vol: float
-    lags: list[float]
-    next_unreg_flows: list[float]
-    list: list = field(init=False)
-
-    def __post_init__(self):
-
-        self.list = [self.vol, *self.lags, *self.next_unreg_flows]
-
-
-@dataclass
-class Observation:
-
-    """
-    Class representing an observation of the agent
-    After initialization, the values are flattened into a `tensor` attribute
-    After calling the normalization method, the normalized tensor is saved in a `normalized` attribute
-    """
-
-    next_prices: list[float]
-    next_incoming_flows: list[float]
-    dams: list[DamObservation]
-    tensor: torch.Tensor = field(init=False)
-    normalized: None | torch.Tensor = field(init=False)
-
-    def __post_init__(self):
-
-        dam_values = [value for dam in self.dams for value in dam.list]
-        self.tensor = torch.tensor([*self.next_prices, *self.next_incoming_flows, *dam_values])
-        self.normalized = None
-
-    def normalize(self, low: "Observation", high: "Observation"):
-
-        """
-        Brings the values of the tensor to the range [0, 1]
-        """
-
-        self.normalized = (self.tensor - low.tensor) / (high.tensor - low.tensor)
-
-
-class Environment:
+class Environment(gym.Env):
 
     """
     Class representing the environment for the RL agent
@@ -64,133 +21,237 @@ class Environment:
     def __init__(
         self,
         instance: Instance,
-        paths_power_models: dict[str, str],
         num_prices: int,
         num_incoming_flows: int,
         num_unreg_flows: int,
+        length_episodes: int,
+        path_constants: str,
+        path_training_data: str,
+        mode: str = "nonlinear",
+        paths_power_models: dict[str, str] = None,
     ):
 
-        self.paths_power_models = paths_power_models
+        super(Environment, self).__init__()
 
-        # Configuration
+        # Configuration for observation space
         self.num_prices = num_prices
         self.num_incoming_flows = num_incoming_flows
         self.num_unreg_flows = num_unreg_flows
 
+        # Configuration to create randome instances
+        self.length_episodes = length_episodes
+        self.constants = load_json(path_constants)
+        self.training_data = pd.read_pickle(path_training_data)
+
         # Instance and river basin
         self.instance = instance
         self.river_basin = RiverBasin(
-            instance=self.instance, paths_power_models=self.paths_power_models
+            instance=self.instance, mode=mode, paths_power_models=paths_power_models
+        )
+
+        # Observation and action spaces
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=1,
+            shape=(
+                self.num_prices + self.num_incoming_flows + sum(
+                    1 + self.instance.get_relevant_lags_of_dam(dam_id)[-1] + self.num_unreg_flows
+                    for dam_id in self.instance.get_ids_of_dams()
+                ),
+            ),
+            dtype=np.float32
+        )
+        self.action_space = gym.spaces.Box(
+            low=-1,
+            high=1,
+            shape=(self.instance.get_num_dams(), ),
+            dtype=np.float32
         )
 
         # Observation limits (for state normalization)
         self.obs_low = self.get_obs_lower_limits()
         self.obs_high = self.get_obs_upper_limits()
 
-    def reset(self, instance: Instance):
+    def reset(self, instance: Instance = None) -> np.array:
 
-        self.instance = instance
+        if instance is None:
+            self.instance = self.create_instance(
+                length_episodes=self.length_episodes,
+                constants=self.constants,
+                training_data=self.training_data,
+                initial_row=None,
+            )
+        else:
+            self.instance = instance
+
         self.river_basin.reset(self.instance)
-
         self.obs_low = self.get_obs_lower_limits()
         self.obs_high = self.get_obs_upper_limits()
 
-    def get_obs_lower_limits(self) -> Observation:
+        return self.get_observation()
+
+    def get_obs_lower_limits(self) -> np.ndarray:
 
         """
-        Returns the lower limits (as an Observation object) of the values of the agent's observations
+        Returns the lower limits of the values of the agent's observations
         All attributes are 0, except the volume (for which the minimum volume is given)
         """
 
-        return Observation(
-            next_prices=[0] * self.num_prices,
-            next_incoming_flows=[0] * self.num_incoming_flows,
-            dams=[
-                DamObservation(
-                    vol=self.instance.get_min_vol_of_dam(dam_id),
-                    lags=[0] * self.instance.get_relevant_lags_of_dam(dam_id)[-1],
-                    next_unreg_flows=[0] * self.num_unreg_flows,
-                )
+        return np.concatenate([
+            np.repeat(0, self.num_prices),
+            np.repeat(0, self.num_incoming_flows),
+            *[
+                np.concatenate([
+                    np.array([self.instance.get_min_vol_of_dam(dam_id)]),
+                    np.repeat(0, self.instance.get_relevant_lags_of_dam(dam_id)[-1]),
+                    np.repeat(0, self.num_unreg_flows)
+                ])
                 for dam_id in self.instance.get_ids_of_dams()
-            ],
-        )
-
-    def get_obs_upper_limits(self) -> Observation:
-
-        """
-        Returns the upper limits (as an Observation object) of the values of the agent's observations
-        """
-
-        return Observation(
-            next_prices=[
-                max(
-                    self.instance.get_price(
-                        0, num_steps=self.instance.get_largest_impact_horizon()
-                    )
-                )
             ]
-            * self.num_prices,
-            next_incoming_flows=[self.instance.get_max_incoming_flow()]
-            * self.num_incoming_flows,
-            dams=[
-                DamObservation(
-                    vol=self.instance.get_max_vol_of_dam(dam_id),
-                    lags=[self.instance.get_max_flow_of_channel(dam_id)]
-                    * self.instance.get_relevant_lags_of_dam(dam_id)[-1],
-                    next_unreg_flows=[self.instance.get_max_unregulated_flow_of_dam(dam_id)]
-                    * self.num_unreg_flows,
-                )
-                for dam_id in self.instance.get_ids_of_dams()
-            ],
-        )
+        ])
 
-    def get_observation(self) -> Observation:
+    def get_obs_upper_limits(self) -> np.ndarray:
+
+        """
+        Returns the upper limits of the values of the agent's observations
+        """
+
+        return np.concatenate([
+            np.repeat(self.instance.get_largest_price(), self.num_prices),
+            np.repeat(self.instance.get_max_incoming_flow(), self.num_incoming_flows),
+            *[
+                np.concatenate([
+                    np.array([self.instance.get_max_vol_of_dam(dam_id)]),
+                    np.repeat(self.instance.get_max_flow_of_channel(dam_id),
+                              self.instance.get_relevant_lags_of_dam(dam_id)[-1]),
+                    np.repeat(self.instance.get_max_unregulated_flow_of_dam(dam_id), self.num_unreg_flows)
+                ])
+                for dam_id in self.instance.get_ids_of_dams()
+            ]
+        ])
+
+    def get_observation(self, normalize: bool = True) -> np.array:
 
         """
         Returns the observation of the agent for the current state of the river basin
         """
 
-        obs = Observation(
-            next_prices=self.instance.get_price(
-                self.river_basin.time + 1, num_steps=self.num_prices
-            ),
-            next_incoming_flows=self.instance.get_incoming_flow(
-                self.river_basin.time + 1, num_steps=self.num_incoming_flows
-            ),
-            dams=[
-                DamObservation(
-                    vol=dam.volume.item(),
-                    lags=dam.channel.past_flows.squeeze().tolist(),
-                    next_unreg_flows=self.instance.get_unregulated_flow_of_dam(
+        obs = np.concatenate([
+            self.instance.get_price(self.river_basin.time + 1, num_steps=self.num_prices),
+            self.instance.get_incoming_flow(self.river_basin.time + 1, num_steps=self.num_incoming_flows),
+            *[
+                np.concatenate([
+                    dam.volume,
+                    dam.channel.past_flows.squeeze(),
+                    self.instance.get_unregulated_flow_of_dam(
                         self.river_basin.time + 1, dam.idx, num_steps=self.num_unreg_flows
-                    ),
-                )
+                    )
+                ])
                 for dam in self.river_basin.dams
-            ],
-        )
+            ]
+        ])
 
-        obs.normalize(self.obs_low, self.obs_high)
+        if normalize:
+            obs = (obs - self.obs_low) / (self.obs_high - self.obs_low)
 
-        return obs
+        return obs.astype(np.float32)
 
-    def step(self, action: torch.Tensor) -> tuple[float, Observation, bool]:
+    def step(self, action: np.array, normalize_obs=True) -> tuple[np.array, float, bool, dict]:
 
         """
         Updates the river basin with the given action
-        Returns the reward obtained, the next observation, and whether the episode is finished or not
+        Returns the next observation, the reward obtained, and whether the episode is finished or not
         """
 
-        assert list(action.size()) == [self.instance.get_num_dams()]
-
-        flows = action.numpy().reshape(-1, 1)
+        flows = action.reshape(-1, 1)  # noqa
         self.river_basin.update(flows)
-        income = self.river_basin.get_income()
+        # TODO: change action so it represents relvars, and not flows
 
         # The reward is proportional to the income obtained
         # However, the normalized energy price is used, to avoid inconsistencies throughout several episodes
         # (in which energy prices are normalized differently)
-        reward = income / self.obs_high.next_prices[0]
-        next_obs = self.get_observation()
-        done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
+        # TODO: change reward to take into account startups, etc.
+        reward = self.river_basin.get_income().item() / self.instance.get_largest_price()
+        next_obs = self.get_observation(normalize=normalize_obs)
+        done = self.river_basin.time >= self.instance.get_largest_impact_horizon()
 
-        return reward, next_obs, done
+        return next_obs, reward, done, dict()
+
+    @staticmethod
+    def create_instance(
+            length_episodes: int,
+            constants: dict,
+            training_data: pd.DataFrame,
+            initial_row: int | datetime = None,
+    ) -> Instance:
+
+        # Incomplete instance (we create a deepcopy of constants to avoid modifying it)
+        data = pickle.loads(pickle.dumps(constants, -1))
+        instance_constants = Instance.from_dict(data)
+
+        # Get necessary constants
+        dam_ids = instance_constants.get_ids_of_dams()
+        channel_last_lags = {
+            dam_id: instance_constants.get_relevant_lags_of_dam(dam_id)[-1]
+            for dam_id in dam_ids
+        }
+
+        # Required rows from data frame
+        total_rows = len(training_data.index)
+        min_row = max(channel_last_lags.values())
+        max_row = total_rows - length_episodes
+        if isinstance(initial_row, datetime):
+            initial_row = training_data.index[
+                training_data["datetime"] == initial_row
+                ].tolist()[0]
+        if initial_row is None:
+            initial_row = randint(min_row, max_row)
+        assert initial_row in range(
+            min_row, max_row + 1
+        ), f"{initial_row=} should be between {min_row=} and {max_row=}"
+        last_row = initial_row + length_episodes - 1
+        last_row_decisions = last_row - max(
+            [
+                instance_constants.get_relevant_lags_of_dam(dam_id)[0]
+                for dam_id in instance_constants.get_ids_of_dams()
+            ]
+        )
+
+        # Add time-dependent values to the data
+
+        data["datetime"]["start"] = training_data.loc[
+            initial_row, "datetime"
+        ].strftime("%Y-%m-%d %H:%M")
+        data["datetime"]["end_decisions"] = training_data.loc[
+            last_row_decisions, "datetime"
+        ].strftime("%Y-%m-%d %H:%M")
+
+        data["incoming_flows"] = training_data.loc[
+                                 initial_row:last_row, "incoming_flow"
+                                 ].values.tolist()
+        data["energy_prices"] = training_data.loc[
+                                initial_row:last_row, "price"
+                                ].values.tolist()
+
+        for order, dam_id in enumerate(dam_ids):
+            # Initial volume
+            # Not to be confused with the volume at the end of the first time step
+            data["dams"][order]["initial_vol"] = training_data.loc[
+                initial_row, dam_id + "_vol"
+            ]
+
+            initial_lags = training_data.loc[
+                           initial_row - channel_last_lags[dam_id]: initial_row - 1,
+                           dam_id + "_flow",
+                           ].values.tolist()
+            initial_lags.reverse()
+            data["dams"][order]["initial_lags"] = initial_lags
+
+            data["dams"][order]["unregulated_flows"] = training_data.loc[
+                                                       initial_row:last_row, dam_id + "_unreg_flow"
+                                                       ].values.tolist()
+
+        # Complete instance
+        instance = Instance.from_dict(data)
+
+        return instance

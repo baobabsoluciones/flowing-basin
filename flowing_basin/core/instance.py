@@ -461,3 +461,11 @@ class Instance(InstanceCore):
             prices = prices[0]
 
         return prices
+
+    def get_largest_price(self) -> float:
+
+        """
+        Get the largest price value for the instance.
+        """
+
+        return max(self.data["energy_prices"])

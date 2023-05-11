@@ -132,11 +132,7 @@ def test_river_basin(
 if __name__ == "__main__":
 
     instance = Instance.from_json("../data/input_example1.json")
-    paths_power_models = {
-        "dam1": "../ml_models/model_E1.sav",
-        "dam2": "../ml_models/model_E2.sav",
-    }
-    river_basin = RiverBasin(instance=instance, paths_power_models=paths_power_models, mode="linear")
+    river_basin = RiverBasin(instance=instance, mode="linear")
 
     print("---- SCENARIO A ----")
     decisionsA = np.array([[[6.79], [6.58]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]]])

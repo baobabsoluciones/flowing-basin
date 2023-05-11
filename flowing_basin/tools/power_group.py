@@ -20,7 +20,8 @@ class PowerGroup:
         self.mode = mode
 
         self.idx = idx
-        self.power_model = self.get_nonlinear_power_model(paths_power_models[self.idx])
+        if paths_power_models is not None:
+            self.power_model = self.get_nonlinear_power_model(paths_power_models[self.idx])
         self.relevant_lags = instance.get_relevant_lags_of_dam(self.idx)
         self.verification_lags = instance.get_verification_lags_of_dam(self.idx)
         self.turbined_flow_points = instance.get_turbined_flow_obs_for_power_group(

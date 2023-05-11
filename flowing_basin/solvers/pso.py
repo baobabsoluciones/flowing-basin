@@ -47,9 +47,9 @@ class PSO(Experiment):
     def __init__(
         self,
         instance: Instance,
-        paths_power_models: dict[str, str],
         config: PSOConfiguration,
         solution: Solution = None,
+        paths_power_models: dict[str, str] = None,
     ):
 
         super().__init__(instance=instance, solution=solution)
@@ -64,6 +64,11 @@ class PSO(Experiment):
             self.instance.get_num_dams() * self.instance.get_largest_impact_horizon()
         )
         self.objective_function_history = None
+
+        if self.config.mode == "nonlinear" and paths_power_models is None:
+            raise TypeError(
+                "Parameter 'paths_power_models' is required when 'mode' is 'nonlinear', but it was not given."
+            )
 
         if self.config.use_relvars:
 

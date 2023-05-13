@@ -11,14 +11,14 @@ instance = Instance.from_json("../data/input_example1_greater_max_vol.json")
 
 # PSO object to find the solution
 config = PSOConfiguration(
-    volume_shortage_penalty=3,
-    volume_exceedance_bonus=0.1,
-    startups_penalty=50,
-    limit_zones_penalty=50,
     volume_objectives={
         "dam1": 59627.42324,
         "dam2": 31010.43613642857
     },
+    volume_shortage_penalty=3,
+    volume_exceedance_bonus=0.1,
+    startups_penalty=50,
+    limit_zones_penalty=50,
     use_relvars=True,
     max_relvar=1,
     flow_smoothing=2,

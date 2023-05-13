@@ -1,4 +1,4 @@
-from flowing_basin.core import Instance
+from flowing_basin.core import Instance, Configuration
 from flowing_basin.tools import RiverBasin
 from cornflow_client.core.tools import load_json
 import numpy as np
@@ -7,6 +7,25 @@ import pandas as pd
 from datetime import datetime
 import pickle
 from random import randint
+from dataclasses import dataclass
+
+
+@dataclass(kw_only=True)
+class RLConfiguration(Configuration):
+
+    num_prices: int
+    num_incoming_flows: int
+    num_unreg_flows: int
+    length_episodes: int
+
+    # RiverBasin simulator options
+    flow_smoothing: int = 0
+    mode: str = "nonlinear"
+
+    def __post_init__(self):
+        valid_modes = {"linear", "nonlinear"}
+        if self.mode not in valid_modes:
+            raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
 
 class Environment(gym.Env):
@@ -21,32 +40,24 @@ class Environment(gym.Env):
     def __init__(
         self,
         instance: Instance,
-        num_prices: int,
-        num_incoming_flows: int,
-        num_unreg_flows: int,
-        length_episodes: int,
+        config: RLConfiguration,
         path_constants: str,
         path_training_data: str,
-        mode: str = "nonlinear",
         paths_power_models: dict[str, str] = None,
     ):
 
         super(Environment, self).__init__()
 
-        # Configuration for observation space
-        self.num_prices = num_prices
-        self.num_incoming_flows = num_incoming_flows
-        self.num_unreg_flows = num_unreg_flows
+        self.config = config
 
-        # Configuration to create randome instances
-        self.length_episodes = length_episodes
+        # Files required to create randeom instances
         self.constants = load_json(path_constants)
         self.training_data = pd.read_pickle(path_training_data)
 
         # Instance and river basin
         self.instance = instance
         self.river_basin = RiverBasin(
-            instance=self.instance, mode=mode, paths_power_models=paths_power_models
+            instance=self.instance, mode=self.config.mode, paths_power_models=paths_power_models
         )
 
         # Observation and action spaces
@@ -54,8 +65,8 @@ class Environment(gym.Env):
             low=0,
             high=1,
             shape=(
-                self.num_prices + self.num_incoming_flows + sum(
-                    1 + self.instance.get_relevant_lags_of_dam(dam_id)[-1] + self.num_unreg_flows
+                self.config.num_prices + self.config.num_incoming_flows + sum(
+                    1 + self.instance.get_relevant_lags_of_dam(dam_id)[-1] + self.config.num_unreg_flows
                     for dam_id in self.instance.get_ids_of_dams()
                 ),
             ),
@@ -71,12 +82,18 @@ class Environment(gym.Env):
         # Observation limits (for state normalization)
         self.obs_low = self.get_obs_lower_limits()
         self.obs_high = self.get_obs_upper_limits()
+        self.max_flows = np.array([
+            self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
+        ])
+        self.old_flows = np.array([
+            self.instance.get_initial_lags_of_channel(dam_id)[0] for dam_id in self.instance.get_ids_of_dams()
+        ])
 
     def reset(self, instance: Instance = None) -> np.array:
 
         if instance is None:
             self.instance = self.create_instance(
-                length_episodes=self.length_episodes,
+                length_episodes=self.config.length_episodes,
                 constants=self.constants,
                 training_data=self.training_data,
                 initial_row=None,
@@ -87,6 +104,12 @@ class Environment(gym.Env):
         self.river_basin.reset(self.instance)
         self.obs_low = self.get_obs_lower_limits()
         self.obs_high = self.get_obs_upper_limits()
+        self.max_flows = np.array([
+            self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
+        ])
+        self.old_flows = np.array([
+            self.instance.get_initial_lags_of_channel(dam_id)[0] for dam_id in self.instance.get_ids_of_dams()
+        ])
 
         return self.get_observation()
 
@@ -98,13 +121,13 @@ class Environment(gym.Env):
         """
 
         return np.concatenate([
-            np.repeat(0, self.num_prices),
-            np.repeat(0, self.num_incoming_flows),
+            np.repeat(0, self.config.num_prices),
+            np.repeat(0, self.config.num_incoming_flows),
             *[
                 np.concatenate([
                     np.array([self.instance.get_min_vol_of_dam(dam_id)]),
                     np.repeat(0, self.instance.get_relevant_lags_of_dam(dam_id)[-1]),
-                    np.repeat(0, self.num_unreg_flows)
+                    np.repeat(0, self.config.num_unreg_flows)
                 ])
                 for dam_id in self.instance.get_ids_of_dams()
             ]
@@ -117,14 +140,14 @@ class Environment(gym.Env):
         """
 
         return np.concatenate([
-            np.repeat(self.instance.get_largest_price(), self.num_prices),
-            np.repeat(self.instance.get_max_incoming_flow(), self.num_incoming_flows),
+            np.repeat(self.instance.get_largest_price(), self.config.num_prices),
+            np.repeat(self.instance.get_max_incoming_flow(), self.config.num_incoming_flows),
             *[
                 np.concatenate([
                     np.array([self.instance.get_max_vol_of_dam(dam_id)]),
                     np.repeat(self.instance.get_max_flow_of_channel(dam_id),
                               self.instance.get_relevant_lags_of_dam(dam_id)[-1]),
-                    np.repeat(self.instance.get_max_unregulated_flow_of_dam(dam_id), self.num_unreg_flows)
+                    np.repeat(self.instance.get_max_unregulated_flow_of_dam(dam_id), self.config.num_unreg_flows)
                 ])
                 for dam_id in self.instance.get_ids_of_dams()
             ]
@@ -137,14 +160,14 @@ class Environment(gym.Env):
         """
 
         obs = np.concatenate([
-            self.instance.get_price(self.river_basin.time + 1, num_steps=self.num_prices),
-            self.instance.get_incoming_flow(self.river_basin.time + 1, num_steps=self.num_incoming_flows),
+            self.instance.get_price(self.river_basin.time + 1, num_steps=self.config.num_prices),
+            self.instance.get_incoming_flow(self.river_basin.time + 1, num_steps=self.config.num_incoming_flows),
             *[
                 np.concatenate([
                     dam.volume,
                     dam.channel.past_flows.squeeze(),
                     self.instance.get_unregulated_flow_of_dam(
-                        self.river_basin.time + 1, dam.idx, num_steps=self.num_unreg_flows
+                        self.river_basin.time + 1, dam.idx, num_steps=self.config.num_unreg_flows
                     )
                 ])
                 for dam in self.river_basin.dams
@@ -156,22 +179,31 @@ class Environment(gym.Env):
 
         return obs.astype(np.float32)
 
-    def step(self, action: np.array, normalize_obs=True) -> tuple[np.array, float, bool, dict]:
+    def step(self, action: np.array, normalize_obs: bool = True) -> tuple[np.array, float, bool, dict]:
 
         """
         Updates the river basin with the given action
-        Returns the next observation, the reward obtained, and whether the episode is finished or not
+
+        :param action: An array of size num_dams of values between -1 and 1
+        indicating how much the flow of each channel should change
+        (-1 => reduce it by 100% of the channel's max flow; 1 => increase it by 100% of the channel's max flow)
+        :param normalize_obs: Whether to normalize the returned observation or not
+        :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
 
-        flows = action.reshape(-1, 1)  # noqa
-        self.river_basin.update(flows)
-        # TODO: change action so it represents relvars, and not flows
+        new_flows = self.old_flows + action * self.max_flows
+        self.river_basin.update(new_flows.reshape(-1, 1))
+        self.old_flows = self.river_basin.get_clipped_flows().reshape(-1)
 
-        # The reward is proportional to the income obtained
-        # However, the normalized energy price is used, to avoid inconsistencies throughout several episodes
-        # (in which energy prices are normalized differently)
-        # TODO: change reward to take into account startups, etc.
-        reward = self.river_basin.get_income().item() / self.instance.get_largest_price()
+        # Reward - we divide the income and penalties by the maximum price in the episode
+        # to avoid inconsistencies throughout episodes (in which energy prices are normalized differently)
+        # Note we do not take into account the final volumes here; this is something the agent should tackle on its own
+        income = self.river_basin.get_income().item()
+        startups_penalty = self.river_basin.get_num_startups().item() * self.config.startups_penalty
+        limit_zones_penalty = self.river_basin.get_num_times_in_limit().item() * self.config.limit_zones_penalty
+        reward = (income - startups_penalty - limit_zones_penalty) / self.instance.get_largest_price()
+        # print(self.river_basin.get_income().item(), startups_penalty, limit_zones_penalty, reward)
+
         next_obs = self.get_observation(normalize=normalize_obs)
         done = self.river_basin.time >= self.instance.get_largest_impact_horizon()
 

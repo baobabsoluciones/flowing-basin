@@ -3,6 +3,23 @@ from typing import Dict
 from pytups import SuperDict
 from .instance import Instance
 from .solution import Solution
+from dataclasses import dataclass
+
+
+@dataclass(kw_only=True)
+class Configuration:
+
+    # Objective final volumes
+    volume_objectives: dict[str, float]
+
+    # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
+    volume_shortage_penalty: float
+    volume_exceedance_bonus: float
+
+    # Penalty for each power group startup, and
+    # for each time step with the turbined flow in a limit zone (in €/occurrence)
+    startups_penalty: float
+    limit_zones_penalty: float
 
 
 class Experiment(ExperimentCore):

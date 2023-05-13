@@ -1,4 +1,4 @@
-from flowing_basin.core import Instance, Solution, Experiment
+from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import RiverBasin
 from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
@@ -16,24 +16,22 @@ import os
 import typing
 
 
-@dataclass
-class PSOConfiguration:
+@dataclass(kw_only=True)
+class PSOConfiguration(Configuration):  # noqa
 
-    # Objective final volumes
-    volume_objectives: dict[str, float]
+    num_particles: int
+    num_iterations: int
 
-    # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
-    volume_shortage_penalty: float
-    volume_exceedance_bonus: float
+    # PySwarms optimizer options
+    cognitive_coefficient: float
+    social_coefficient: float
+    inertia_weight: float
 
-    # Penalty for each power group startup, and
-    # for each time step with the turbined flow in a limit zone (in €/occurrence)
-    startups_penalty: float
-    limit_zones_penalty: float
-
-    # Other parameters
+    # Particles represent flows, or flow variations? In the second case, are they capped?
     use_relvars: bool
     max_relvar: float = 0.5  # Used only when use_relvars=True
+
+    # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"
 
@@ -300,22 +298,23 @@ class PSO(Experiment):
 
         return cost, position
 
-    def solve(
-        self, options: dict[str, float], num_particles: int = 200, num_iters: int = 100
-    ) -> dict:
+    def solve(self, options: dict = None) -> dict:
 
         """
         Fill the 'solution' attribute of the object, with the optimal solution found by the PSO algorithm.
 
-        :param options: Dictionary with options given to the PySwarms optimizer (see 'optimize' method for more info)
-        :param num_particles: Number of particles of the swarm
-        :param num_iters: Number of iterations with which to run the optimization algorithm
+        :param options: Unused argument, inherited from Experiment
         :return: A dictionary with status codes
         """
 
         start_time = time.perf_counter()
+        ps_options = {
+            "c1": self.config.cognitive_coefficient,
+            "c2": self.config.social_coefficient,
+            "w": self.config.inertia_weight
+        }
         cost, optimal_particle = self.optimize(
-            options=options, num_particles=num_particles, num_iters=num_iters
+            options=ps_options, num_particles=self.config.num_particles, num_iters=self.config.num_iterations
         )
         end_time = time.perf_counter()
         execution_time = end_time - start_time
@@ -332,9 +331,6 @@ class PSO(Experiment):
         )
 
         self.solver_info = dict(
-            num_iters=num_iters,
-            num_particles=num_particles,
-            **options,
             execution_time=execution_time,
             objective=-cost,
         )
@@ -346,8 +342,6 @@ class PSO(Experiment):
 
     def study_configuration(
         self,
-        options: dict[str, float],
-        num_iters_each_test: int = 100,
         num_replications: int = 20,
         confidence: float = 0.95,
     ):
@@ -372,7 +366,7 @@ class PSO(Experiment):
         # Execute `solve` multiple times to fill data
         for i in range(num_replications):
 
-            self.solve(options=options, num_iters=num_iters_each_test)
+            self.solve()
             data["execution_times"].append(self.solver_info["execution_time"])
             data["objectives"].append(self.solver_info["objective"])
 
@@ -470,7 +464,7 @@ class PSO(Experiment):
         details.write("Configuration:\n")
         details.write(json.dumps(asdict(self.config), indent=2))
         details.write("\n\n")
-        details.write("Parameters and other information:\n")
+        details.write("Solver information:\n")
         details.write(json.dumps(self.solver_info, indent=2))
         details.write("\n\n")
 

@@ -39,10 +39,11 @@ class Environment(gym.Env):
 
     def __init__(
         self,
-        instance: Instance,
         config: RLConfiguration,
         path_constants: str,
         path_training_data: str,
+        instance: Instance = None,
+        initial_row: int | datetime = None,
         paths_power_models: dict[str, str] = None,
     ):
 
@@ -50,12 +51,12 @@ class Environment(gym.Env):
 
         self.config = config
 
-        # Files required to create randeom instances
+        # Create instance
         self.constants = load_json(path_constants)
         self.training_data = pd.read_pickle(path_training_data)
+        self._reset_instance(instance, initial_row)
 
-        # Instance and river basin
-        self.instance = instance
+        # Simulator (the core of the environment)
         self.river_basin = RiverBasin(
             instance=self.instance, mode=self.config.mode, paths_power_models=paths_power_models
         )
@@ -79,29 +80,46 @@ class Environment(gym.Env):
             dtype=np.float32
         )
 
-        # Observation limits (for state normalization)
-        self.obs_low = self.get_obs_lower_limits()
-        self.obs_high = self.get_obs_upper_limits()
-        self.max_flows = np.array([
-            self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
-        ])
-        self.old_flows = np.array([
-            self.instance.get_initial_lags_of_channel(dam_id)[0] for dam_id in self.instance.get_ids_of_dams()
-        ])
+        # Variables that depend on the instance
+        self.obs_low = None
+        self.obs_high = None
+        self.max_flows = None
+        self.old_flows = None
 
-    def reset(self, instance: Instance = None) -> np.array:
+        # Initialize these variables
+        self._reset_variables()
+
+    def reset(self, instance: Instance = None, initial_row: int | datetime = None) -> np.array:
+
+        self._reset_instance(instance, initial_row)
+        self.river_basin.reset(self.instance)
+        self._reset_variables()
+
+        return self.get_observation()
+
+    def _reset_instance(self, instance: Instance = None, initial_row: int | datetime = None):
+
+        """
+        Reset the current instance
+        """
 
         if instance is None:
             self.instance = self.create_instance(
                 length_episodes=self.config.length_episodes,
                 constants=self.constants,
                 training_data=self.training_data,
-                initial_row=None,
+                config=self.config,
+                initial_row=initial_row,
             )
         else:
             self.instance = instance
 
-        self.river_basin.reset(self.instance)
+    def _reset_variables(self):
+
+        """
+        Reset variables according to the current instance
+        """
+
         self.obs_low = self.get_obs_lower_limits()
         self.obs_high = self.get_obs_upper_limits()
         self.max_flows = np.array([
@@ -110,8 +128,6 @@ class Environment(gym.Env):
         self.old_flows = np.array([
             self.instance.get_initial_lags_of_channel(dam_id)[0] for dam_id in self.instance.get_ids_of_dams()
         ])
-
-        return self.get_observation()
 
     def get_obs_lower_limits(self) -> np.ndarray:
 
@@ -156,7 +172,13 @@ class Environment(gym.Env):
     def get_observation(self, normalize: bool = True) -> np.array:
 
         """
-        Returns the observation of the agent for the current state of the river basin
+        Returns the observation of the agent for the current state of the river basin, formed by:
+            - the next N energy prices
+            - the next N incoming flows to the basin
+            - for each dam:
+                - the current volume
+                - the relevant past flows
+                - the next N unregulated flows
         """
 
         obs = np.concatenate([
@@ -191,7 +213,7 @@ class Environment(gym.Env):
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
 
-        new_flows = self.old_flows + action * self.max_flows
+        new_flows = self.old_flows + action * self.max_flows  # noqa
         self.river_basin.update(new_flows.reshape(-1, 1))
         self.old_flows = self.river_basin.get_clipped_flows().reshape(-1)
 
@@ -214,8 +236,20 @@ class Environment(gym.Env):
             length_episodes: int,
             constants: dict,
             training_data: pd.DataFrame,
+            config: RLConfiguration = None,
             initial_row: int | datetime = None,
     ) -> Instance:
+
+        """
+        Create an instance from the data frame of training data.
+
+        :param length_episodes: Number of time steps of the episodes (including impact buffer)
+        :param constants: Dictionary with the constants (e.g. constant physical characteristics of the dams)
+        :param training_data: Data frame with the time-dependent values (e.g. volume of the dams at a particular time)
+        :param config: If given, calculates a greater information horizon
+            according to the number of time steps the RL agent looks ahead
+        :param initial_row: If given, starts the episode in this row or datetime
+        """
 
         # Incomplete instance (we create a deepcopy of constants to avoid modifying it)
         data = pickle.loads(pickle.dumps(constants, -1))
@@ -228,26 +262,37 @@ class Environment(gym.Env):
             for dam_id in dam_ids
         }
 
-        # Required rows from data frame
-        total_rows = len(training_data.index)
-        min_row = max(channel_last_lags.values())
-        max_row = total_rows - length_episodes
-        if isinstance(initial_row, datetime):
-            initial_row = training_data.index[
-                training_data["datetime"] == initial_row
-                ].tolist()[0]
-        if initial_row is None:
-            initial_row = randint(min_row, max_row)
-        assert initial_row in range(
-            min_row, max_row + 1
-        ), f"{initial_row=} should be between {min_row=} and {max_row=}"
-        last_row = initial_row + length_episodes - 1
-        last_row_decisions = last_row - max(
+        # Impact buffer (included in the length of the episode) and information buffer (added on top of it)
+        impact_buffer = max(
             [
                 instance_constants.get_relevant_lags_of_dam(dam_id)[0]
                 for dam_id in instance_constants.get_ids_of_dams()
             ]
         )
+        info_buffer = 0
+        if config is not None:
+            info_buffer = max(config.num_prices, config.num_incoming_flows, config.num_unreg_flows)
+
+        # Required rows from data frame
+        total_rows = len(training_data.index)
+        min_row = max(channel_last_lags.values())
+        max_row = total_rows - length_episodes - info_buffer
+
+        # Initial row
+        if isinstance(initial_row, datetime):
+            initial_row = training_data.index[
+                training_data["datetime"] == initial_row
+            ].tolist()[0]
+        if initial_row is None:
+            initial_row = randint(min_row, max_row)
+        assert initial_row in range(
+            min_row, max_row + 1
+        ), f"{initial_row=} should be between {min_row=} and {max_row=}"
+
+        # Last rows
+        last_row_impact = initial_row + length_episodes - 1
+        last_row_decisions = last_row_impact - impact_buffer
+        last_row_info = last_row_impact + info_buffer
 
         # Add time-dependent values to the data
 
@@ -257,13 +302,16 @@ class Environment(gym.Env):
         data["datetime"]["end_decisions"] = training_data.loc[
             last_row_decisions, "datetime"
         ].strftime("%Y-%m-%d %H:%M")
+        data["datetime"]["end_information"] = training_data.loc[
+            last_row_info, "datetime"
+        ].strftime("%Y-%m-%d %H:%M")
 
         data["incoming_flows"] = training_data.loc[
-                                 initial_row:last_row, "incoming_flow"
-                                 ].values.tolist()
+            initial_row: last_row_info, "incoming_flow"
+        ].values.tolist()
         data["energy_prices"] = training_data.loc[
-                                initial_row:last_row, "price"
-                                ].values.tolist()
+            initial_row: last_row_info, "price"
+        ].values.tolist()
 
         for order, dam_id in enumerate(dam_ids):
             # Initial volume
@@ -273,15 +321,15 @@ class Environment(gym.Env):
             ]
 
             initial_lags = training_data.loc[
-                           initial_row - channel_last_lags[dam_id]: initial_row - 1,
-                           dam_id + "_flow",
-                           ].values.tolist()
+               initial_row - channel_last_lags[dam_id]: initial_row - 1,
+               dam_id + "_flow",
+            ].values.tolist()
             initial_lags.reverse()
             data["dams"][order]["initial_lags"] = initial_lags
 
             data["dams"][order]["unregulated_flows"] = training_data.loc[
-                                                       initial_row:last_row, dam_id + "_unreg_flow"
-                                                       ].values.tolist()
+                initial_row: last_row_info, dam_id + "_unreg_flow"
+            ].values.tolist()
 
         # Complete instance
         instance = Instance.from_dict(data)

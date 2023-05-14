@@ -46,8 +46,8 @@ class PSO(Experiment):
         self,
         instance: Instance,
         config: PSOConfiguration,
-        solution: Solution = None,
         paths_power_models: dict[str, str] = None,
+        solution: Solution = None,
     ):
 
         super().__init__(instance=instance, solution=solution)

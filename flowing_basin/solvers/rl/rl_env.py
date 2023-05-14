@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 
 @dataclass(kw_only=True)
-class RLConfiguration(Configuration):
+class RLConfiguration(Configuration):  # noqa
 
     num_prices: int
     num_incoming_flows: int
@@ -28,7 +28,7 @@ class RLConfiguration(Configuration):
             raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
 
-class Environment(gym.Env):
+class RLEnvironment(gym.Env):
 
     """
     Class representing the environment for the RL agent
@@ -40,20 +40,24 @@ class Environment(gym.Env):
     def __init__(
         self,
         config: RLConfiguration,
-        path_constants: str,
-        path_training_data: str,
+        path_constants: str = None,
+        path_training_data: str = None,
         instance: Instance = None,
         initial_row: int | datetime = None,
         paths_power_models: dict[str, str] = None,
     ):
 
-        super(Environment, self).__init__()
+        super(RLEnvironment, self).__init__()
 
         self.config = config
 
         # Create instance
-        self.constants = load_json(path_constants)
-        self.training_data = pd.read_pickle(path_training_data)
+        self.constants = None
+        if path_constants is not None:
+            self.constants = load_json(path_constants)
+        self.training_data = None
+        if path_training_data is not None:
+            self.training_data = pd.read_pickle(path_training_data)
         self._reset_instance(instance, initial_row)
 
         # Simulator (the core of the environment)
@@ -104,6 +108,13 @@ class Environment(gym.Env):
         """
 
         if instance is None:
+
+            assert self.constants is not None and self.training_data is not None, (
+                "If you reset the environment without giving an instance,"
+                "you need to give the path to the constants JSON and training dataframe in the class constructor,"
+                "in order to be able to create a random instance."
+            )
+
             self.instance = self.create_instance(
                 length_episodes=self.config.length_episodes,
                 constants=self.constants,
@@ -111,7 +122,17 @@ class Environment(gym.Env):
                 config=self.config,
                 initial_row=initial_row,
             )
+
         else:
+
+            required_info_buffer = max(self.config.num_prices, self.config.num_incoming_flows, self.config.num_unreg_flows)
+            actual_info_buffer = instance.get_information_horizon() - instance.get_largest_impact_horizon()
+            assert actual_info_buffer >= required_info_buffer, (
+                "Because of how much the RL agent looks ahead, the information horizon should be "
+                f"{required_info_buffer} time steps ahead of the impact horizon, "
+                f"but in the given instance it is only {actual_info_buffer} time steps ahead."
+            )
+
             self.instance = instance
 
     def _reset_variables(self):
@@ -227,7 +248,7 @@ class Environment(gym.Env):
         # print(self.river_basin.get_income().item(), startups_penalty, limit_zones_penalty, reward)
 
         next_obs = self.get_observation(normalize=normalize_obs)
-        done = self.river_basin.time >= self.instance.get_largest_impact_horizon()
+        done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
         return next_obs, reward, done, dict()
 

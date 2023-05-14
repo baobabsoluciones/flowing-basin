@@ -9,17 +9,17 @@ from dataclasses import dataclass
 @dataclass(kw_only=True)
 class Configuration:
 
-    # Objective final volumes
-    volume_objectives: dict[str, float]
-
-    # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
-    volume_shortage_penalty: float
-    volume_exceedance_bonus: float
-
     # Penalty for each power group startup, and
     # for each time step with the turbined flow in a limit zone (in €/occurrence)
     startups_penalty: float
     limit_zones_penalty: float
+
+    # Objective final volumes
+    volume_objectives: dict[str, float] = None
+
+    # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
+    volume_shortage_penalty: float = None
+    volume_exceedance_bonus: float = None
 
 
 class Experiment(ExperimentCore):

@@ -1,5 +1,5 @@
 from flowing_basin.tools import RiverBasin
-from flowing_basin.solvers.rl import Environment
+from flowing_basin.solvers.rl import RLEnvironment
 from cornflow_client.core.tools import load_json
 import pandas as pd
 import numpy as np
@@ -48,7 +48,7 @@ START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
 path_constants = "../data/rl_training_data/constants.json"
 path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"
 df = pd.read_pickle(path_training_data)
-instance = Environment.create_instance(
+instance = RLEnvironment.create_instance(
     length_episodes=LENGTH_EPISODE,
     constants=load_json(path_constants),
     training_data=df,

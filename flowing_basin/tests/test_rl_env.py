@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from flowing_basin.solvers.rl import Environment, RLConfiguration
+from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 import numpy as np
 from stable_baselines3.common.env_checker import check_env
 from datetime import datetime
@@ -7,12 +7,6 @@ from datetime import datetime
 
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 config = RLConfiguration(
-    volume_objectives={
-        "dam1": 59627.42324,
-        "dam2": 31010.43613642857
-    },
-    volume_shortage_penalty=3,
-    volume_exceedance_bonus=0.1,
     startups_penalty=50,
     limit_zones_penalty=50,
     mode="linear",
@@ -21,7 +15,7 @@ config = RLConfiguration(
     num_incoming_flows=10,
     length_episodes=24 * 4 + 3,
 )
-env1 = Environment(
+env1 = RLEnvironment(
     config=config,
     path_constants="../data/rl_training_data/constants.json",
     path_training_data="../data/rl_training_data/training_data.pickle",
@@ -85,7 +79,7 @@ print(env1.river_basin.history.to_string())
 
 # ENVIRONMENT 2 (WITH INSTANCE 2)
 instance2 = Instance.from_json("../data/input_example3.json")
-env2 = Environment(
+env2 = RLEnvironment(
     instance=instance2,
     config=config,
     path_constants="../data/rl_training_data/constants.json",

@@ -19,9 +19,9 @@ config = PSOConfiguration(
     volume_exceedance_bonus=0.1,
     startups_penalty=50,
     limit_zones_penalty=50,
-    use_relvars=True,
+    use_relvars=False,
     max_relvar=1,
-    flow_smoothing=2,
+    flow_smoothing=0,
     mode="linear",
     num_particles=200,
     num_iterations=1000,
@@ -129,11 +129,11 @@ sol_lp = Solution.from_json("../data/output_example1_LPmodelCARLOS.json")
 
 # Optimal solution found by PSO ---- #
 
-path_parent = "../data"
-dir_name = f"output_example1_PSO_{datetime.now().strftime('%Y-%m-%d %H.%M')}_mode={pso.config.mode}_k={pso.config.flow_smoothing}"
-status = pso.solve()
-print("status:", status)
-print("solver info:", pso.solver_info)
+# path_parent = "../data"
+# dir_name = f"output_example1_PSO_{datetime.now().strftime('%Y-%m-%d %H.%M')}_mode={pso.config.mode}_k={pso.config.flow_smoothing}"
+# status = pso.solve()
+# print("status:", status)
+# print("solver info:", pso.solver_info)
 
 # path_parent = "../data"
 # dir_name = f"output_example1_original-real-decisions_mode={pso.config.mode}_k={pso.config.flow_smoothing}"
@@ -142,6 +142,14 @@ print("solver info:", pso.solver_info)
 # path_parent = "../data"
 # dir_name = f"output_example1_LPmodelCARLOS"
 # pso.solution = sol_lp
+
+path_parent = "../data"
+# dir_name = "RL_model_2023-05-14 19.28_sol_example1"
+# pso.solution = Solution.from_json("../data/RL_model_2023-05-14 19.28_sol_example1.json")
+# dir_name = "RL_model_2023-05-14 20.10_sol_example1"
+# pso.solution = Solution.from_json("../data/RL_model_2023-05-14 20.10_sol_example1.json")
+dir_name = "RL_model_2023-05-14 20.25_sol_example1"
+pso.solution = Solution.from_json("../data/RL_model_2023-05-14 20.25_sol_example1.json")
 
 print(pso.solution.check())
 print("optimal solution:", pso.solution.data)

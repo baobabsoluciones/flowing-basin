@@ -62,7 +62,10 @@ class RLEnvironment(gym.Env):
 
         # Simulator (the core of the environment)
         self.river_basin = RiverBasin(
-            instance=self.instance, mode=self.config.mode, paths_power_models=paths_power_models
+            instance=self.instance,
+            mode=self.config.mode,
+            flow_smoothing=self.config.flow_smoothing,
+            paths_power_models=paths_power_models
         )
 
         # Observation and action spaces
@@ -98,6 +101,9 @@ class RLEnvironment(gym.Env):
         self._reset_instance(instance, initial_row)
         self.river_basin.reset(self.instance)
         self._reset_variables()
+
+        new_start, _ = self.instance.get_start_end_datetimes()
+        print(f"Environment reset. New episode's starting datetime: {new_start.strftime('%Y-%m-%d %H:%M')}")
 
         return self.get_observation()
 

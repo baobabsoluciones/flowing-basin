@@ -5,6 +5,7 @@ config = RLConfiguration(
     startups_penalty=50,
     limit_zones_penalty=50,
     mode="linear",
+    flow_smoothing=2,
     num_prices=10,
     num_unreg_flows=10,
     num_incoming_flows=10,

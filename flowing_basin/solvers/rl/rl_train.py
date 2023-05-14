@@ -28,7 +28,7 @@ class RLTrain(Experiment):
         )
         self.model = SAC("MlpPolicy", self.env, verbose=1)
 
-    def solve(self, num_episodes: int, path_agent: str, options: dict = None) -> dict:
+    def solve(self, num_episodes: int, path_agent: str, options: dict = None) -> dict:  # noqa
 
         """
         Train the model and save it in the given path.

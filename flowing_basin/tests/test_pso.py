@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 
 # Instance we want to solve
-instance = Instance.from_json("../data/input_example3.json"))
+instance = Instance.from_json("../data/input_example3.json")
 
 # PSO object to find the solution
 config = PSOConfiguration(

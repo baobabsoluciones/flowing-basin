@@ -731,7 +731,7 @@ class LPModel(Experiment):
 
         for i in I:
             for t in T:
-                if t == T[-1]:
+                if t == T[-4]:
                     lpproblem += vol[(i, t)] == VolFinal[i] + pos_desv[i] - neg_desv[i]
 
         for i in I:

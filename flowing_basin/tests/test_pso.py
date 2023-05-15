@@ -137,7 +137,7 @@ sol_lp = Solution.from_json("../data/output_instance3_LPmodel.json")
 # pso.solution = sol_original
 
 path_parent = "../data"
-dir_name = "output_example_instance3_LPModel"
+dir_name = "output_example_instance3_LPModel_Linear"
 pso.solution = sol_lp
 
 print(pso.solution.check())

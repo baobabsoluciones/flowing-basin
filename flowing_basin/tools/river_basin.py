@@ -14,10 +14,19 @@ class RiverBasin:
     def __init__(
         self,
         instance: Instance,
-        paths_power_models: dict[str, str],
         flow_smoothing: int = 0,
         num_scenarios: int = 1,
+        mode: str = "nonlinear",
+        paths_power_models: dict[str, str] = None,
     ):
+
+        valid_modes = {"linear", "nonlinear"}
+        if mode not in valid_modes:
+            raise ValueError(f"Invalid value for 'mode': {mode}. Allowed values are {valid_modes}")
+        if mode == "nonlinear" and paths_power_models is None:
+            raise TypeError(
+                "Parameter 'paths_power_models' is required when 'mode' is 'nonlinear', but it was not given."
+            )
 
         # Number of scenarios (e.g. candidate solutions) for which to do calculations at the same time
         self.num_scenarios = num_scenarios
@@ -35,6 +44,7 @@ class RiverBasin:
                 paths_power_models=paths_power_models,
                 flow_smoothing=self.flow_smoothing,
                 num_scenarios=self.num_scenarios,
+                mode=mode,
             )
             for dam_id in self.instance.get_ids_of_dams()
         ]
@@ -116,7 +126,6 @@ class RiverBasin:
                 f"{dam_id}_vol",
                 f"{dam_id}_power",
                 f"{dam_id}_turbined",
-                f"{dam_id}_turbined_aprox",
                 f"{dam_id}_groups",
                 f"{dam_id}_startups",
                 f"{dam_id}_limits",
@@ -162,7 +171,6 @@ class RiverBasin:
                         f"{dam.idx}_vol": dam.volume[i],
                         f"{dam.idx}_power": dam.channel.power_group.power[i],
                         f"{dam.idx}_turbined": dam.channel.power_group.turbined_flow[i],
-                        f"{dam.idx}_turbined_aprox": dam.channel.power_group.turbined_flow_aprox[i],
                         f"{dam.idx}_groups": dam.channel.power_group.num_active_groups[i],
                         f"{dam.idx}_startups": int(dam.channel.power_group.num_startups[i]),
                         f"{dam.idx}_limits": int(dam.channel.power_group.num_times_in_limit[i]),

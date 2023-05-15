@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 
 # Instance we want to solve
-instance = Instance.from_json("../data/input_example1_greater_max_vol.json")
+instance = Instance.from_json("../data/input_example3.json"))
 
 # PSO object to find the solution
 config = PSOConfiguration(
@@ -120,7 +120,8 @@ sol_original = Solution.from_json("../data/output_example1_original-real-decisio
 # print(sol_lp.check())
 # print(sol_lp.to_flows())
 # sol_lp.to_json("../data/output_example1_LPmodel_gap0_solution.json")
-sol_lp = Solution.from_json("../data/output_example1_LPmodelCARLOS.json")
+
+sol_lp = Solution.from_json("../data/output_instance3_LPmodel.json")
 
 # Optimal solution found by PSO ---- #
 
@@ -136,7 +137,7 @@ sol_lp = Solution.from_json("../data/output_example1_LPmodelCARLOS.json")
 # pso.solution = sol_original
 
 path_parent = "../data"
-dir_name = f"output_example1_LPmodelCARLOS"
+dir_name = "output_example_instance3_LPModel"
 pso.solution = sol_lp
 
 print(pso.solution.check())

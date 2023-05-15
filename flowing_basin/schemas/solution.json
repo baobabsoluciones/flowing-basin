@@ -15,12 +15,30 @@
                         "items": {
                             "type": "number"
                         }
+                    },
+                    "power": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "volume": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
                     }
                 },
                 "required": [
                     "flows",
                     "id"
                 ]
+            }
+        },
+        "price": {
+            "type": "array",
+            "items": {
+                "type": "number"
             }
         }
     },

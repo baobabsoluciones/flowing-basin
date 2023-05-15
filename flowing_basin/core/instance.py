@@ -215,6 +215,7 @@ class Instance(InstanceCore):
         """
 
         return len(self.data["dams"])
+    
 
     def get_ids_of_dams(self) -> list[str]:
 
@@ -326,6 +327,7 @@ class Instance(InstanceCore):
             points = None
 
         return points
+    
 
     def get_turbined_flow_obs_for_power_group(self, idx: str) -> dict[str, list]:
 
@@ -394,6 +396,29 @@ class Instance(InstanceCore):
             unreg_flows = unreg_flows[0]
 
         return unreg_flows
+    
+    def get_all_unregulated_flows_of_dam(self, idx: str):
+        
+        """
+        
+        :return: All unregulated flow that enters the dam (flow that comes from the river) within the decision horizon (m3/s)
+        """
+        
+        unreg_flows = self.data["dams"][idx]["unregulated_flows"]
+        
+        return unreg_flows
+    
+    def get_all_prices(self):
+        
+        """
+        
+        :return: All the prices of energy (EUR/MWh) in the time bands within the decision horizon
+        """
+        
+        prices = self.data["energy_prices"]
+        
+        return prices
+        
 
     def get_max_unregulated_flow_of_dam(self, idx: str) -> float:
 
@@ -429,6 +454,17 @@ class Instance(InstanceCore):
             incoming_flows = incoming_flows[0]
 
         return incoming_flows
+    
+    def get_all_incoming_flows(self):
+        
+        """
+        
+        :return: All the flows (m3/s) entering the first dam in the time bands within the decision horizon
+        """
+        
+        prices = self.data["incoming_flows"]
+        
+        return prices
 
     def get_max_incoming_flow(self) -> float:
 

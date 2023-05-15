@@ -24,6 +24,7 @@ print("prices (next 12 steps):", instance.get_price(time, num_steps=12))
 # Print dam info
 for dam in instance.get_ids_of_dams():
     print("-----", dam, "-----")
+    print("order:", instance.get_order_of_dam(dam))
     print("initial volume:", instance.get_initial_vol_of_dam(dam))
     print("min volume:", instance.get_min_vol_of_dam(dam))
     print("max volume:", instance.get_max_vol_of_dam(dam))
@@ -32,6 +33,8 @@ for dam in instance.get_ids_of_dams():
     print("verification lags:", instance.get_verification_lags_of_dam(dam))
     print("max flow:", instance.get_max_flow_of_channel(dam))
     print("flow limit observations:", instance.get_flow_limit_obs_for_channel(dam))
+    print("flow coef a:", instance.get_flow_limit_coef_a_of_channel(dam))
+    print("flow coef b:", instance.get_flow_limit_coef_b_of_channel(dam))
     print("turbined flow observations:", instance.get_turbined_flow_obs_for_power_group(dam))
     print("startup flows:", instance.get_startup_flows_of_power_group(dam))
     print("shutdown flows:", instance.get_shutdown_flows_of_power_group(dam))

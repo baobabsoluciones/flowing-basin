@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 
 # Instance we want to solve
-instance = Instance.from_json("../data/input_example1.json")
+instance = Instance.from_json("../data/input_example3.json")
 paths_power_models = {
     "dam1": "../ml_models/model_E1.sav",
     "dam2": "../ml_models/model_E2.sav",
@@ -25,7 +25,7 @@ config = PSOConfiguration(
     },
     use_relvars=False,
     # max_relvar=0.2,
-    flow_smoothing=2,
+    flow_smoothing=0,
 )
 pso = PSO(
     instance=instance,
@@ -124,24 +124,24 @@ sol_original = Solution.from_json("../data/output_example1_original-real-decisio
 # print(sol_lp.check())
 # print(sol_lp.to_flows())
 # sol_lp.to_json("../data/output_example1_LPmodel_gap0_solution.json")
-sol_lp = Solution.from_json("../data/output_example1_LPmodel_gap0_solution.json")
+sol_lp = Solution.from_json("../data/output_instance3_LPmodel.json")
 
 # Optimal solution found by PSO ---- #
 
-path_parent = "../data"
+"""path_parent = "../data"
 dir_name = f"output_example1_PSO_{datetime.now().strftime('%Y-%m-%d %H.%M')}"
 options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113}
 status = pso.solve(options, num_particles=200, num_iters=100)
 print("status:", status)
-print("solver info:", pso.solver_info)
+print("solver info:", pso.solver_info)"""
 
 # path_parent = "../data"
 # dir_name = "output_example1_original-real-decisions"
 # pso.solution = sol_original
 
-# path_parent = "../data"
-# dir_name = "output_example1_LPmodel_gap0"
-# pso.solution = sol_lp
+path_parent = "../data"
+dir_name = "output_example_instance3_LPModel"
+pso.solution = sol_lp
 
 print(pso.solution.check())
 print("optimal solution:", pso.solution.data)

@@ -780,7 +780,8 @@ class LPModel(Experiment):
 
         # Solve
         solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
-        # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)
+        # solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap)
+        # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)  # <-- caca
         lpproblem.solve(solver)
         
         # Caracterización de la solución

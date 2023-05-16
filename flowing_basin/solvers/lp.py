@@ -189,6 +189,8 @@ class LPModel(Experiment):
                 if bp != BreakPointsPQ[i][-1]:
                     if PotBP[i][bp - 1] == PotBP[i][bp]:
                         ZonaLimitePQ[i].append(bp)
+        for i in I:
+            ZonaLimitePQ[i].pop(0)
         
         FranjasGrupos1 = {}
         FranjasGrupos = {}
@@ -402,6 +404,8 @@ class LPModel(Experiment):
                 if bp != BreakPointsPQ[i][-1]:
                     if PotBP[i][bp - 1] == PotBP[i][bp]:
                         ZonaLimitePQ[i].append(bp)
+        for i in I:
+            ZonaLimitePQ[i].pop(0)
 
         FranjasGrupos1 = {}
         FranjasGrupos = {}
@@ -560,56 +564,47 @@ class LPModel(Experiment):
         # TODO: improve this constraint
         for i in I:
             for t in T:
-                if i[i.rfind("_") + 1: i.rfind("copy")] == "dam1":
+                if i == "dam1" or i[i.rfind("_") + 1: i.rfind("copy")] == "dam1":
                     if t == T[0]:
-                        lpproblem += qtb[(i, t)] == (
-                            IniLags[i][0] + IniLags[i][1]
-                        ) / len(L[i])
+                        lpproblem += qtb[(i, t)] == IniLags[i][0]
                     if t == 1:
-                        lpproblem += qtb[(i, t)] == (IniLags[i][0] + qs[(i, 0)]) / len(
-                            L[i]
-                        )
+                        lpproblem += qtb[(i, t)] == qs[(i, 0)]
                     if t >= 2:
-                        lpproblem += qtb[(i, t)] == lp.lpSum(
-                            (qs[(i, t - l)]) * (1 / len(L[i])) for l in L[i]
-                        )
-                if i[i.rfind("_") + 1: i.rfind("copy")] == "dam2":
+                        lpproblem += qtb[(i, t)] == qs[(i, t - 1)]
+                if i == "dam2" or i[i.rfind("_") + 1: i.rfind("copy")] == "dam2":
                     if t == T[0]:
                         lpproblem += qtb[(i, t)] == (
                             IniLags[i][2]
                             + IniLags[i][3]
                             + IniLags[i][4]
-                            + IniLags[i][5]
-                        ) / len(L[i])
+                        ) / 3
                     if t == 1:
                         lpproblem += qtb[(i, t)] == (
                             IniLags[i][1]
                             + IniLags[i][2]
                             + IniLags[i][3]
-                            + IniLags[i][4]
-                        ) / len(L[i])
+                        ) / 3
                     if t == 2:
                         lpproblem += qtb[(i, t)] == (
                             IniLags[i][0]
                             + IniLags[i][1]
                             + IniLags[i][2]
-                            + IniLags[i][3]
-                        ) / len(L[i])
+                        ) / 3
                     if t == 3:
                         lpproblem += qtb[(i, t)] == (
-                            qs[(i, 0)] + IniLags[i][0] + IniLags[i][1] + IniLags[i][2]
-                        ) / len(L[i])
+                            qs[(i, 0)] + IniLags[i][0] + IniLags[i][1]
+                        ) / 3
                     if t == 4:
                         lpproblem += qtb[(i, t)] == (
-                            qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0] + IniLags[i][1]
-                        ) / len(L[i])
+                            qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0]
+                        ) / 3
                     if t == 5:
                         lpproblem += qtb[(i, t)] == (
-                            qs[(i, 2)] + qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0]
-                        ) / len(L[i])
+                            qs[(i, 2)] + qs[(i, 1)] + qs[(i, 0)]
+                        ) / 3
                     if t >= 6:
                         lpproblem += qtb[(i, t)] == lp.lpSum(
-                            (qs[(i, t - l)]) * (1 / len(L[i])) for l in L[i]
+                            (qs[(i, t - l)]) * (1 / 3) for l in range(3,6)
                         )
 
         for i in I:
@@ -807,7 +802,7 @@ class LPModel(Experiment):
         print("--------Arranques grupos de potencia--------")
         for var in pwch_tot.values():
             print(f"{var.name}: {var.value()}")
-        for var in pwch.values():
+        for var in qtb.values():
             print(f"{var.name}: {var.value()}")
 
         # Flows

@@ -807,6 +807,8 @@ class LPModel(Experiment):
         print("--------Arranques grupos de potencia--------")
         for var in pwch_tot.values():
             print(f"{var.name}: {var.value()}")
+        for var in pwch.values():
+            print(f"{var.name}: {var.value()}")
 
         # Flows
         # TODO develope

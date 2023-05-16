@@ -560,7 +560,7 @@ class LPModel(Experiment):
         # TODO: improve this constraint
         for i in I:
             for t in T:
-                if i == I[0]:
+                if i[i.rfind("_") + 1: i.rfind("copy")] == "dam1":
                     if t == T[0]:
                         lpproblem += qtb[(i, t)] == (
                             IniLags[i][0] + IniLags[i][1]
@@ -573,7 +573,7 @@ class LPModel(Experiment):
                         lpproblem += qtb[(i, t)] == lp.lpSum(
                             (qs[(i, t - l)]) * (1 / len(L[i])) for l in L[i]
                         )
-                if i == "dam2":
+                if i[i.rfind("_") + 1: i.rfind("copy")] == "dam2":
                     if t == T[0]:
                         lpproblem += qtb[(i, t)] == (
                             IniLags[i][2]
@@ -782,8 +782,8 @@ class LPModel(Experiment):
         )
 
         # Solve
-        solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
-        # solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap)
+        # solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
+        solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap)
         # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)  # <-- caca
         lpproblem.solve(solver)
         
@@ -810,31 +810,27 @@ class LPModel(Experiment):
 
         # Flows
         # TODO develope
-        qsalida1 = []
-        qsalida2 = []
+        qsalida = {dam_id: [] for dam_id in I}
         for var in qs.values():
-            if "dam1" in var.name:
-                qsalida1.append(var.value())
-            if "dam2" in var.name:
-                qsalida2.append(var.value())
-        potencia1 = []
-        potencia2 = []
+            for dam_id in I:
+                if dam_id in var.name:
+                    qsalida[dam_id].append(var.value())
+        potencia = {dam_id: [] for dam_id in I}
         for var in pot.values():
-            if "dam1" in var.name:
-                potencia1.append(var.value())
-            if "dam2" in var.name:
-                potencia2.append(var.value())
-        volumenes1 = []
-        volumenes2 = []
+            for dam_id in I:
+                if dam_id in var.name:
+                    potencia[dam_id].append(var.value())
+        volumenes = {dam_id: [] for dam_id in I}
         for var in vol.values():
-            if "dam1" in var.name:
-                volumenes1.append(var.value())
-            if "dam2" in var.name:
-                volumenes2.append(var.value())
+            for dam_id in I:
+                if dam_id in var.name:
+                    volumenes[dam_id].append(var.value())
         sol_dict = {
             "dams": [
-                {"flows": qsalida1, "id": "dam1", "power": potencia1, "volume": volumenes1},
-                {"flows": qsalida2, "id": "dam2", "power": potencia2, "volume": volumenes2},
+                {
+                    "flows": qsalida[dam_id], "id": dam_id, "power": potencia[dam_id], "volume": volumenes[dam_id]
+                }
+                for dam_id in I
             ],
             "price": Price
         }

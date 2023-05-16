@@ -207,6 +207,7 @@ class LPModel(Experiment):
                             FranjasGrupos1[i]["Grupo_potencia" + str(gp+1)].append(QtBP[i].index(bp)+1)
             FranjasGrupos[i] = {"Grupo_potencia0": [1]}
             FranjasGrupos[i].update(FranjasGrupos1[i])
+        D_1 = self.instance.get_decision_horizon()
 
         print(f"{I=}")
         print(f"{T=}")
@@ -236,6 +237,7 @@ class LPModel(Experiment):
         print(f"{startup_flows=}")
         print(f"{ZonaLimitePQ=}")
         print(f"{FranjasGrupos=}")
+        print(f"{D_1=}")
 
         print(len(Price), len(T), len(Q0))
 
@@ -289,6 +291,7 @@ class LPModel(Experiment):
 
         # Parameters
         D = self.instance.get_time_step_seconds()
+        D_1 = self.instance.get_decision_horizon()
         Qnr = {
             dam_id: self.instance.get_all_unregulated_flows_of_dam(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
@@ -727,11 +730,11 @@ class LPModel(Experiment):
             lpproblem += tpot[t] == lp.lpSum(pot[(i, t)] for i in I)
             
         for i in I:
-            lpproblem += pot_embalse[i] == lp.lpSum(pot[(i, t)] * Price[t] for t in T)
+            lpproblem += pot_embalse[i] == lp.lpSum(pot[(i, t)] * Price[t] * (D / 3600) for t in T)
 
         for i in I:
             for t in T:
-                if t == T[-4]:
+                if t == T[D_1 - 1]:
                     lpproblem += vol[(i, t)] == VolFinal[i] + pos_desv[i] - neg_desv[i]
 
         for i in I:

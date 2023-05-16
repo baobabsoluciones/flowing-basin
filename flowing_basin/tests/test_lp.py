@@ -17,6 +17,6 @@ instance = Instance.from_json("../data/input_example3.json")
 lp = LPModel(config=config, instance=instance)
 lp.LPModel_print()
 
-lp.solve(dict())
-path_sol = "../data/output_instance3_LPmodel.json"
-lp.solution.to_json(path_sol)
+# lp.solve(dict())
+# path_sol = "../data/output_instance3_LPmodel.json"
+# lp.solution.to_json(path_sol)

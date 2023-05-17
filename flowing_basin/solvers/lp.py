@@ -248,13 +248,25 @@ class LPModel(Experiment):
         lpproblem = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
 
         # Sets
+        """
+        Conjunto embalses: I
+        """
         I = self.instance.get_ids_of_dams()
+        """
+        Conjunto franjas de tiempo: T
+        """
         T = list(range(self.instance.get_largest_impact_horizon()))
+        """
+        Conjunto lags relevantes: L
+        """
+        #TODO: cambiar este conjunto
         L = {
             dam_id: self.instance.get_relevant_lags_of_dam(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        """
+        Conjunto breakpoints en curva Potencia - Caudal turbinado: BreakPointsPQ
+        """
         BreakPointsPQ = {
             dam_id: list(
                 range(
@@ -267,10 +279,13 @@ class LPModel(Experiment):
             )
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        # Ajustamos este conjunto para corregir indexación
         for key in BreakPointsPQ:
             for i in range(len(BreakPointsPQ[key])):
                 BreakPointsPQ[key][i] += 1
+        """
+        Conjunto breakpoints en curva Volumen - Caudal máximo: BreakPointsVQ
+        """
         BreakPointsVQ = {}
         for dam_id in self.instance.get_ids_of_dams():
             if self.instance.get_flow_limit_obs_for_channel(dam_id) != None:
@@ -285,37 +300,59 @@ class LPModel(Experiment):
                 )
             else:
                 BreakPointsVQ[dam_id] = None
-
+        # Ajustamos este conjunto para corregir indexación
         for key in BreakPointsVQ:
             if BreakPointsVQ[key] != None:
                 for i in range(len(BreakPointsVQ[key])):
                     BreakPointsVQ[key][i] += 1
 
         # Parameters
+        """
+        Parámetro duración de cada franja (s): D
+        """
         D = self.instance.get_time_step_seconds()
+        """
+        Parámetro franja donde se compara con volumen objetivo: D_1
+        """
         D_1 = self.instance.get_decision_horizon()
+        """
+        Parámetro caudal no regulado (m3/s): Qnr
+        """
         Qnr = {
             dam_id: self.instance.get_all_unregulated_flows_of_dam(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
+        """
+        Parámetro caudal máximo permitido por canal (m3/s): QMax
+        """
         QMax = {
             dam_id: self.instance.get_max_flow_of_channel(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
+        """
+        Parámetro caudal turbinado en los breakpoints
+        de la curva Potencia - Caudal turbinado (m3/s): QtBP
+        """
         QtBP = {
             dam_id: self.instance.get_turbined_flow_obs_for_power_group(
                 dam_id
             )["observed_flows"]
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        """
+        Parámetro potencia en los breakpoints
+        de la curva Potencia - Caudal turbinado (MWh): PotBP
+        """
         PotBP = {
             dam_id: self.instance.get_turbined_flow_obs_for_power_group(
                 dam_id
             )["observed_powers"]
             for dam_id in self.instance.get_ids_of_dams()
         }
-        
+        """
+        Parámetro caudal máximo en los breakpoints
+        de la curva Volumen - Caudal máximo (m3/s): QmaxBP
+        """
         QmaxBP = {}
         for dam_id in self.instance.get_ids_of_dams():
             if self.instance.get_flow_limit_obs_for_channel(dam_id) != None:
@@ -324,7 +361,10 @@ class LPModel(Experiment):
                 )["observed_flows"]
             else:
                 QmaxBP[dam_id] = None
-
+        """
+        Parámetro volumen en los breakpoints
+        de la curva Volumen - Caudal máximo (m3): VolBP
+        """
         VolBP = {}
         for dam_id in self.instance.get_ids_of_dams():
             if self.instance.get_flow_limit_obs_for_channel(dam_id) != None:
@@ -333,57 +373,88 @@ class LPModel(Experiment):
                 )["observed_vols"]
             else:
                 VolBP[dam_id] = None
-
+        """
+        Parámetro volumen inicial (m3): V0
+        """
         V0 = {
             dam_id: self.instance.get_initial_vol_of_dam(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        """
+        Parámetro volumen máximo (m3): VMax
+        """
         VMax = {
             dam_id: self.instance.get_max_vol_of_dam(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        """
+        Parámetro volumen mínimo (m3): VMin
+        """
         VMin = {
             dam_id: self.instance.get_min_vol_of_dam(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        """
+        Parámetro franjas sin cambio en el caudal de salida: TMin
+        """
         TMin = self.config.step_min
-
+        """
+        Parámetro precio en cada franja (€/MWh): Price
+        """
         Price = self.instance.get_all_prices()
-
+        """
+        Parámetro lags iniciales en el caudal de entrada
+        a cada embalse (m3/s): IniLags
+        """
         IniLags = {
             dam_id: self.instance.get_initial_lags_of_channel(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        """
+        Parámetro volumen final objetivo (m3): VolFinal
+        """
         VolFinal = {
             dam_id: self.config.volume_objectives[dam_id]
             for dam_id in self.instance.get_ids_of_dams()
         }
-
+        """
+        Parámetro caudal entrante al primer embalse (m3/s): Q0
+        """
         Q0 = self.instance.get_all_incoming_flows()
-
+        """
+        Parámetro bonus por exceder volumen objetivo (€/m3): BonusVol
+        """
         BonusVol = self.config.volume_exceedance_bonus
-
+        """
+        Parámetro penalización por no llegar a volumen objetivo (€/m3): PenVol
+        """
         PenVol = self.config.volume_shortage_penalty
-
+        """
+        Parámetro penalización por franja en zona límite
+        (€/nºfranjas): PenZL
+        """
         PenZL = self.config.limit_zones_penalty
-        
+        """
+        Parámetro penalización por arranque de grupo de potencia
+        (€/nºarranques): PenSU
+        """
         PenSU = self.config.startups_penalty
-        
+        """
+        Parámetro caudal turbinado de apagado de turbina (m3/s): shutdown_flows
+        """
         shutdown_flows = {
             dam_id: self.instance.get_startup_flows_of_power_group(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
-        
+        """
+        Parámetro caudal turbinado de arranque de turbina (m3/s): startup_flows
+        """
         startup_flows = {
             dam_id: self.instance.get_shutdown_flows_of_power_group(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
         
-        # Primero hago un proceso para eliminar la desviación de decimales
+        # Proceso para eliminar la desviación de decimales de startup_flows y shutdown_flows
         for i in I:
             for y in range(len(startup_flows[i])):
                 for w in range(len(QtBP[i])):
@@ -395,7 +466,10 @@ class LPModel(Experiment):
                 for w in range(len(QtBP[i])):
                     if (shutdown_flows[i][y] - QtBP[i][w]) <= 0.1 and (shutdown_flows[i][y] - QtBP[i][w]) >= -0.1:
                         shutdown_flows[i][y] = QtBP[i][w]
-
+        """
+        Parámetro zonas límite de cada embalse
+        en la curva Potencia - Caudal turbinado: ZonaLimitePQ
+        """
         ZonaLimitePQ = {}
         for dam_id in self.instance.get_ids_of_dams():
             ZonaLimitePQ[dam_id] = []
@@ -404,9 +478,14 @@ class LPModel(Experiment):
                 if bp != BreakPointsPQ[i][-1]:
                     if PotBP[i][bp - 1] == PotBP[i][bp]:
                         ZonaLimitePQ[i].append(bp)
+        # Proceso para eliminar la primera franja
+        # (antes del primer arranque) de este parámetro
         for i in I:
             ZonaLimitePQ[i].pop(0)
-
+        """
+        Parámetro conjunto de franjas para cada powergroup
+        de cada embalse: FranjasGrupos
+        """
         FranjasGrupos1 = {}
         FranjasGrupos = {}
         for i in I:
@@ -426,39 +505,72 @@ class LPModel(Experiment):
             FranjasGrupos[i].update(FranjasGrupos1[i])
 
         # Variables
+        """
+        Variable volumen en cada embalse en cada franja de tiempo
+        (m3): vol
+        """
         vol = lp.LpVariable.dicts(
             "Volumen ", [(i, t) for i in I for t in T], lowBound=0, cat=lp.LpContinuous
         )
+        """
+        Variable caudal entrada en cada embalse
+        en cada franja de tiempo (m3/s): qe
+        """
         qe = lp.LpVariable.dicts(
             "Caudal entrada ",
             [(i, t) for i in I for t in T],
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable caudal salida en cada embalse
+        en cada franja de tiempo (m3/s): qe
+        """
         qs = lp.LpVariable.dicts(
             "Caudal salida ",
             [(i, t) for i in I for t in T],
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable potencia generada en cada embalse
+        en cada franja de tiempo (MWh): pot
+        """
         pot = lp.LpVariable.dicts(
             "Potencia ",
             [(i, t) for i in I for t in T],
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable caudal turbinado en cada embalse
+        en cada franja de tiempo (m3/s): qtb
+        """
         qtb = lp.LpVariable.dicts(
             "Caudal turbinado ",
             [(i, t) for i in I for t in T],
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable variación de caudal en cada embalse
+        en cada franja de tiempo (m3/s): qch
+        """
         qch = lp.LpVariable.dicts(
             "Cambio caudal ", [(i, t) for i in I for t in T], cat=lp.LpContinuous
         )
+        """
+        Variable binaria: y
+        1 si hay variación de caudal en la franja
+        0 si no hay variación de caudal en la franja
+        """
         y = lp.LpVariable.dicts(
             "01Variacion ", [(i, t) for i in I for t in T], cat=lp.LpBinary
         )
+        """
+        Variable asociada al IP with Piecewise Linear Functions
+        de Winston en relación a la curva Potencia - Caudal turbinado
+        """
         w_pq = lp.LpVariable.dicts(
             "01Franja_PQ ",
             [
@@ -469,12 +581,20 @@ class LPModel(Experiment):
             ],
             cat=lp.LpBinary,
         )
+        """
+        Variable asociada al IP with Piecewise Linear Functions
+        de Winston en relación a la curva Potencia - Caudal turbinado
+        """
         z_pq = lp.LpVariable.dicts(
             "PropFranj_PQ ",
             [(i, t, bp) for i in I for t in T for bp in BreakPointsPQ[i]],
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable asociada al IP with Piecewise Linear Functions
+        de Winston en relación a la curva Volumen - Caudal máximo
+        """
         w_vq = lp.LpVariable.dicts(
             "01Franja_VQ ",
             [
@@ -486,6 +606,10 @@ class LPModel(Experiment):
             ],
             cat=lp.LpBinary,
         )
+        """
+        Variable asociada al IP with Piecewise Linear Functions
+        de Winston en relación a la curva Volumen - Caudal máximo
+        """
         z_vq = lp.LpVariable.dicts(
             "PropFranj_VQ ",
             [
@@ -498,45 +622,79 @@ class LPModel(Experiment):
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable caudal máximo permitido por canal
+        en función del volumen del embalse en cada franja
+        (m3/s): q_max_vol
+        """
         q_max_vol = lp.LpVariable.dicts(
             "Caudal máximo volumen ",
             [(i, t) for i in I if QmaxBP[i] != None for t in T],
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable potencia total producida
+        en cada franja de tiempo (MWh): tpot
+        """
+        #TODO comprobar que se puede eliminar
         tpot = lp.LpVariable.dicts(
             "Potencia total ", [t for t in T], lowBound=0, cat=lp.LpContinuous
         )
+        """
+        Variable desviación positiva respecto a volumen objetivo
+        (m3): pos_desv
+        """
         pos_desv = lp.LpVariable.dicts(
             "Desviación positiva del ", [i for i in I], lowBound=0, cat=lp.LpContinuous
         )
+        """
+        Variable desviación negativa respecto a volumen objetivo
+        (m3): pos_desv
+        """
         neg_desv = lp.LpVariable.dicts(
             "Desviación negativa del ",
             [i for i in I],
             lowBound=0,
             cat=lp.LpContinuous,
         )
+        """
+        Variable beneficio por falta o exceso respecto
+        al volumen objetivo (€): cost_desv
+        """
         cost_desv = lp.LpVariable.dicts(
             "Beneficio por desviación volumen del ",
             [i for i in I],
             cat=lp.LpContinuous,
         )
-
+        """
+        Variable número total de franjas en zonas límite: zl_tot
+        """
         zl_tot = lp.LpVariable.dicts(
             "Zonas límites totales del ",
             [i for i in I],
             cat=lp.LpInteger,
         )
+        """
+        Variable binaria: pwch
+        1 si se ha arrancado un powergroup en la franja
+        1 si no se ha arrancado un powergroup en la franja
+        """
         pwch = lp.LpVariable.dicts(
             "01Arranque PG ", [(i, t, pg) for i in I for t in T for pg in FranjasGrupos[i]], cat=lp.LpBinary
         )
-
+        """
+        Variable número total de arranques por embalse
+        """
         pwch_tot = lp.LpVariable.dicts(
             "Arranque totales del ",
             [i for i in I],
             cat=lp.LpInteger,
         )
-
+        """
+        Variable potencia total generada en cada embalse
+        (MWh): pot_embalse
+        """
         pot_embalse = lp.LpVariable.dicts(
             "Potencia total del ",
             [i for i in I],
@@ -544,6 +702,9 @@ class LPModel(Experiment):
         )
 
         # Constraints
+        """
+        Restricción balance de volumen
+        """
         for i in I:
             for t in T:
                 if t == T[0]:
@@ -552,15 +713,18 @@ class LPModel(Experiment):
                     lpproblem += vol[(i, t)] == vol[(i, t - 1)] + D * (
                         qe[(i, t)] - qs[(i, t)]
                     )
-
-        # TODO: edit latex
+        """
+        Restricción caudal de entrada
+        """
         for i in I:
             for t in T:
                 if i == I[0]:
                     lpproblem += qe[(i, t)] == Q0[t] + Qnr[i][t]
                 else:
                     lpproblem += qe[(i, t)] == qtb[(I[I.index(i) - 1], t)] + Qnr[i][t]
-
+        """
+        Restricción caudal turbinado en base a lags relevantes
+        """
         # TODO: improve this constraint
         for i in I:
             for t in T:
@@ -606,58 +770,87 @@ class LPModel(Experiment):
                         lpproblem += qtb[(i, t)] == lp.lpSum(
                             (qs[(i, t - l)]) * (1 / 3) for l in range(3,6)
                         )
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Potencia - Caudal turbinado
+        """
         for i in I:
             for t in T:
                 lpproblem += pot[(i, t)] == lp.lpSum(
                     z_pq[(i, t, bp)] * PotBP[i][bp - 1] for bp in BreakPointsPQ[i]
                 )
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Potencia - Caudal turbinado
+        """
         for i in I:
             for t in T:
                 lpproblem += qtb[(i, t)] == lp.lpSum(
                     z_pq[(i, t, bp)] * QtBP[i][bp - 1] for bp in BreakPointsPQ[i]
                 )
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Potencia - Caudal turbinado
+        """
         for i in I:
             for t in T:
                 lpproblem += w_pq[(i, t, 0)] == 0
                 lpproblem += w_pq[(i, t, BreakPointsPQ[i][-1])] == 0
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Potencia - Caudal turbinado
+        """
         for i in I:
             for t in T:
                 for bp in BreakPointsPQ[i]:
                     lpproblem += z_pq[(i, t, bp)] <= w_pq[(i, t, bp-1)] + w_pq[(i, t, bp)]
-
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Potencia - Caudal turbinado
+        """
         for i in I:
             for t in T:
                 lpproblem += lp.lpSum(z_pq[(i, t, bp)] for bp in BreakPointsPQ[i]) == 1
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Potencia - Caudal turbinado
+        """
         for i in I:
             for t in T:
                 lpproblem += lp.lpSum(w_pq[(i, t, bp)] for bp in BreakPointsPQ[i]) == 1
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Volumen - Caudal máximo
+        """
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
                     lpproblem += q_max_vol[(i, t)] == lp.lpSum(
                         z_vq[(i, t, bp)] * QmaxBP[i][bp - 1] for bp in BreakPointsVQ[i]
                     )
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Volumen - Caudal máximo
+        """
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
                     lpproblem += vol[(i, t)] == lp.lpSum(
                         z_vq[(i, t, bp)] * VolBP[i][bp - 1] for bp in BreakPointsVQ[i]
                     )
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Volumen - Caudal máximo
+        """
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
                     lpproblem += w_vq[(i, t, 0)] == 0
                     lpproblem += w_vq[(i, t, BreakPointsVQ[i][-1])] == 0
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Volumen - Caudal máximo
+        """
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
@@ -665,36 +858,50 @@ class LPModel(Experiment):
                         lpproblem += z_vq[(i, t, bp)] <= lp.lpSum(
                             w_vq[(i, t, tr)] for tr in range(bp - 1, bp + 1)
                         )
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Volumen - Caudal máximo
+        """
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
                     lpproblem += (
                         lp.lpSum(z_vq[(i, t, bp)] for bp in BreakPointsVQ[i]) == 1
                     )
-
+        """
+        Restricción asociada al IP with Piecewise Linear Functions de Winston
+        en referencia a la curva Volumen - Caudal máximo
+        """
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
                     lpproblem += (
                         lp.lpSum(w_vq[(i, t, bp)] for bp in BreakPointsVQ[i]) == 1
                     )
-
+        """
+        Restricción cálculo variación caudal en cada franja
+        """
         for i in I:
             for t in T:
                 if t == T[0]:
                     lpproblem += qch[(i, t)] == 0  # qs[(i, t)] - IniLags[i][0]
                 else:
                     lpproblem += qch[(i, t)] == qs[(i, t)] - qs[(i, t - 1)]
-
+        """
+        Restricción para contabilizar variación caudal en cada franja
+        """
         for i in I:
             for t in T:
                 lpproblem += qch[(i, t)] <= y[(i, t)] * QMax[i]
-
+        """
+        Restricción para contabilizar variación caudal en cada franja
+        """
         for i in I:
             for t in T:
                 lpproblem += -qch[(i, t)] <= y[(i, t)] * QMax[i]
-                
+        """
+        Restricción acotar cambios de caudal en tmin franjas
+        """
         for i in I:
             for t in T:
                 lpproblem += (
@@ -703,40 +910,65 @@ class LPModel(Experiment):
                     )
                     <= 1
                 )
-
+        """
+        Restricción volumen máximo
+        """
         for i in I:
             for t in T:
                 lpproblem += vol[(i, t)] <= VMax[i]
-
+        """
+        Restricción volumen mínimo
+        """
         for i in I:
             for t in T:
                 lpproblem += vol[(i, t)] >= VMin[i]
-
+        """
+        Restricción caudal máximo por canal
+        (restricción por sección)
+        """
         for i in I:
             for t in T:
                 lpproblem += qs[(i, t)] <= QMax[i]
-
+        """
+        Restricción caudal máximo por canal
+        (restricción por volumen)
+        """
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
                     lpproblem += qs[(i, t)] <= q_max_vol[(i, t)]
-
+        """
+        Restricción suma de potencias en cada franja
+        """
+        #TODO comprobar que se puede eliminar
         for t in T:
             lpproblem += tpot[t] == lp.lpSum(pot[(i, t)] for i in I)
-            
+        """
+        Restricción ganancia (€) total de cada embalse
+        """
         for i in I:
             lpproblem += pot_embalse[i] == lp.lpSum(pot[(i, t)] * Price[t] * (D / 3600) for t in T)
-
+        """
+        Restricción cómputo desviación respecto a volumen objetivo
+        """
         for i in I:
             for t in T:
                 if t == T[D_1 - 1]:
                     lpproblem += vol[(i, t)] == VolFinal[i] + pos_desv[i] - neg_desv[i]
-
+        """
+        Restricción cálculo beneficio por exceso/falta de volumen
+        respecto al objetivo
+        """
         for i in I:
             lpproblem += cost_desv[i] == pos_desv[i] * BonusVol - neg_desv[i] * PenVol
+        """
+        Restricción número total de franjas en zona límite para cada embalse
+        """
         for i in I:
             lpproblem += zl_tot[i] == lp.lpSum(w_pq[(i, t, bp)] for t in T for bp in ZonaLimitePQ[i])
-
+        # Función que, dado el conjunto FranjasGrupos y un powergroup específico, te devuelve
+        # las franjas de la curva Potencia - Caudal turbinado que están en powergroups
+        # superiores al dado.
         def obtener_franjas_pw_mayores(diccionario, clave):
             pw_posteriores = list(diccionario.keys())[list(diccionario.keys()).index(clave) + 1:]
 
@@ -747,7 +979,10 @@ class LPModel(Experiment):
             return franjas_posteriores
 
         print(obtener_franjas_pw_mayores(FranjasGrupos["dam2"], "Grupo_potencia1"))
-
+        """
+        Restricción cómputo arranques de powergroups
+        """
+        #TODO: implementar que compute dos veces cuando hay dos arranques simultáneos de una franja a la siguiente
         for i in I:
             for t in T:
                 if t != T[0]:
@@ -761,10 +996,12 @@ class LPModel(Experiment):
                                                                                                                         for franja_sup in franjassuperiores) >= 2* pwch[(i, t, lista_keys[lista_keys.index(pg)+1])]
                         if t == 0:
                             lpproblem += pwch[(i, t, pg)] == 0
-                            
+        """
+        Restricción cálculo número de arranques totales en cada embalse
+        """
         for i in I:
             lpproblem += pwch_tot[i] == lp.lpSum(pwch[(i, t, pg)] for t in T for pg in FranjasGrupos[i])
-            
+
 
         # Objective Function
         lpproblem += lp.lpSum(
@@ -781,7 +1018,7 @@ class LPModel(Experiment):
         solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap)
         # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)  # <-- caca
         lpproblem.solve(solver)
-        
+
         # Caracterización de la solución
         print("--------Función objetivo--------")
         print("Estado de la solución: ", lp.LpStatus[lpproblem.status])
@@ -805,8 +1042,7 @@ class LPModel(Experiment):
         for var in qtb.values():
             print(f"{var.name}: {var.value()}")
 
-        # Flows
-        # TODO develope
+        # solution.json
         qsalida = {dam_id: [] for dam_id in I}
         for var in qs.values():
             for dam_id in I:

@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 # Instance
-instance = Instance.from_json("../data/rl_training_data/constants.json")
+instance = Instance.from_json("../data/rl_training_data/constants_2dams.json")
 
 # History
 path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"

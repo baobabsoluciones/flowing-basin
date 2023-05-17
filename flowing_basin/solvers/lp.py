@@ -637,7 +637,7 @@ class LPModel(Experiment):
         Variable potencia total producida
         en cada franja de tiempo (MWh): tpot
         """
-        #TODO comprobar que se puede eliminar
+        # TODO: comprobar que se puede eliminar
         tpot = lp.LpVariable.dicts(
             "Potencia total ", [t for t in T], lowBound=0, cat=lp.LpContinuous
         )
@@ -678,7 +678,7 @@ class LPModel(Experiment):
         """
         Variable binaria: pwch
         1 si se ha arrancado un powergroup en la franja
-        1 si no se ha arrancado un powergroup en la franja
+        0 si no se ha arrancado un powergroup en la franja
         """
         pwch = lp.LpVariable.dicts(
             "01Arranque PG ", [(i, t, pg) for i in I for t in T for pg in FranjasGrupos[i]], cat=lp.LpBinary

@@ -3,9 +3,6 @@ from flowing_basin.tools import RiverBasin
 from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
 import scipy
-import pyswarms as ps
-from pyswarms.utils.plotters import plot_cost_history
-from pyswarms.utils.search import RandomSearch
 from matplotlib import pyplot as plt
 from dataclasses import dataclass, asdict
 import warnings
@@ -15,6 +12,15 @@ from datetime import datetime
 import os
 import typing
 
+# import pyswarms as ps
+# from pyswarms.utils.plotters import plot_cost_history
+# from pyswarms.utils.search import RandomSearch
+
+import sys
+sys.path.append(r"C:\Users\rodri\Documents\GitHub\my-pyswarms")
+import my_pyswarms as ps
+from my_pyswarms.utils.plotters import plot_cost_history
+from my_pyswarms.utils.search import RandomSearch
 
 @dataclass
 class PSOConfiguration:
@@ -269,7 +275,7 @@ class PSO(Experiment):
         return self.objective_function_env()
 
     def optimize(
-        self, options: dict[str, float], num_particles: int, num_iters: int
+        self, options: dict[str, float], num_particles: int, num_iters: int, timeout: int = None
     ) -> tuple[float, np.ndarray]:
 
         """
@@ -293,7 +299,7 @@ class PSO(Experiment):
             "is_relvars": self.config.use_relvars
         }  # Argument of `self.calculate_objective_function`
         cost, position = optimizer.optimize(
-            self.calculate_objective_function, iters=num_iters, **kwargs
+            self.calculate_objective_function, iters=num_iters, **kwargs, max_time=timeout
         )
 
         self.objective_function_history = optimizer.cost_history
@@ -301,7 +307,7 @@ class PSO(Experiment):
         return cost, position
 
     def solve(
-        self, options: dict[str, float], num_particles: int = 200, num_iters: int = 100
+        self, options: dict[str, float], num_particles: int = 200, num_iters: int = 100, timeout: int = None
     ) -> dict:
 
         """
@@ -315,7 +321,7 @@ class PSO(Experiment):
 
         start_time = time.perf_counter()
         cost, optimal_particle = self.optimize(
-            options=options, num_particles=num_particles, num_iters=num_iters
+            options=options, num_particles=num_particles, num_iters=num_iters, timeout=timeout
         )
         end_time = time.perf_counter()
         execution_time = end_time - start_time

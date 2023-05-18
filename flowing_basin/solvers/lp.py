@@ -23,6 +23,9 @@ class LPConfiguration:
     # Gap for the solution
     MIPGap: float
 
+    # Solver timeout
+    time_limit_seconds: int
+
 
 class LPModel(Experiment):
     def __init__(
@@ -243,7 +246,7 @@ class LPModel(Experiment):
 
         print(len(Price), len(T), len(Q0))
 
-    def solve(self, options: dict) -> dict:
+    def solve(self, options: dict = None) -> dict:
         # LP Problem
         lpproblem = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
 
@@ -708,9 +711,9 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 if t == T[0]:
-                    lpproblem += vol[(i, t)] == V0[i] + D * (qe[(i, t)] - qs[(i, t)])
+                    lpproblem += vol[(i, t)] <= V0[i] + D * (qe[(i, t)] - qs[(i, t)])
                 else:
-                    lpproblem += vol[(i, t)] == vol[(i, t - 1)] + D * (
+                    lpproblem += vol[(i, t)] <= vol[(i, t - 1)] + D * (
                         qe[(i, t)] - qs[(i, t)]
                     )
         """
@@ -1015,7 +1018,7 @@ class LPModel(Experiment):
 
         # Solve
         # solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
-        solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap)
+        solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap, timeLimit=self.config.time_limit_seconds)
         # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)  # <-- caca
         lpproblem.solve(solver)
 
@@ -1046,19 +1049,20 @@ class LPModel(Experiment):
         qsalida = {dam_id: [] for dam_id in I}
         for var in qs.values():
             for dam_id in I:
-                if dam_id in var.name:
+                if dam_id == var.name[var.name.index("'") + 1: var.name.rindex("'")]:
                     qsalida[dam_id].append(var.value())
         potencia = {dam_id: [] for dam_id in I}
         for var in pot.values():
             for dam_id in I:
-                if dam_id in var.name:
+                if dam_id == var.name[var.name.index("'") + 1: var.name.rindex("'")]:
                     potencia[dam_id].append(var.value())
         volumenes = {dam_id: [] for dam_id in I}
         for var in vol.values():
             for dam_id in I:
-                if dam_id in var.name:
+                if dam_id == var.name[var.name.index("'") + 1: var.name.rindex("'")]:
                     volumenes[dam_id].append(var.value())
         sol_dict = {
+            "objective_function": lp.value(lpproblem.objective),
             "dams": [
                 {
                     "flows": qsalida[dam_id], "id": dam_id, "power": potencia[dam_id], "volume": volumenes[dam_id]

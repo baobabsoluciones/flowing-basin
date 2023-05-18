@@ -21,6 +21,7 @@ class RLConfiguration(Configuration):  # noqa
     # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"
+    fast_mode: bool = True
 
     def __post_init__(self):
         valid_modes = {"linear", "nonlinear"}
@@ -241,7 +242,7 @@ class RLEnvironment(gym.Env):
         """
 
         new_flows = self.old_flows + action * self.max_flows  # noqa
-        self.river_basin.update(new_flows.reshape(-1, 1))
+        self.river_basin.update(new_flows.reshape(-1, 1), fast_mode=self.config.fast_mode)
         self.old_flows = self.river_basin.get_clipped_flows().reshape(-1)
 
         # Reward - we divide the income and penalties by the maximum price in the episode

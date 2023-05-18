@@ -6,10 +6,11 @@ config = RLConfiguration(
     limit_zones_penalty=50,
     mode="linear",
     flow_smoothing=2,
-    num_prices=10,
-    num_unreg_flows=10,
-    num_incoming_flows=10,
+    num_prices=16,
+    num_unreg_flows=16,
+    num_incoming_flows=16,
     length_episodes=24 * 4 + 3,
+    fast_mode=True,
 )
 train = RLTrain(
     config=config,

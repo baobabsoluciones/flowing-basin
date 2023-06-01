@@ -20,9 +20,9 @@ env1 = RLEnvironment(
     config=config,
     path_constants="../data/rl_training_data/constants.json",
     path_training_data="../data/rl_training_data/training_data.pickle",
-    initial_row=datetime.strptime("2021-07-02 04:45", "%Y-%m-%d %H:%M"),
+    initial_row=datetime.strptime("2021-06-30 21:30", "%Y-%m-%d %H:%M"),
 )
-env1.instance.to_json("../data/input_example1_expanded10steps.json")
+# env1.instance.to_json("../data/input_example1_expanded10steps.json")
 
 # ENVIRONMENT 1 OBSERVATION LIMITS
 print("low:", env1.get_obs_lower_limits())

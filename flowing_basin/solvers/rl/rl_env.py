@@ -13,10 +13,16 @@ from dataclasses import dataclass
 @dataclass(kw_only=True)
 class RLConfiguration(Configuration):  # noqa
 
+    # RL environment options
     num_prices: int
     num_incoming_flows: int
     num_unreg_flows: int
     length_episodes: int
+
+    # RL training configuration
+    log_ep_freq: int = 5
+    eval_ep_freq: int = 5
+    eval_num_episodes: int = 5
 
     # RiverBasin simulator options
     flow_smoothing: int = 0
@@ -229,6 +235,24 @@ class RLEnvironment(gym.Env):
 
         return obs.astype(np.float32)
 
+    def get_reward(self) -> float:
+
+        """
+        Calculate the reward obtained with the current state of the river basin
+
+        We divide the income and penalties by the maximum price in the episode
+        to avoid inconsistencies throughout episodes (in which energy prices are normalized differently)
+        Note we do not take into account the final volumes here; this is something the agent should tackle on its own
+        """
+
+        income = self.river_basin.get_income().item()
+        startups_penalty = self.river_basin.get_num_startups().item() * self.config.startups_penalty
+        limit_zones_penalty = self.river_basin.get_num_times_in_limit().item() * self.config.limit_zones_penalty
+        reward = (income - startups_penalty - limit_zones_penalty) / self.instance.get_largest_price()
+        # print(self.river_basin.get_income().item(), startups_penalty, limit_zones_penalty, reward)
+
+        return reward
+
     def step(self, action: np.array, normalize_obs: bool = True) -> tuple[np.array, float, bool, dict]:
 
         """
@@ -245,16 +269,8 @@ class RLEnvironment(gym.Env):
         self.river_basin.update(new_flows.reshape(-1, 1), fast_mode=self.config.fast_mode)
         self.old_flows = self.river_basin.get_clipped_flows().reshape(-1)
 
-        # Reward - we divide the income and penalties by the maximum price in the episode
-        # to avoid inconsistencies throughout episodes (in which energy prices are normalized differently)
-        # Note we do not take into account the final volumes here; this is something the agent should tackle on its own
-        income = self.river_basin.get_income().item()
-        startups_penalty = self.river_basin.get_num_startups().item() * self.config.startups_penalty
-        limit_zones_penalty = self.river_basin.get_num_times_in_limit().item() * self.config.limit_zones_penalty
-        reward = (income - startups_penalty - limit_zones_penalty) / self.instance.get_largest_price()
-        # print(self.river_basin.get_income().item(), startups_penalty, limit_zones_penalty, reward)
-
         next_obs = self.get_observation(normalize=normalize_obs)
+        reward = self.get_reward()
         done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
         return next_obs, reward, done, dict()

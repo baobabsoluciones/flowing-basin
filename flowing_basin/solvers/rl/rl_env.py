@@ -109,8 +109,11 @@ class RLEnvironment(gym.Env):
         self.river_basin.reset(self.instance)
         self._reset_variables()
 
-        new_start, _ = self.instance.get_start_end_datetimes()
-        print(f"Environment reset. New episode's starting datetime: {new_start.strftime('%Y-%m-%d %H:%M')}")
+        # Print to debug...
+        # new_start, _ = self.instance.get_start_end_datetimes()
+        # print(f"Environment reset. New episode's starting datetime: {new_start.strftime('%Y-%m-%d %H:%M')}")
+        # info_horizon = self.instance.get_information_horizon()
+        # print(f"New episode's information horizon: {info_horizon}")
 
         return self.get_observation()
 
@@ -214,6 +217,19 @@ class RLEnvironment(gym.Env):
                 - the relevant past flows
                 - the next N unregulated flows
         """
+
+        # Print to debug...
+        # print(f"time {self.river_basin.time}")
+        # prices = self.instance.get_price(self.river_basin.time + 1, num_steps=self.config.num_prices)
+        # print(f"\tprices ({len(prices)}): {prices}")
+        # incoming_flows = self.instance.get_incoming_flow(self.river_basin.time + 1, num_steps=self.config.num_incoming_flows)
+        # print(f"\tincoming flows ({len(incoming_flows)}): {incoming_flows}")
+        # for dam in self.river_basin.dams:
+        #     print(f"\t{dam.idx} volume (1): {dam.volume}")
+        #     past_flows = dam.channel.past_flows.squeeze()
+        #     print(f"\t{dam.idx} past flows({len(past_flows)}): {past_flows}")
+        #     unreg_flows = self.instance.get_unregulated_flow_of_dam(self.river_basin.time + 1, dam.idx, num_steps=self.config.num_unreg_flows)
+        #     print(f"\t{dam.idx} unregulated flows ({len(unreg_flows)}): {unreg_flows}")
 
         obs = np.concatenate([
             self.instance.get_price(self.river_basin.time + 1, num_steps=self.config.num_prices),

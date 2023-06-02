@@ -19,15 +19,8 @@ run = RLRun(
     instance=Instance.from_json(f"../data/input_example1_expanded{NUM_STEPS_LOOKAHEAD}steps.json")
 )
 
-# run.solve(path_agent="../data/RL_model_2023-05-14 19.28.zip")
-# run.solution.to_json("../data/RL_model_2023-05-14 19.28_sol_example1.json")
-# run.solve(path_agent="../data/RL_model_2023-05-14 20.10.zip")
-# run.solution.to_json("../data/RL_model_2023-05-14 20.10_sol_example1.json")
-# run.solve(path_agent="../data/RL_model_2023-05-14 20.25.zip")
-# run.solution.to_json("../data/RL_model_2023-05-14 20.25_sol_example1.json")
-
 start_time = time.perf_counter()
-run.solve(path_agent="../data/RL_model_2023-05-18 20.09.zip")
-run.solution.to_json("../data/RL_model_2023-05-18 20.09_sol_example1.json")
+run.solve(path_agent="../data/RL_model_2023-06-02 01.18.zip")
+run.solution.to_json("../data/RL_model_2023-06-02 01.18_sol_example1.json")
 exec_time = time.perf_counter() - start_time
 print(f"{exec_time=}")

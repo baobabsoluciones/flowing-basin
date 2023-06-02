@@ -412,7 +412,8 @@ class Instance(InstanceCore):
         information_horizon = self.get_information_horizon()
         if time + num_steps - 1 >= information_horizon:
             warnings.warn(
-                f"Tried to access unregulated flow for {time + num_steps - 1=}, "
+                f"Tried to access unregulated flow for "
+                f"time + num_steps - 1 = {time} + {num_steps} - 1 = {time + num_steps - 1}, "
                 f"which is equal or greater than {information_horizon=}. "
                 f"None was returned"
             )
@@ -450,7 +451,8 @@ class Instance(InstanceCore):
         information_horizon = self.get_information_horizon()
         if time + num_steps - 1 >= information_horizon:
             warnings.warn(
-                f"Tried to access incoming flow for {time + num_steps - 1=}, "
+                f"Tried to access incoming flow for "
+                f"time + num_steps - 1 = {time} + {num_steps} - 1 = {time + num_steps - 1}, "
                 f"which is equal or greater than {information_horizon=}. "
                 f"None was returned"
             )
@@ -483,7 +485,7 @@ class Instance(InstanceCore):
         information_horizon = self.get_information_horizon()
         if time + num_steps - 1 >= information_horizon:
             warnings.warn(
-                f"Tried to access price for {time + num_steps - 1=}, "
+                f"Tried to access price for time + num_steps - 1 = {time} + {num_steps} - 1 = {time + num_steps - 1}, "
                 f"which is equal or greater than {information_horizon=}. "
                 f"None was returned"
             )

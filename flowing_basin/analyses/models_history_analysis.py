@@ -7,7 +7,7 @@ import numpy as np
 instance = Instance.from_json("../data/rl_training_data/constants.json")
 
 # History
-path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"
+path_training_data = "../data/rl_training_data/training_data_no_na.pickle"
 df_history = pd.read_pickle(path_training_data)
 print(df_history)
 

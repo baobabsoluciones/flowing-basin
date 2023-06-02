@@ -37,7 +37,7 @@ START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
 #   when it should actually be increasing with the unregulated and turbined flow it gets (as seen in our model)
 #   Something similar (although less striking) happens with the volume of dam1
 # NOTE: These problems arise both with training_data.pickle
-# and with training_data_NO_NA.pickle (in which rows with unknown unregulated flows were eliminated and not set to 0)
+# and with training_data_no_na.pickle (in which rows with unknown unregulated flows were eliminated and not set to 0)
 # Although the inconsistency problem is less often (actually, very uncommon) with the second dataset
 
 # ---- CODE ---- #
@@ -46,7 +46,7 @@ START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
 
 # Create instance
 path_constants = "../data/rl_training_data/constants.json"
-path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"
+path_training_data = "../data/rl_training_data/training_data_no_na.pickle"
 df = pd.read_pickle(path_training_data)
 instance = RLEnvironment.create_instance(
     length_episodes=LENGTH_EPISODE,

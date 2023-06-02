@@ -3,7 +3,7 @@ from flowing_basin.solvers import PSOConfiguration, PSO
 from datetime import datetime
 import os
 
-NEW_SOLUTION = True
+NEW_SOLUTION = False
 
 # Instance we want to solve
 instance = Instance.from_json("../data/input_example1.json")
@@ -44,12 +44,8 @@ if NEW_SOLUTION:
     print("solver info:", pso.solver_info)
 else:
     # Given solution
-    # dir_name = "RL_model_2023-05-14 19.28_sol_example1"
-    # pso.solution = Solution.from_json("../data/RL_model_2023-05-14 19.28_sol_example1.json")
-    # dir_name = "RL_model_2023-05-14 20.10_sol_example1"
-    # pso.solution = Solution.from_json("../data/RL_model_2023-05-14 20.10_sol_example1.json")
-    dir_name = "RL_model_2023-05-18 20.09_sol_example1"
-    pso.solution = Solution.from_json("../data/RL_model_2023-05-18 20.09_sol_example1.json")
+    dir_name = "RL_model_2023-06-02 01.18_sol_example1"
+    pso.solution = Solution.from_json("../data/RL_model_2023-06-02 01.18_sol_example1.json")
 
 print(pso.solution.check())
 print("optimal solution:", pso.solution.data)

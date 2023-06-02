@@ -5,24 +5,31 @@ from stable_baselines3.common.env_checker import check_env
 from datetime import datetime
 
 
+INITIAL_ROW = "2021-08-24 03:45"
+
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 config = RLConfiguration(
     startups_penalty=50,
     limit_zones_penalty=50,
     mode="linear",
-    num_prices=10,
-    num_unreg_flows=10,
-    num_incoming_flows=10,
+    flow_smoothing=2,
+    num_prices=16,
+    num_unreg_flows=16,
+    num_incoming_flows=16,
     length_episodes=24 * 4 + 3,
     fast_mode=False,
 )
 env1 = RLEnvironment(
     config=config,
     path_constants="../data/rl_training_data/constants.json",
-    path_training_data="../data/rl_training_data/training_data.pickle",
-    initial_row=datetime.strptime("2021-06-30 21:30", "%Y-%m-%d %H:%M"),
+    path_training_data="../data/rl_training_data/training_data_no_duplicates.pickle",
+    initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
 # env1.instance.to_json("../data/input_example1_expanded10steps.json")
+print("instance:", env1.instance.to_dict())
+print("decision horizon:", env1.instance.get_decision_horizon())
+print("impact horizon:", env1.instance.get_largest_impact_horizon())
+print("information horizon:", env1.instance.get_information_horizon())
 
 # ENVIRONMENT 1 OBSERVATION LIMITS
 print("low:", env1.get_obs_lower_limits())
@@ -32,6 +39,7 @@ print("high:", env1.get_obs_upper_limits())
 print("---- initial observation ----")
 print("initial observation (not normalized):", env1.get_observation(normalize=False))
 print("initial observation:", env1.get_observation())
+print("initial observation's shape:", env1.get_observation().shape)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS I
 print("---- hardcoded actions I ----")
@@ -53,7 +61,7 @@ print(env1.river_basin.history.to_string())
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS II (FULL SOLUTION)
 print("---- hardcoded actions II (full solution) ----")
-env1.reset(initial_row=datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M"))
+env1.reset(initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"))
 decisionsVA = np.array(
     [
         [0.5, 0.5],
@@ -114,12 +122,12 @@ print(env1.river_basin.history.to_string())
 # print("observation (not normalized):", next_obs)
 
 # TEST 'CREATE INSTANCE' METHOD
-print("---- ENVIRONMENT 1 | RESET WITH RANDOM INSTANCE ----")
-env1.reset()
-print(env1.instance.check())
-print(env1.instance.data)
-print(env1.get_observation())
+# print("---- ENVIRONMENT 1 | RESET WITH RANDOM INSTANCE ----")
+# env1.reset()
+# print(env1.instance.check())
+# print(env1.instance.data)
+# print(env1.get_observation())
 
 # CHECK ENVS WITH SB3
-check_env(env1)
+# check_env(env1)
 # check_env(env2)

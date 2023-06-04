@@ -13,7 +13,7 @@ config = RLConfiguration(
     length_episodes=24 * 4 + 3,
     log_ep_freq=5,
     eval_ep_freq=5,
-    eval_num_episodes=5,
+    eval_num_episodes=10,
     fast_mode=True,
 )
 train = RLTrain(

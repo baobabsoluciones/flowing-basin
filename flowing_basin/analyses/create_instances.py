@@ -8,8 +8,8 @@ NUM_STEPS_LOOKAHEAD = 16
 path_constants = "../data/rl_training_data/constants.json"
 constants = load_json(path_constants)
 
-path_training_data = "../data/rl_training_data/training_data.pickle"
-training_data = pd.read_pickle(path_training_data)
+path_historical_data = "../data/rl_training_data/historical_data.pickle"
+historical_data = pd.read_pickle(path_historical_data)
 
 config = RLConfiguration(
     startups_penalty=50,
@@ -25,7 +25,7 @@ config = RLConfiguration(
 instance = RLEnvironment.create_instance(
     length_episodes=24 * 4 + 3,
     constants=constants,
-    training_data=training_data,
+    historical_data=historical_data,
     config=config,
     initial_row=datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M"),
 )

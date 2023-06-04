@@ -19,7 +19,8 @@ config = RLConfiguration(
 train = RLTrain(
     config=config,
     path_constants="../data/rl_training_data/constants.json",
-    path_training_data="../data/rl_training_data/training_data_no_duplicates.pickle",
+    path_train_data="../data/rl_training_data/historical_data_clean_train.pickle",
+    path_test_data="../data/rl_training_data/historical_data_clean_test.pickle"
 )
 train.solve(
     num_episodes=200,

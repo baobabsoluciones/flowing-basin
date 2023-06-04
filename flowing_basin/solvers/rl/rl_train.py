@@ -16,7 +16,8 @@ class RLTrain(Experiment):
             self,
             config: RLConfiguration,
             path_constants: str,
-            path_training_data: str,
+            path_train_data: str,
+            path_test_data: str,
             paths_power_models: dict[str, str] = None,
             instance: Instance = None,
             solution: Solution = None,
@@ -28,20 +29,20 @@ class RLTrain(Experiment):
 
         # Configuration, environment and model (RL agent)
         self.config = config
-        self.env = RLEnvironment(
+        self.train_env = RLEnvironment(
             config=self.config,
             path_constants=path_constants,
-            path_training_data=path_training_data,
+            path_historical_data=path_train_data,
             paths_power_models=paths_power_models,
             instance=instance,
         )
-        self.model = SAC("MlpPolicy", self.env, verbose=1)
+        self.model = SAC("MlpPolicy", self.train_env, verbose=1)
 
         # Variables for periodic evaluation of agent during training
         self.eval_env = RLEnvironment(
             config=self.config,
             path_constants=path_constants,
-            path_training_data=path_training_data,
+            path_historical_data=path_test_data,
             paths_power_models=paths_power_models,
             instance=instance,
         )
@@ -55,7 +56,7 @@ class RLTrain(Experiment):
         Train the model and save it in the given path.
         """
 
-        episode_length = self.env.instance.get_largest_impact_horizon()
+        episode_length = self.train_env.instance.get_largest_impact_horizon()
         total_timesteps = num_episodes * episode_length
 
         # Set evaluation callback

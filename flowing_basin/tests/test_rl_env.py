@@ -5,7 +5,7 @@ from stable_baselines3.common.env_checker import check_env
 from datetime import datetime
 
 
-INITIAL_ROW = "2021-08-24 03:45"
+INITIAL_ROW = "2021-03-27 11:30"
 
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 config = RLConfiguration(
@@ -22,7 +22,7 @@ config = RLConfiguration(
 env1 = RLEnvironment(
     config=config,
     path_constants="../data/rl_training_data/constants.json",
-    path_training_data="../data/rl_training_data/training_data_no_duplicates.pickle",
+    path_historical_data="../data/rl_training_data/historical_data_clean.pickle",
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
 # env1.instance.to_json("../data/input_example1_expanded10steps.json")
@@ -92,7 +92,7 @@ print(env1.river_basin.history.to_string())
 #     instance=instance2,
 #     config=config,
 #     path_constants="../data/rl_training_data/constants.json",
-#     path_training_data="../data/rl_training_data/training_data.pickle",
+#     path_historical_data="../data/rl_training_data/historical_data.pickle",
 # )
 
 # ENVIRONMENT 2 | Initial observation

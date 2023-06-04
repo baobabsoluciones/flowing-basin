@@ -48,7 +48,7 @@ class RLEnvironment(gym.Env):
         self,
         config: RLConfiguration,
         path_constants: str = None,
-        path_training_data: str = None,
+        path_historical_data: str = None,
         instance: Instance = None,
         initial_row: int | datetime = None,
         paths_power_models: dict[str, str] = None,
@@ -62,9 +62,9 @@ class RLEnvironment(gym.Env):
         self.constants = None
         if path_constants is not None:
             self.constants = load_json(path_constants)
-        self.training_data = None
-        if path_training_data is not None:
-            self.training_data = pd.read_pickle(path_training_data)
+        self.historical_data = None
+        if path_historical_data is not None:
+            self.historical_data = pd.read_pickle(path_historical_data)
         self._reset_instance(instance, initial_row)
 
         # Simulator (the core of the environment)
@@ -125,16 +125,16 @@ class RLEnvironment(gym.Env):
 
         if instance is None:
 
-            assert self.constants is not None and self.training_data is not None, (
+            assert self.constants is not None and self.historical_data is not None, (
                 "If you reset the environment without giving an instance,"
-                "you need to give the path to the constants JSON and training dataframe in the class constructor,"
+                "you need to give the path to the constants JSON and history dataframe in the class constructor,"
                 "in order to be able to create a random instance."
             )
 
             self.instance = self.create_instance(
                 length_episodes=self.config.length_episodes,
                 constants=self.constants,
-                training_data=self.training_data,
+                historical_data=self.historical_data,
                 config=self.config,
                 initial_row=initial_row,
             )
@@ -295,17 +295,17 @@ class RLEnvironment(gym.Env):
     def create_instance(
             length_episodes: int,
             constants: dict,
-            training_data: pd.DataFrame,
+            historical_data: pd.DataFrame,
             config: RLConfiguration = None,
             initial_row: int | datetime = None,
     ) -> Instance:
 
         """
-        Create an instance from the data frame of training data.
+        Create an instance from the data frame of historical data.
 
         :param length_episodes: Number of time steps of the episodes (including impact buffer)
         :param constants: Dictionary with the constants (e.g. constant physical characteristics of the dams)
-        :param training_data: Data frame with the time-dependent values (e.g. volume of the dams at a particular time)
+        :param historical_data: Data frame with the time-dependent values (e.g. volume of the dams at a particular time)
         :param config: If given, calculates a greater information horizon
             according to the number of time steps the RL agent looks ahead
         :param initial_row: If given, starts the episode in this row or datetime
@@ -334,15 +334,15 @@ class RLEnvironment(gym.Env):
             info_buffer = max(config.num_prices, config.num_incoming_flows, config.num_unreg_flows)
 
         # Required rows from data frame
-        total_rows = len(training_data.index)
+        total_rows = len(historical_data.index)
         min_row = max(channel_last_lags.values())
         max_row = total_rows - length_episodes - info_buffer
 
         # Initial row
         if isinstance(initial_row, datetime):
-            initial_row = training_data.index[
-                training_data["datetime"] == initial_row
-            ].tolist()[0]
+            initial_row = historical_data.index[
+                historical_data["datetime"] == initial_row
+                ].tolist()[0]
         if initial_row is None:
             initial_row = randint(min_row, max_row)
         assert initial_row in range(
@@ -356,40 +356,40 @@ class RLEnvironment(gym.Env):
 
         # Add time-dependent values to the data
 
-        data["datetime"]["start"] = training_data.loc[
+        data["datetime"]["start"] = historical_data.loc[
             initial_row, "datetime"
         ].strftime("%Y-%m-%d %H:%M")
-        data["datetime"]["end_decisions"] = training_data.loc[
+        data["datetime"]["end_decisions"] = historical_data.loc[
             last_row_decisions, "datetime"
         ].strftime("%Y-%m-%d %H:%M")
-        data["datetime"]["end_information"] = training_data.loc[
+        data["datetime"]["end_information"] = historical_data.loc[
             last_row_info, "datetime"
         ].strftime("%Y-%m-%d %H:%M")
 
-        data["incoming_flows"] = training_data.loc[
+        data["incoming_flows"] = historical_data.loc[
             initial_row: last_row_info, "incoming_flow"
-        ].values.tolist()
-        data["energy_prices"] = training_data.loc[
+                                 ].values.tolist()
+        data["energy_prices"] = historical_data.loc[
             initial_row: last_row_info, "price"
-        ].values.tolist()
+                                ].values.tolist()
 
         for order, dam_id in enumerate(dam_ids):
             # Initial volume
             # Not to be confused with the volume at the end of the first time step
-            data["dams"][order]["initial_vol"] = training_data.loc[
+            data["dams"][order]["initial_vol"] = historical_data.loc[
                 initial_row, dam_id + "_vol"
             ]
 
-            initial_lags = training_data.loc[
+            initial_lags = historical_data.loc[
                initial_row - channel_last_lags[dam_id]: initial_row - 1,
                dam_id + "_flow",
-            ].values.tolist()
+                           ].values.tolist()
             initial_lags.reverse()
             data["dams"][order]["initial_lags"] = initial_lags
 
-            data["dams"][order]["unregulated_flows"] = training_data.loc[
+            data["dams"][order]["unregulated_flows"] = historical_data.loc[
                 initial_row: last_row_info, dam_id + "_unreg_flow"
-            ].values.tolist()
+                                                       ].values.tolist()
 
         # Complete instance
         instance = Instance.from_dict(data)

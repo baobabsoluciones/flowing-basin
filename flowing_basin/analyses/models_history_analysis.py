@@ -7,8 +7,8 @@ import numpy as np
 instance = Instance.from_json("../data/rl_training_data/constants.json")
 
 # History
-path_training_data = "../data/rl_training_data/training_data_no_na.pickle"
-df_history = pd.read_pickle(path_training_data)
+path_historical_data = "../data/rl_training_data/historical_data_reliable_only.pickle"
+df_history = pd.read_pickle(path_historical_data)
 print(df_history)
 
 for dam in [1, 2]:

@@ -7,14 +7,14 @@ path_constants = "../data/rl_training_data/constants.json"
 constants = load_json(path_constants)
 inst_const = Instance.from_dict(constants)
 
-path_training_data = "../data/rl_training_data/training_data.pickle"
-training_data = pd.read_pickle(path_training_data)
+path_historical_data = "../data/rl_training_data/historical_data.pickle"
+historical_data = pd.read_pickle(path_historical_data)
 
 # Average incoming flows
 
 avg_in_flow = dict()
-avg_in_flow["dam1"] = training_data["incoming_flow"].mean() + training_data["dam1_unreg_flow"].mean()
-avg_in_flow["dam2"] = training_data["dam1_turbined_flow"].mean() + training_data["dam2_unreg_flow"].mean()
+avg_in_flow["dam1"] = historical_data["incoming_flow"].mean() + historical_data["dam1_unreg_flow"].mean()
+avg_in_flow["dam2"] = historical_data["dam1_turbined_flow"].mean() + historical_data["dam2_unreg_flow"].mean()
 print(avg_in_flow)
 
 # Average time required to fill or empty dam

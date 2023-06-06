@@ -20,7 +20,7 @@ run = RLRun(
 )
 
 start_time = time.perf_counter()
-run.solve(path_agent="../data/RL_model_2023-06-04 21.16.zip")
-run.solution.to_json("../data/RL_model_2023-06-04 21.16_sol_example1.json")
+run.solve(path_agent="../data/RL_model_2023-06-05 14.03.zip")
+run.solution.to_json("../data/RL_model_2023-06-05 14.03_sol_example1.json")
 exec_time = time.perf_counter() - start_time
 print(f"{exec_time=}")

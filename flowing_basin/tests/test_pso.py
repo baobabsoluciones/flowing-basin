@@ -44,8 +44,8 @@ if NEW_SOLUTION:
     print("solver info:", pso.solver_info)
 else:
     # Given solution
-    dir_name = "RL_model_2023-06-04 21.16_sol_example1"
-    pso.solution = Solution.from_json("../data/RL_model_2023-06-04 21.16_sol_example1.json")
+    dir_name = "RL_model_2023-06-05 14.03_sol_example1"
+    pso.solution = Solution.from_json("../data/RL_model_2023-06-05 14.03_sol_example1.json")
 
 print(pso.solution.check())
 print("optimal solution:", pso.solution.data)

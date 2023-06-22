@@ -29,3 +29,4 @@ train.solve(
 )
 train.plot_training_curve()
 plt.show()
+print(train.model.policy)

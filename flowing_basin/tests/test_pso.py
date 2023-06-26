@@ -121,7 +121,7 @@ sol_original = Solution.from_json("../data/output_example1_original-real-decisio
 # print(sol_lp.to_flows())
 # sol_lp.to_json("../data/output_example1_LPmodel_gap0_solution.json")
 
-sol_lp = Solution.from_json("../data/output_instance3_LPmodel_V4.json")
+sol_lp = Solution.from_json("../data/output_instance3_LPmodel.json")
 
 # Optimal solution found by PSO ---- #
 
@@ -137,7 +137,7 @@ sol_lp = Solution.from_json("../data/output_instance3_LPmodel_V4.json")
 # pso.solution = sol_original
 
 path_parent = "../data"
-dir_name = "output_example_instance3_LPModel_V4_Linear"
+dir_name = "output_example_instance3_LPModel_Linear_Old"
 pso.solution = sol_lp
 
 print(pso.solution.check())

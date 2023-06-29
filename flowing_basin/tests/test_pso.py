@@ -100,7 +100,7 @@ pso = PSO(
 # sol_original = Solution.from_flows(decisions, dam_ids=instance.get_ids_of_dams())
 # print(sol_original.check())
 # sol_original.to_json("../data/output_example1_original-real-decisions_solution.json")
-sol_original = Solution.from_json("../data/output_example1_original-real-decisions_solution.json")
+# sol_original = Solution.from_json("../data/output_example1_original-real-decisions_solution.json")
 
 # Study LP model solution ---- #
 # sol_lp = Solution.from_dict(
@@ -121,7 +121,7 @@ sol_original = Solution.from_json("../data/output_example1_original-real-decisio
 # print(sol_lp.to_flows())
 # sol_lp.to_json("../data/output_example1_LPmodel_gap0_solution.json")
 
-sol_lp = Solution.from_json("../data/output_instance3_LPmodel.json")
+sol_lp = Solution.from_json("../data/output_instance3_LPmodel_VolumChange.json")
 
 # Optimal solution found by PSO ---- #
 
@@ -137,7 +137,7 @@ sol_lp = Solution.from_json("../data/output_instance3_LPmodel.json")
 # pso.solution = sol_original
 
 path_parent = "../data"
-dir_name = "output_example_instance3_LPModel_Linear_Old"
+dir_name = "output_example_instance3_LPModel_VolumChange"
 pso.solution = sol_lp
 
 print(pso.solution.check())

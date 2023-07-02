@@ -43,6 +43,22 @@ class Solution(SolutionCore):
 
         return inconsistencies
 
+    def get_exiting_flows(self, idx: str) -> list[float]:
+
+        """
+        Get the assigned flows to the given dam.
+
+        :param idx: ID of the dam in the river basin
+        :return: List indicating the flow exiting the reservoir at each point in time (m3/s)
+        """
+
+        flows = None
+        for el in self.data["dams"]:
+            if el["id"] == idx:
+                flows = el["flows"]
+
+        return flows
+
     @classmethod
     def from_flows(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
 

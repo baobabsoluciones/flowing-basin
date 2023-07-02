@@ -26,7 +26,7 @@ class RLRun(Experiment):
     def solve(self, path_agent: str, options: dict = None) -> dict:
 
         """
-        Load the given model and use it to solve th instance given in the initialization.
+        Load the given model and use it to solve the instance given in the initialization.
         """
 
         model = SAC.load(path_agent)

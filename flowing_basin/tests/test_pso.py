@@ -4,8 +4,10 @@ from datetime import datetime
 import os
 
 EXAMPLE = 3
-NUM_DAMS = 6
+NUM_DAMS = 2
 NUM_DAYS = 1
+K_PARAMETER = 2
+USE_RELVARS = True
 
 # Instance we want to solve
 instance = Instance.from_json(f"../data/input_example{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -26,9 +28,9 @@ config = PSOConfiguration(
         "dam7_dam2copy": 31010.43613642857,
         "dam8_dam1copy": 59627.42324,
     },
-    use_relvars=True,
+    use_relvars=USE_RELVARS,
     max_relvar=1,
-    flow_smoothing=0,
+    flow_smoothing=K_PARAMETER,
     mode="linear"
 )
 pso = PSO(
@@ -39,7 +41,8 @@ pso = PSO(
 # Optimal solution found by PSO ---- #
 
 path_parent = "../data"
-dir_name = f"output_instance{EXAMPLE}_PSO_{NUM_DAMS}dams_{NUM_DAYS}days_{datetime.now().strftime('%Y-%m-%d %H.%M')}_mode={pso.config.mode}_k={pso.config.flow_smoothing}"
+dir_name = f"output_instance{EXAMPLE}_PSO_{NUM_DAMS}dams_{NUM_DAYS}days_{datetime.now().strftime('%Y-%m-%d %H.%M')}" \
+           f"_mode={pso.config.mode}_k={pso.config.flow_smoothing}{'_no_relvars' if not config.use_relvars else ''}"
 options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113}
 status = pso.solve(options, num_particles=200, num_iters=100_000, timeout=8*60)
 print("status:", status)

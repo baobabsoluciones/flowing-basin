@@ -3,12 +3,36 @@ from matplotlib import pyplot as plt
 from matplotlib import dates as mdates
 from datetime import timedelta
 
-INSTANCE = 1
+INSTANCE = 3
 Y_VALUES = "out_flows"
-NO_TEXT = False
+SOLUTION = "PSO_k=2"
+NO_TEXT = True
 
 instance = Instance.from_json(f"../data/input_example{INSTANCE}.json")
-solution = Solution.from_json(f"../data/output_instance{INSTANCE}_LPmodel_V2_2dams_1days.json")
+if SOLUTION == "MILP":
+    solution = Solution.from_json(f"../data/output_instance{INSTANCE}_LPmodel_V2_2dams_1days.json")
+elif SOLUTION == "PSO_k=2":
+    if INSTANCE == 1:
+        solution = Solution.from_json(
+            f"../data/output_instance1_PSO_2dams_1days_2023-05-17 21.36_mode=linear_k=2/solution.json"
+        )
+    elif INSTANCE == 3:
+        solution = Solution.from_json(
+            f"../data/output_instance3_PSO_2dams_1days_2023-05-17 17.56_mode=linear_k=2/solution.json"
+        )
+    else:
+        raise FileNotFoundError()
+elif SOLUTION == "PSO_k=0":
+    if INSTANCE == 1:
+        solution = Solution.from_json(
+            f"../data/output_instance1_PSO_2dams_1days_2023-07-03 16.03_mode=linear_k=0/solution.json"
+        )
+    elif INSTANCE == 3:
+        raise FileNotFoundError()
+    else:
+        raise FileNotFoundError()
+else:
+    raise ValueError()
 
 # Get X axis, time ---- #
 
@@ -104,5 +128,6 @@ elif Y_VALUES == "out_flows":
 else:
     raise ValueError()
 
-plt.savefig(f"instance_plots/instance{INSTANCE}/{Y_VALUES}{'_no_text' if NO_TEXT else ''}.png")
+plt.savefig(f"instance_plots/instance{INSTANCE}/"
+            f"{Y_VALUES}{'_' + SOLUTION if Y_VALUES == 'out_flows' else ''}{'_no_text' if NO_TEXT else ''}.png")
 plt.show()

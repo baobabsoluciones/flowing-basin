@@ -231,14 +231,14 @@ class LPModel(Experiment):
         Parámetro caudal turbinado de apagado de turbina (m3/s): shutdown_flows
         """
         shutdown_flows = {
-            dam_id: self.instance.get_startup_flows_of_power_group(dam_id)
+            dam_id: self.instance.get_shutdown_flows_of_power_group(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
         """
         Parámetro caudal turbinado de arranque de turbina (m3/s): startup_flows
         """
         startup_flows = {
-            dam_id: self.instance.get_shutdown_flows_of_power_group(dam_id)
+            dam_id: self.instance.get_startup_flows_of_power_group(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
 
@@ -262,10 +262,9 @@ class LPModel(Experiment):
         for dam_id in self.instance.get_ids_of_dams():
             ZonaLimitePQ[dam_id] = []
         for i in I:
-            for bp in BreakPointsPQ[i]:
-                if bp != BreakPointsPQ[i][-1]:
-                    if PotBP[i][bp - 1] == PotBP[i][bp]:
-                        ZonaLimitePQ[i].append(bp)
+            for bp in QtBP[i]:
+                if bp in shutdown_flows[i]:
+                    ZonaLimitePQ[i].append(QtBP[i].index(bp)+1)
         # Proceso para eliminar la primera franja
         # (antes del primer arranque) de este parámetro
         for i in I:
@@ -522,14 +521,14 @@ class LPModel(Experiment):
         Parámetro caudal turbinado de apagado de turbina (m3/s): shutdown_flows
         """
         shutdown_flows = {
-            dam_id: self.instance.get_startup_flows_of_power_group(dam_id)
+            dam_id: self.instance.get_shutdown_flows_of_power_group(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
         """
         Parámetro caudal turbinado de arranque de turbina (m3/s): startup_flows
         """
         startup_flows = {
-            dam_id: self.instance.get_shutdown_flows_of_power_group(dam_id)
+            dam_id: self.instance.get_startup_flows_of_power_group(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
 
@@ -556,10 +555,9 @@ class LPModel(Experiment):
         for dam_id in self.instance.get_ids_of_dams():
             ZonaLimitePQ[dam_id] = []
         for i in I:
-            for bp in BreakPointsPQ[i]:
-                if bp != BreakPointsPQ[i][-1]:
-                    if PotBP[i][bp - 1] == PotBP[i][bp]:
-                        ZonaLimitePQ[i].append(bp)
+            for bp in QtBP[i]:
+                if bp in shutdown_flows[i]:
+                    ZonaLimitePQ[i].append(QtBP[i].index(bp) + 1)
         # Proceso para eliminar la primera franja
         # (antes del primer arranque) de este parámetro
         for i in I:

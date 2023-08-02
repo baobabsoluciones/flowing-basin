@@ -52,17 +52,17 @@ for index, row in data_no_duplicates.iterrows():
 data_all_dates.reset_index(inplace=True, drop=True)
 assert dates == data_all_dates.loc[:, "datetime"].tolist()
 print(data_all_dates)
-# data_all_dates.to_pickle("../data/rl_training_data/historical_data_clean.pickle")
+data_all_dates.to_pickle("../data/rl_training_data/historical_data_clean.pickle")
 
 # Split clean historical data into train and test data ---- #
 
 total_rows = data_all_dates.shape[0]
 train_size = int(0.8 * total_rows)
 train_data = data_all_dates[:train_size]
-# train_data.to_pickle("../data/rl_training_data/historical_data_clean_train.pickle")
+train_data.to_pickle("../data/rl_training_data/historical_data_clean_train.pickle")
 print(train_data)
 
 test_data = data_all_dates[train_size:]
 test_data.reset_index(inplace=True, drop=True)
-# test_data.to_pickle("../data/rl_training_data/historical_data_clean_test.pickle")
+test_data.to_pickle("../data/rl_training_data/historical_data_clean_test.pickle")
 print(test_data)

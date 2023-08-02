@@ -23,7 +23,7 @@ train = RLTrain(
     path_test_data="../data/rl_training_data/historical_data_clean_test.pickle"
 )
 train.solve(
-    num_episodes=10000,
+    num_episodes=10,
     path_agent=f"../data/RL_model_{datetime.now().strftime('%Y-%m-%d %H.%M')}.zip",
     periodic_evaluation=True
 )

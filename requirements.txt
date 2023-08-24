@@ -1,1 +1,2 @@
 cornflow-client
+git+https://github.com/RodrigoCastroF/my-pyswarms@master

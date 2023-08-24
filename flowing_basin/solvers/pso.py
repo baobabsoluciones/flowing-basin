@@ -11,16 +11,10 @@ import time
 from datetime import datetime
 import os
 import typing
-
-# import pyswarms as ps
-# from pyswarms.utils.plotters import plot_cost_history
-# from pyswarms.utils.search import RandomSearch
-
-import sys
-sys.path.append(r"C:\Users\rodri\Documents\GitHub\my-pyswarms")
 import my_pyswarms as ps
 from my_pyswarms.utils.plotters import plot_cost_history
 from my_pyswarms.utils.search import RandomSearch
+# Download my_pyswarms with pip install git+https://github.com/RodrigoCastroF/my-pyswarms
 
 @dataclass
 class PSOConfiguration:

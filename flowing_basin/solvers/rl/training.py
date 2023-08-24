@@ -100,6 +100,11 @@ class Training:
 
         for order, dam_id in enumerate(dam_ids):
 
+            # If dam is not dam1 or dam2,
+            # it will be e.g. dam3_dam2copy (a copy of dam2) or dam4_dam1copy (a copy of dam1)
+            if dam_id not in ["dam1", "dam2"]:
+                dam_id = dam_id[dam_id.rfind("_") + 1: dam_id.rfind("copy")]
+
             # Initial volume
             # Not to be confused with the volume at the end of the first time step
             data["dams"][order]["initial_vol"] = training_data.loc[

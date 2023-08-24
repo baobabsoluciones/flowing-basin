@@ -231,7 +231,7 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: Order of the dam in the river basin,
+        :return: Order of the dam in the river basin, from 1 to num_dams
         """
 
         return self.data["dams"][idx]["order"]

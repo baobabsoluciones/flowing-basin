@@ -2,6 +2,9 @@
     "$schema": "http://json-schema.org/schema#",
     "type": "object",
     "properties": {
+        "objective_function": {
+            "type": "number"
+        },
         "dams": {
             "type": "array",
             "items": {

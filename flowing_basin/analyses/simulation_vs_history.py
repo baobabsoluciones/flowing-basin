@@ -45,7 +45,7 @@ START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
 # Variable values in HISTORY ---- #
 
 # Create instance
-path_constants = "../data/rl_training_data/constants.json"
+path_constants = "../data/rl_training_data/constants_2dams.json"
 path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"
 df = pd.read_pickle(path_training_data)
 instance = Training.create_instance(

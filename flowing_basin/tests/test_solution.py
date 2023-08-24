@@ -8,8 +8,10 @@ paths_power_models = {
 }
 river_basin = RiverBasin(instance=instance, paths_power_models=paths_power_models)
 
-solution = Solution.from_json("../data/output_example1_original-real-decisions_solution.json")
+solution = Solution.from_json("../data/output_instance1_LPmodel_V2_2dams_1days.json")
 print(solution.check())
+for dam_id in instance.get_ids_of_dams():
+    print(solution.get_exiting_flows(dam_id))
 
-river_basin.deep_update_flows(solution.to_flows())
-print(river_basin.history)
+# river_basin.deep_update_flows(solution.to_flows())
+# print(river_basin.history)

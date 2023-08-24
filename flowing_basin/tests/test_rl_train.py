@@ -18,7 +18,7 @@ config = RLConfiguration(
 )
 train = RLTrain(
     config=config,
-    path_constants="../data/rl_training_data/constants.json",
+    path_constants="../data/rl_training_data/constants_2dams.json",
     path_train_data="../data/rl_training_data/historical_data_clean_train.pickle",
     path_test_data="../data/rl_training_data/historical_data_clean_test.pickle"
 )

@@ -21,7 +21,7 @@ config = RLConfiguration(
 )
 env1 = RLEnvironment(
     config=config,
-    path_constants="../data/rl_training_data/constants.json",
+    path_constants="../data/rl_training_data/constants_2dams.json",
     path_historical_data="../data/rl_training_data/historical_data_clean.pickle",
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
@@ -91,7 +91,7 @@ print(env1.river_basin.history.to_string())
 # env2 = RLEnvironment(
 #     instance=instance2,
 #     config=config,
-#     path_constants="../data/rl_training_data/constants.json",
+#     path_constants="../data/rl_training_data/constants_2dams.json",
 #     path_historical_data="../data/rl_training_data/historical_data.pickle",
 # )
 

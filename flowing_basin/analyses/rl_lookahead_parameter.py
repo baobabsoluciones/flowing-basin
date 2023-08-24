@@ -3,7 +3,7 @@ from cornflow_client.core.tools import load_json
 from math import ceil
 import pandas as pd
 
-path_constants = "../data/rl_training_data/constants.json"
+path_constants = "../data/rl_training_data/constants_2dams.json"
 constants = load_json(path_constants)
 inst_const = Instance.from_dict(constants)
 

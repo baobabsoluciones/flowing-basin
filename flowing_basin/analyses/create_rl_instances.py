@@ -5,7 +5,7 @@ from datetime import datetime
 
 NUM_STEPS_LOOKAHEAD = 16
 
-path_constants = "../data/rl_training_data/constants.json"
+path_constants = "../data/rl_training_data/constants_2dams.json"
 constants = load_json(path_constants)
 
 path_historical_data = "../data/rl_training_data/historical_data.pickle"

@@ -1,13 +1,14 @@
-from flowing_basin.solvers.rl import Training
+from flowing_basin.solvers.rl import RLEnvironment
 import pandas as pd
 from datetime import datetime
 from cornflow_client.core.tools import load_json
 
 
 START = datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M")
-PATH_TRAINING_DATA = "../data/rl_training_data/training_data.pickle"
-TRAINING_DATA = pd.read_pickle(PATH_TRAINING_DATA)
 EXAMPLE_NUMBER = 1
+
+path_historical_data = "../data/rl_training_data/historical_data.pickle"
+historical_data = pd.read_pickle(path_historical_data)
 
 for num_dams in [4]:
 
@@ -15,10 +16,10 @@ for num_dams in [4]:
 
         length_episode = num_days * 24 * 4 + 3  # One day (+ impact buffer)
         path_constants = f"../data/rl_training_data/constants_{num_dams}dams.json"
-        instance = Training.create_instance(
+        instance = RLEnvironment.create_instance(
             length_episodes=length_episode,
             constants=load_json(path_constants),
-            training_data=TRAINING_DATA,
+            historical_data=historical_data,
             initial_row=START,
         )
 

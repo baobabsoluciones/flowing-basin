@@ -3,6 +3,7 @@ from flowing_basin.solvers import PSOConfiguration, PSO
 from datetime import datetime
 import os
 
+NEW_SOLUTION = False
 EXAMPLE = 3
 NUM_DAMS = 2
 NUM_DAYS = 1
@@ -28,30 +29,36 @@ config = PSOConfiguration(
         "dam7_dam2copy": 31010.43613642857,
         "dam8_dam1copy": 59627.42324,
     },
-    use_relvars=USE_RELVARS,
+    use_relvars=USE_RELVARS if NEW_SOLUTION else False,
     max_relvar=1,
-    flow_smoothing=K_PARAMETER,
-    mode="linear"
+    flow_smoothing=K_PARAMETER if NEW_SOLUTION else 0,
+    mode="linear",
+    num_particles=200,
+    num_iterations=100_000,
+    timeout=8*60,
+    cognitive_coefficient=2.905405139888455,
+    social_coefficient=0.4232260541405988,
+    inertia_weight=0.4424113459034113
 )
 pso = PSO(
     instance=instance,
     config=config,
 )
 
-# Optimal solution found by PSO ---- #
+# Solution ---- #
 
 path_parent = "../data"
-dir_name = f"output_instance{EXAMPLE}_PSO_{NUM_DAMS}dams_{NUM_DAYS}days_{datetime.now().strftime('%Y-%m-%d %H.%M')}" \
-           f"_mode={pso.config.mode}_k={pso.config.flow_smoothing}{'_no_relvars' if not config.use_relvars else ''}"
-options = {'c1': 2.905405139888455, 'c2': 0.4232260541405988, 'w': 0.4424113459034113}
-status = pso.solve(options, num_particles=200, num_iters=100_000, timeout=8*60)
-print("status:", status)
-print("solver info:", pso.solver_info)
-
-# sol_lp = Solution.from_json(f"../data/output_instance{EXAMPLE}_LPmodel_V2_{NUM_DAMS}dams_{NUM_DAYS}days.json")
-# path_parent = "../data"
-# dir_name = f"output_instance{EXAMPLE}_LPmodel_V2_{NUM_DAMS}dams_{NUM_DAYS}days"
-# pso.solution = sol_lp
+if NEW_SOLUTION:
+    # Optimal solution found by PSO
+    dir_name = f"output_instance{EXAMPLE}_PSO_{NUM_DAMS}dams_{NUM_DAYS}days_{datetime.now().strftime('%Y-%m-%d %H.%M')}" \
+               f"_mode={pso.config.mode}_k={pso.config.flow_smoothing}{'_no_relvars' if not config.use_relvars else ''}"
+    status = pso.solve()
+    print("status:", status)
+    print("solver info:", pso.solver_info)
+else:
+    # Given solution
+    dir_name = "RL_model_2023-08-02 18.46_sol_example1"
+    pso.solution = Solution.from_json("../data/RL_model_2023-08-02 18.46_sol_example1.json")
 
 sol_inconsistencies = pso.solution.check()
 if sol_inconsistencies:

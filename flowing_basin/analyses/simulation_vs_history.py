@@ -1,5 +1,5 @@
 from flowing_basin.tools import RiverBasin
-from flowing_basin.solvers.rl import Training
+from flowing_basin.solvers.rl import RLEnvironment
 from cornflow_client.core.tools import load_json
 import pandas as pd
 import numpy as np
@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 import os
 
 # Path and extension in which to save the generated graphs
-SAVE_PLOT = True
+SAVE_PLOT = False
 PATH_START = "simulation_vs_history_graphs/sim_v_hist_NO-NA_"
 PATH_END = ""
 EXTENSION = ".png"
@@ -36,8 +36,8 @@ START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
 # - Like in 2021-09-29 01:00, in this episode the real volume of dam2 keeps steady,
 #   when it should actually be increasing with the unregulated and turbined flow it gets (as seen in our model)
 #   Something similar (although less striking) happens with the volume of dam1
-# NOTE: These problems arise both with training_data.pickle
-# and with training_data_NO_NA.pickle (in which rows with unknown unregulated flows were eliminated and not set to 0)
+# NOTE: These problems arise both with historical_data.pickle
+# and with historical_data_reliable_only.pickle (in which rows with unknown unregulated flows were eliminated and not set to 0)
 # Although the inconsistency problem is less often (actually, very uncommon) with the second dataset
 
 # ---- CODE ---- #
@@ -46,12 +46,12 @@ START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
 
 # Create instance
 path_constants = "../data/rl_training_data/constants_2dams.json"
-path_training_data = "../data/rl_training_data/training_data_NO_NA.pickle"
+path_training_data = "../data/rl_training_data/historical_data_reliable_only.pickle"
 df = pd.read_pickle(path_training_data)
-instance = Training.create_instance(
+instance = RLEnvironment.create_instance(
     length_episodes=LENGTH_EPISODE,
     constants=load_json(path_constants),
-    training_data=df,
+    historical_data=df,
     initial_row=START,
 )
 print(instance.data)

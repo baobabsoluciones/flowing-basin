@@ -248,10 +248,22 @@ class RiverBasin:
 
         return np.array([dam.channel.power_group.acc_income for dam in self.dams]).sum(axis=0)
 
+    def get_num_startups(self) -> np.ndarray:
+
+        """
+        Get the number of startups that happened in all dams in the current time step.
+
+        :return:
+             Array of size num_scenarios with
+             the current number of startups in every scenario
+        """
+
+        return np.array([dam.channel.power_group.num_startups for dam in self.dams]).sum(axis=0)
+
     def get_acc_num_startups(self) -> np.ndarray:
 
         """
-        Get the accumulated number of startups of both dams
+        Get the accumulated number of startups of all dams
         throughout all time steps so far (up to the decision horizon).
 
         :return:
@@ -260,6 +272,18 @@ class RiverBasin:
         """
 
         return np.array([dam.channel.power_group.acc_num_startups for dam in self.dams]).sum(axis=0)
+
+    def get_num_times_in_limit(self) -> np.ndarray:
+
+        """
+        Get the number of dams that have a turbined flow in a limit zone.
+
+        :return:
+             Array of size num_scenarios with
+             the current number of turbined flows in limit in every scenario
+        """
+
+        return np.array([dam.channel.power_group.num_times_in_limit for dam in self.dams]).sum(axis=0)
 
     def get_acc_num_times_in_limit(self) -> np.ndarray:
 

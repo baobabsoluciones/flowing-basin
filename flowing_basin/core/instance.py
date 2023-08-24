@@ -43,8 +43,18 @@ class Instance(InstanceCore):
 
         # Number of time steps ---- #
 
-        # Get number of time steps
-        num_time_steps = self.get_largest_impact_horizon()
+        # Get number of time steps for which we need data (information horizon)
+        num_time_steps = self.get_information_horizon()
+
+        # The largest impact horizon must be lower than the information horizon
+        largest_impact_horizon = self.get_largest_impact_horizon()
+        if largest_impact_horizon > num_time_steps:
+            inconsistencies.update(
+                {
+                    "The largest impact horizon is greater than the information horizon":
+                        f"{largest_impact_horizon} vs. {num_time_steps}"
+                }
+            )
 
         # Calculate the number of each time-dependent variable
         num_time_dep_var_values = {
@@ -206,6 +216,26 @@ class Instance(InstanceCore):
         #  to get the max delay of each channel, and not the min?
 
         return decision_horizon + max_lag
+
+    def get_information_horizon(self) -> int:
+
+        """
+        Get the number of time steps up to the information horizon
+        (number of time steps in which we need to know the price, incoming flow, and unregulated flow).
+
+        This horizon is, by default, equal to the largest impact horizon,
+        but may need to be larger with some solvers (RL).
+
+        :return: Number of time steps up to the information horizon
+        """
+
+        start, _ = self.get_start_end_datetimes()
+        try:
+            end_info = datetime.strptime(self.data["datetime"]["end_information"], "%Y-%m-%d %H:%M")
+            difference = end_info - start
+            return int(difference.total_seconds() // self.get_time_step_seconds() + 1)
+        except KeyError:
+            return self.get_largest_impact_horizon()
 
     def get_num_dams(self) -> int:
 
@@ -381,10 +411,12 @@ class Instance(InstanceCore):
         :return: Unregulated flow that enters the dam (flow that comes from the river) in all of these time steps (m3/s)
         """
 
-        if time >= self.get_largest_impact_horizon():
+        information_horizon = self.get_information_horizon()
+        if time + num_steps - 1 >= information_horizon:
             warnings.warn(
-                f"Tried to access unregulated flow for {time=}, "
-                f"which is equal or greater than {self.get_largest_impact_horizon()=}. "
+                f"Tried to access unregulated flow for "
+                f"time + num_steps - 1 = {time} + {num_steps} - 1 = {time + num_steps - 1}, "
+                f"which is equal or greater than {information_horizon=}. "
                 f"None was returned"
             )
             return None
@@ -441,10 +473,12 @@ class Instance(InstanceCore):
         :return: FLow entering the first dam in all of these time steps (m3/s)
         """
 
-        if time >= self.get_largest_impact_horizon():
+        information_horizon = self.get_information_horizon()
+        if time + num_steps - 1 >= information_horizon:
             warnings.warn(
-                f"Tried to access incoming flow for {time=}, "
-                f"which is equal or greater than {self.get_largest_impact_horizon()=}. "
+                f"Tried to access incoming flow for "
+                f"time + num_steps - 1 = {time} + {num_steps} - 1 = {time + num_steps - 1}, "
+                f"which is equal or greater than {information_horizon=}. "
                 f"None was returned"
             )
             return None
@@ -484,10 +518,11 @@ class Instance(InstanceCore):
         :return: Price of energy in all of these time steps (EUR/MWh)
         """
 
-        if time >= self.get_largest_impact_horizon():
+        information_horizon = self.get_information_horizon()
+        if time + num_steps - 1 >= information_horizon:
             warnings.warn(
-                f"Tried to access price for {time=}, "
-                f"which is equal or greater than {self.get_largest_impact_horizon()=}. "
+                f"Tried to access price for time + num_steps - 1 = {time} + {num_steps} - 1 = {time + num_steps - 1}, "
+                f"which is equal or greater than {information_horizon=}. "
                 f"None was returned"
             )
             return None
@@ -497,3 +532,11 @@ class Instance(InstanceCore):
             prices = prices[0]
 
         return prices
+
+    def get_largest_price(self) -> float:
+
+        """
+        Get the largest price value for the instance.
+        """
+
+        return max(self.data["energy_prices"])

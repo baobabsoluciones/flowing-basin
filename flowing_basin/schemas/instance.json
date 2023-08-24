@@ -13,6 +13,9 @@
                 },
                 "end_decisions": {
                     "type": "string"
+                },
+                "end_information": {
+                    "type": "string"
                 }
             },
             "required": [

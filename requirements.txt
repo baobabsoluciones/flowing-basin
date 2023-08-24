@@ -1,2 +1,10 @@
 cornflow-client
 git+https://github.com/RodrigoCastroF/my-pyswarms@master
+numpy~=1.25.2
+pytups~=0.86.2
+matplotlib~=3.7.2
+lightgbm~=4.0.0
+pandas~=2.0.3
+scipy~=1.11.1
+pyswarms~=1.3.0
+gymnasium~=0.28.1

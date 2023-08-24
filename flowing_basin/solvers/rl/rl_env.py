@@ -2,7 +2,7 @@ from flowing_basin.core import Instance, Configuration
 from flowing_basin.tools import RiverBasin
 from cornflow_client.core.tools import load_json
 import numpy as np
-import gym
+import gymnasium as gym
 import pandas as pd
 from datetime import datetime
 import pickle
@@ -103,7 +103,11 @@ class RLEnvironment(gym.Env):
         # Initialize these variables
         self._reset_variables()
 
-    def reset(self, instance: Instance = None, initial_row: int | datetime = None) -> np.array:
+    def reset(
+            self, instance: Instance = None, initial_row: int | datetime = None, seed=None, options=None
+    ) -> tuple[np.array, dict]:
+
+        super().reset(seed=seed)
 
         self._reset_instance(instance, initial_row)
         self.river_basin.reset(self.instance)
@@ -115,7 +119,7 @@ class RLEnvironment(gym.Env):
         # info_horizon = self.instance.get_information_horizon()
         # print(f"New episode's information horizon: {info_horizon}")
 
-        return self.get_observation()
+        return self.get_observation(), dict()
 
     def _reset_instance(self, instance: Instance = None, initial_row: int | datetime = None):
 
@@ -269,7 +273,7 @@ class RLEnvironment(gym.Env):
 
         return reward
 
-    def step(self, action: np.array, normalize_obs: bool = True) -> tuple[np.array, float, bool, dict]:
+    def step(self, action: np.array, normalize_obs: bool = True) -> tuple[np.array, float, bool, bool, dict]:
 
         """
         Updates the river basin with the given action
@@ -289,7 +293,7 @@ class RLEnvironment(gym.Env):
         reward = self.get_reward()
         done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
-        return next_obs, reward, done, dict()
+        return next_obs, reward, done, False, dict()
 
     @staticmethod
     def create_instance(

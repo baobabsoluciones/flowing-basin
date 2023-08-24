@@ -34,7 +34,7 @@ class RLRun(Experiment):
         done = False
         while not done:
             action, _states = model.predict(obs, deterministic=True)
-            obs, reward, done, _ = self.env.step(action)
+            obs, reward, done, _, _ = self.env.step(action)
 
         self.solution = Solution.from_flows(
             self.env.river_basin.all_past_clipped_flows, dam_ids=self.instance.get_ids_of_dams()

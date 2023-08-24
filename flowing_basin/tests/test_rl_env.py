@@ -50,7 +50,7 @@ actions = np.array([
 ])
 for i, action in enumerate(actions):
     print(f">>>> decision {i}")
-    next_obs, reward, done, _ = env1.step(action)
+    next_obs, reward, done, _, _ = env1.step(action)
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
     print("observation (not normalized):", env1.get_observation(normalize=False))
@@ -78,7 +78,7 @@ padding = np.array(
 decisionsVA = np.concatenate([decisionsVA, padding])
 for i, decision in enumerate(decisionsVA):
     print(f">>>> decision {i}")
-    next_obs, reward, done, _ = env1.step(decision, normalize_obs=False)
+    next_obs, reward, done, _, _ = env1.step(decision, normalize_obs=False)
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
     print("observation (not normalized):", next_obs)
@@ -129,5 +129,5 @@ print(env1.river_basin.history.to_string())
 # print(env1.get_observation())
 
 # CHECK ENVS WITH SB3
-# check_env(env1)
+check_env(env1)
 # check_env(env2)

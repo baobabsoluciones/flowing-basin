@@ -16,11 +16,13 @@ from my_pyswarms.utils.plotters import plot_cost_history
 from my_pyswarms.utils.search import RandomSearch
 # Download my_pyswarms with pip install git+https://github.com/RodrigoCastroF/my-pyswarms
 
+
 @dataclass(kw_only=True)
 class PSOConfiguration(Configuration):  # noqa
 
     num_particles: int
-    num_iterations: int
+    max_iterations: int
+    max_time: int
 
     # PySwarms optimizer options
     cognitive_coefficient: float
@@ -267,7 +269,7 @@ class PSO(Experiment):
         return self.objective_function_env()
 
     def optimize(
-        self, options: dict[str, float], num_particles: int, num_iters: int, timeout: int = None
+        self, options: dict[str, float], num_particles: int, max_iters: int, max_time: int = None
     ) -> tuple[float, np.ndarray]:
 
         """
@@ -276,7 +278,8 @@ class PSO(Experiment):
          - "c2": social coefficient
          - "w": inertia weight
         :param num_particles: Number of particles of the swarm
-        :param num_iters: Number of iterations with which to run the optimization algorithm
+        :param max_iters: Max number of iterations with which to run the PSO
+        :param max_time: Max number of seconds with which to run the PSO
         :return: Best objective function value found
         """
 
@@ -291,7 +294,7 @@ class PSO(Experiment):
             "is_relvars": self.config.use_relvars
         }  # Argument of `self.calculate_objective_function`
         cost, position = optimizer.optimize(
-            self.calculate_objective_function, iters=num_iters, **kwargs, max_time=timeout
+            self.calculate_objective_function, iters=max_iters, **kwargs, max_time=max_time
         )
 
         self.objective_function_history = optimizer.cost_history
@@ -314,7 +317,8 @@ class PSO(Experiment):
             "w": self.config.inertia_weight
         }
         cost, optimal_particle = self.optimize(
-            options=ps_options, num_particles=self.config.num_particles, num_iters=self.config.num_iterations
+            options=ps_options, num_particles=self.config.num_particles,
+            max_iters=self.config.max_iterations, max_time=self.config.max_time
         )
         end_time = time.perf_counter()
         execution_time = end_time - start_time

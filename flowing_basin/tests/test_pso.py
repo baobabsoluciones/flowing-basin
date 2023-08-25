@@ -11,7 +11,7 @@ K_PARAMETER = 2
 USE_RELVARS = True
 
 # Instance we want to solve
-instance = Instance.from_json(f"../data/input_example{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
+instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
 
 # PSO object to find the solution
 config = PSOConfiguration(
@@ -35,7 +35,7 @@ config = PSOConfiguration(
     mode="linear",
     num_particles=200,
     max_iterations=100_000,
-    max_time=8*60,
+    max_time=10,  # =8*60
     cognitive_coefficient=2.905405139888455,
     social_coefficient=0.4232260541405988,
     inertia_weight=0.4424113459034113
@@ -47,18 +47,17 @@ pso = PSO(
 
 # Solution ---- #
 
-path_parent = "../data"
+path_parent = "../solutions"
 if NEW_SOLUTION:
     # Optimal solution found by PSO
-    dir_name = f"output_instance{EXAMPLE}_PSO_{NUM_DAMS}dams_{NUM_DAYS}days_{datetime.now().strftime('%Y-%m-%d %H.%M')}" \
-               f"_mode={pso.config.mode}_k={pso.config.flow_smoothing}{'_no_relvars' if not config.use_relvars else ''}"
+    dir_name = f"instance{EXAMPLE}_PSO_{NUM_DAMS}dams_{NUM_DAYS}days_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
     status = pso.solve()
     print("status:", status)
     print("solver info:", pso.solver_info)
 else:
     # Given solution
-    dir_name = "RL_model_2023-08-02 18.46_sol_example1"
-    pso.solution = Solution.from_json("../data/RL_model_2023-08-02 18.46_sol_example1.json")
+    pso.solution = Solution.from_json("../solutions/instance3_LPmodel_2dams_1days_time2023-08-25_13-04.json")
+    dir_name = "instance3_LPmodel_2dams_1days_time2023-08-25_13-04"
 
 sol_inconsistencies = pso.solution.check()
 if sol_inconsistencies:

@@ -7,7 +7,7 @@ from cornflow_client.core.tools import load_json
 START = datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M")
 EXAMPLE_NUMBER = 1
 
-path_historical_data = "../data/rl_training_data/historical_data.pickle"
+path_historical_data = "../data/history/historical_data.pickle"
 historical_data = pd.read_pickle(path_historical_data)
 
 for num_dams in [4]:
@@ -15,7 +15,7 @@ for num_dams in [4]:
     for num_days in [1]:
 
         length_episode = num_days * 24 * 4 + 3  # One day (+ impact buffer)
-        path_constants = f"../data/rl_training_data/constants_{num_dams}dams.json"
+        path_constants = f"../data/constants/constants_{num_dams}dams.json"
         instance = RLEnvironment.create_instance(
             length_episodes=length_episode,
             constants=load_json(path_constants),
@@ -27,4 +27,4 @@ for num_dams in [4]:
         if inconsistencies:
             raise Exception(f"There are inconsistencies in the data: {inconsistencies}")
 
-        instance.to_json(f"../data/input_example{EXAMPLE_NUMBER}_{num_dams}dams_{num_days}days.json")
+        instance.to_json(f"instances_big/instance{EXAMPLE_NUMBER}_{num_dams}dams_{num_days}days.json")

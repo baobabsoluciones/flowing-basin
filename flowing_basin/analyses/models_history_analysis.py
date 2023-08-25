@@ -4,10 +4,10 @@ import pandas as pd
 import numpy as np
 
 # Instance
-instance = Instance.from_json("../data/rl_training_data/constants_2dams.json")
+instance = Instance.from_json("../data/constants/constants_2dams.json")
 
 # History
-path_historical_data = "../data/rl_training_data/historical_data_reliable_only.pickle"
+path_historical_data = "../data/history/historical_data_reliable_only.pickle"
 df_history = pd.read_pickle(path_historical_data)
 print(df_history)
 

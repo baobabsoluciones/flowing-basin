@@ -18,13 +18,13 @@ config = RLConfiguration(
 )
 train = RLTrain(
     config=config,
-    path_constants="../data/rl_training_data/constants_2dams.json",
-    path_train_data="../data/rl_training_data/historical_data_clean_train.pickle",
-    path_test_data="../data/rl_training_data/historical_data_clean_test.pickle"
+    path_constants="../data/constants/constants_2dams.json",
+    path_train_data="../data/history/historical_data_clean_train.pickle",
+    path_test_data="../data/history/historical_data_clean_test.pickle"
 )
 train.solve(
     num_episodes=10,
-    path_agent=f"../data/RL_model_{datetime.now().strftime('%Y-%m-%d %H.%M')}.zip",
+    path_agent=f"../solutions/RL_model_{datetime.now().strftime('%Y-%m-%d %H.%M')}.zip",
     periodic_evaluation=True
 )
 train.plot_training_curve()

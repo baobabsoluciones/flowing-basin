@@ -131,7 +131,7 @@ def test_river_basin(
 
 if __name__ == "__main__":
 
-    instance = Instance.from_json("../data/input_example1.json")
+    instance = Instance.from_json("../instances/instances_base/instance1.json")
     river_basin = RiverBasin(instance=instance, mode="linear")
 
     # print("---- SCENARIO A ----")

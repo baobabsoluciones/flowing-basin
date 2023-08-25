@@ -2,7 +2,7 @@ from flowing_basin.core import Instance
 from flowing_basin.tools import PowerGroup
 import numpy as np
 
-instance = Instance.from_json("../data/input_example1.json")
+instance = Instance.from_json("../instances/instances_base/instance1.json")
 paths_power_models = {
     "dam1": "../ml_models/model_E1.sav",
     "dam2": "../ml_models/model_E2.sav",

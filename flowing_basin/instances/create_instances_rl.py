@@ -5,10 +5,10 @@ from datetime import datetime
 
 NUM_STEPS_LOOKAHEAD = 16
 
-path_constants = "../data/rl_training_data/constants_2dams.json"
+path_constants = "../data/constants/constants_2dams.json"
 constants = load_json(path_constants)
 
-path_historical_data = "../data/rl_training_data/historical_data.pickle"
+path_historical_data = "../data/history/historical_data.pickle"
 historical_data = pd.read_pickle(path_historical_data)
 
 config = RLConfiguration(
@@ -29,4 +29,4 @@ instance = RLEnvironment.create_instance(
     config=config,
     initial_row=datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M"),
 )
-instance.to_json(f"../data/input_example1_expanded{NUM_STEPS_LOOKAHEAD}steps.json")
+instance.to_json(f"instances_rl/instance1_expanded{NUM_STEPS_LOOKAHEAD}steps.json")

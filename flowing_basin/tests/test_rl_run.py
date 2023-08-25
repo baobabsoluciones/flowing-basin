@@ -16,11 +16,11 @@ config = RLConfiguration(
 )
 run = RLRun(
     config=config,
-    instance=Instance.from_json(f"../data/input_example1_expanded{NUM_STEPS_LOOKAHEAD}steps.json")
+    instance=Instance.from_json(f"../instances/instances_rl/instance1_expanded{NUM_STEPS_LOOKAHEAD}steps.json")
 )
 
 start_time = time.perf_counter()
-run.solve(path_agent="../data/RL_model_2023-08-02 18.46.zip")
-run.solution.to_json("../data/RL_model_2023-08-02 18.46_sol_example1.json")
+run.solve(path_agent="../solutions/RL_model_2023-08-02 18.46.zip")
+run.solution.to_json("../solutions/RL_model_2023-08-02 18.46_sol_example1.json")
 exec_time = time.perf_counter() - start_time
 print(f"{exec_time=}")

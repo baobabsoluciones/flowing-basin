@@ -8,7 +8,7 @@ paths_power_model = "../ml_models/model_E2.sav"
 power_model = PowerGroup.get_nonlinear_power_model(paths_power_model)
 
 # Get necessary data of second dam
-instance = Instance.from_json("../data/rl_training_data/constants_2dams.json")
+instance = Instance.from_json("../data/constants/constants_2dams.json")
 turbined_flow_points = instance.get_turbined_flow_obs_for_power_group("dam2")
 max_flow = instance.get_max_flow_of_channel("dam2")
 

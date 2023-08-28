@@ -33,12 +33,26 @@ config = HeuristicConfiguration(
 heuristic = Heuristic(config=config, instance=instance)
 
 # Sorted prices
-prices = instance.get_all_prices()
-prices_sorted = [prices[time_step] for time_step in heuristic.time_steps_sorted]
-plt.plot(prices_sorted, color='r')
-plt.show()
+# prices = instance.get_all_prices()
+# prices_sorted = [prices[time_step] for time_step in heuristic.sort_time_steps()]
+# plt.plot(prices_sorted, color='r')
+# plt.show()
 
 # Available volume in dam1
-available_volumes = heuristic.calculate_available_volume_for_dam("dam1")
-plt.plot(available_volumes, color='b')
+# available_volumes = heuristic.calculate_available_volumes("dam1")
+# plt.plot(available_volumes, color='b')
+# plt.show()
+
+# Plot solution for dam1
+assigned_flows, volumes = heuristic.solve_for_dam("dam1")
+fig, ax = plt.subplots(1, 1)
+twinax = ax.twinx()
+ax.plot(volumes, color='b', label="Available volume")
+ax.set_xlabel("Time (15min)")
+ax.set_ylabel("Volume (m3)")
+ax.legend(loc='upper left', bbox_to_anchor=(1.1, 1))
+twinax.plot(instance.get_all_prices(), color='r', label="Price")
+twinax.plot(assigned_flows, color='g', label="Flow")
+twinax.set_ylabel("Flow (m3/s), Price (€)")
+twinax.legend(loc='upper left', bbox_to_anchor=(1.1, 0.9))
 plt.show()

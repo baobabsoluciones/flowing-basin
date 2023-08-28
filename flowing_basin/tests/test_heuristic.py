@@ -26,7 +26,8 @@ config = HeuristicConfiguration(
         "dam7_dam2copy": 31010.43613642857,
         "dam8_dam1copy": 59627.42324,
     },
-    flow_smoothing=K_PARAMETER
+    flow_smoothing=K_PARAMETER,
+    mode="linear"
 )
 
 # Solver
@@ -44,10 +45,10 @@ heuristic = Heuristic(config=config, instance=instance)
 # plt.show()
 
 # Plot solution for dam1
-assigned_flows, volumes = heuristic.solve_for_dam("dam1")
+assigned_flows, predicted_volumes = heuristic.solve_for_dam("dam1")
 fig, ax = plt.subplots(1, 1)
 twinax = ax.twinx()
-ax.plot(volumes, color='b', label="Available volume")
+ax.plot(predicted_volumes, color='b', label="Predicted volume")
 ax.set_xlabel("Time (15min)")
 ax.set_ylabel("Volume (m3)")
 ax.legend(loc='upper left', bbox_to_anchor=(1.1, 1))
@@ -55,4 +56,15 @@ twinax.plot(instance.get_all_prices(), color='r', label="Price")
 twinax.plot(assigned_flows, color='g', label="Flow")
 twinax.set_ylabel("Flow (m3/s), Price (€)")
 twinax.legend(loc='upper left', bbox_to_anchor=(1.1, 0.9))
+plt.show()
+
+# Check solution
+turbined_flows, actual_flows, actual_volumes = heuristic.turbined_flows_from_assigned_flows("dam1", assigned_flows)
+# Compare volumes:
+plt.plot(predicted_volumes, color='b', label="Predicted volume")
+plt.plot(actual_volumes, color='pink', label="Actual volume")
+plt.show()
+# Compare flows:
+plt.plot(assigned_flows, color='g', label="Predicted volume")
+plt.plot(actual_flows, color='pink', label="Actual volume")
 plt.show()

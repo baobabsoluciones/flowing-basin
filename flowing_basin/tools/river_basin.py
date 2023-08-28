@@ -20,14 +20,6 @@ class RiverBasin:
         paths_power_models: dict[str, str] = None,
     ):
 
-        valid_modes = {"linear", "nonlinear"}
-        if mode not in valid_modes:
-            raise ValueError(f"Invalid value for 'mode': {mode}. Allowed values are {valid_modes}")
-        if mode == "nonlinear" and paths_power_models is None:
-            raise TypeError(
-                "Parameter 'paths_power_models' is required when 'mode' is 'nonlinear', but it was not given."
-            )
-
         # Number of scenarios (e.g. candidate solutions) for which to do calculations at the same time
         self.num_scenarios = num_scenarios
 

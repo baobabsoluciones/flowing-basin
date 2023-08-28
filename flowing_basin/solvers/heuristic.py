@@ -1,11 +1,19 @@
 from flowing_basin.core import Instance, Solution, Experiment, Configuration
+from flowing_basin.tools import Dam
 from dataclasses import dataclass
+import numpy as np
 
 
 @dataclass(kw_only=True)
 class HeuristicConfiguration(Configuration):
 
     flow_smoothing: int = 0
+    mode: str = "nonlinear"
+
+    def __post_init__(self):
+        valid_modes = {"linear", "nonlinear"}
+        if self.mode not in valid_modes:
+            raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
 
 class Heuristic(Experiment):
@@ -21,12 +29,16 @@ class Heuristic(Experiment):
         self,
         instance: Instance,
         config: HeuristicConfiguration,
+        paths_power_models: dict[str, str] = None,
         solution: Solution = None,
     ):
 
         super().__init__(instance=instance, solution=solution)
         if solution is None:
             self.solution = None
+
+        self.config = config
+        self.paths_power_models = paths_power_models
 
     def sort_time_steps(self) -> list[int]:
 
@@ -145,7 +157,48 @@ class Heuristic(Experiment):
         )
 
         min_vol = self.instance.get_min_vol_of_dam(dam_id)
-        predicted_volumes = [available_vol + min_vol for available_vol in available_volumes]
+        predicted_volumes = [
+            available_vol - self.volume_from_flow(assigned_flow) + min_vol
+            for available_vol, assigned_flow in zip(available_volumes, assigned_flows)
+        ]
 
         return assigned_flows, predicted_volumes
+
+    def turbined_flows_from_assigned_flows(
+            self, dam_id: str, assigned_flows: list[float]
+    ) -> tuple[list[float], list[float], list[float]]:
+
+        """
+        Obtain the turbined flows (m3/s) produced by the dam for the given assigned flows,
+        as well as the actual exiting flows (m3/s) and volume (m3) with these assigned flows
+        """
+
+        dam = Dam(
+            idx=dam_id,
+            instance=self.instance,
+            paths_power_models=self.paths_power_models,
+            flow_smoothing=self.config.flow_smoothing,
+            num_scenarios=1,
+            mode=self.config.mode,
+        )
+
+        turbined_flows = []
+        actual_exiting_flows = []
+        actual_volumes = []
+
+        for time_step in range(self.instance.get_largest_impact_horizon()):
+
+            turbined_flow = dam.update(
+                price=self.instance.get_price(time_step),
+                flow_out=np.array([assigned_flows[time_step]]),
+                incoming_flow=self.instance.get_incoming_flow(time_step),
+                unregulated_flow=self.instance.get_unregulated_flow_of_dam(time_step, dam.idx),
+                turbined_flow_of_preceding_dam=np.array([0]),
+            )
+
+            turbined_flows.append(turbined_flow.item())
+            actual_exiting_flows.append(dam.flow_out_clipped2.item())
+            actual_volumes.append(dam.volume.item())
+
+        return turbined_flows, actual_exiting_flows, actual_volumes
 

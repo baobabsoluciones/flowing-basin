@@ -34,18 +34,18 @@ config = HeuristicConfiguration(
 heuristic = Heuristic(config=config, instance=instance)
 
 # Sorted prices
-# prices = instance.get_all_prices()
-# prices_sorted = [prices[time_step] for time_step in heuristic.sort_time_steps()]
-# plt.plot(prices_sorted, color='r')
-# plt.show()
+prices = instance.get_all_prices()
+prices_sorted = [prices[time_step] for time_step in heuristic.sort_time_steps()]
+plt.plot(prices_sorted, color='r')
+plt.show()
 
 # Available volume in dam1
-# available_volumes = heuristic.calculate_available_volumes("dam1")
-# plt.plot(available_volumes, color='b')
-# plt.show()
+available_volumes = heuristic.single_dam_solvers['dam1'].calculate_available_volumes()
+plt.plot(available_volumes, color='b')
+plt.show()
 
 # Plot solution for dam1
-assigned_flows, predicted_volumes = heuristic.solve_for_dam("dam1")
+assigned_flows, predicted_volumes = heuristic.single_dam_solvers['dam1'].solve()
 fig, ax = plt.subplots(1, 1)
 twinax = ax.twinx()
 ax.plot(predicted_volumes, color='b', label="Predicted volume")

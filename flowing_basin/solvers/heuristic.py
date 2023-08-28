@@ -137,5 +137,15 @@ class Heuristic(Experiment):
                     for vol in available_volumes[time_step_lag + 1:]
                 ]
 
-        return assigned_flows, available_volumes
+        assert all([available_vol >= 0 for available_vol in available_volumes]), (
+            "Remaining available volumes should be positive"
+        )
+        assert all([0 <= flow <= self.instance.get_max_flow_of_channel(dam_id) for flow in assigned_flows]), (
+            "Assigned flows should be positive and lower than the maximum flow"
+        )
+
+        min_vol = self.instance.get_min_vol_of_dam(dam_id)
+        predicted_volumes = [available_vol + min_vol for available_vol in available_volumes]
+
+        return assigned_flows, predicted_volumes
 

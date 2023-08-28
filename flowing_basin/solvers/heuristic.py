@@ -23,12 +23,21 @@ class HeuristicSingleDam:
             dam_id: str,
             instance: Instance,
             sorted_time_steps: list[float],
+            flow_contribution: list[float],
             config: HeuristicConfiguration,
     ):
 
         self.dam_id = dam_id
         self.instance = instance
         self.sorted_time_steps = sorted_time_steps
+        self.flow_contribution = flow_contribution
+
+        # Constant values
+        self.added_volumes = self.calculate_added_volumes()
+
+        # Values changed while finding the heuristic solution
+        self.assigned_flows = [0 for _ in range(self.instance.get_largest_impact_horizon())]
+        self.available_volumes = self.calculate_available_volumes()
 
     def volume_from_flow(self, flow: float) -> float:
 
@@ -43,23 +52,17 @@ class HeuristicSingleDam:
         volume = flow * self.instance.get_time_step_seconds()
         return volume
 
-    def calculate_added_volumes(self, dam_id: str) -> list[float]:
+    def calculate_added_volumes(self) -> list[float]:
 
         """
         List with the volume (m3) added in every time step with the incoming/unregulated flows
         """
 
-        unregulated_flows = self.instance.get_all_unregulated_flows_of_dam(dam_id)
-        if self.instance.get_order_of_dam(dam_id) == 1:
-            incoming_flows = self.instance.get_all_incoming_flows()
-            added_volumes = [
-                self.volume_from_flow(incom + unreg)
-                for incom, unreg in zip(incoming_flows, unregulated_flows)
-            ]
-        else:
-            # added_volumes = volume_from_flow(unregulated_flows + turbined_flow_previous_dam)
-            # TODO: implement this
-            added_volumes = None
+        unregulated_flows = self.instance.get_all_unregulated_flows_of_dam(self.dam_id)
+        added_volumes = [
+            self.volume_from_flow(contrib + unreg)
+            for contrib, unreg in zip(self.flow_contribution, unregulated_flows)
+        ]
 
         return added_volumes
 
@@ -70,9 +73,6 @@ class HeuristicSingleDam:
         This is the extra volume (i.e., volume - minimum volume) the dam would have if no flow was taken out from it
         """
 
-        # Calculate the volume added every time step
-        added_volumes = self.calculate_added_volumes(self.dam_id)
-
         # Calculate the initially available volume
         initial_available_volume = (
                 self.instance.get_initial_vol_of_dam(self.dam_id) - self.instance.get_min_vol_of_dam(self.dam_id)
@@ -81,8 +81,10 @@ class HeuristicSingleDam:
         # Calculate the available volume at every time step
         current_volume = initial_available_volume
         available_volumes = []
-        for added_volume in added_volumes:
+        for added_volume in self.added_volumes:
             current_volume += added_volume
+            # available_volume = min(current_volume, self.instance.get_max_vol_of_dam(self.dam_id))
+            # available_volumes.append(available_volume)
             available_volumes.append(current_volume)
 
         return available_volumes
@@ -105,10 +107,7 @@ class HeuristicSingleDam:
         as well as the predicted volumes (m3)
         """
 
-        assigned_flows = [0 for _ in range(self.instance.get_largest_impact_horizon())]
         verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
-        available_volumes = self.calculate_available_volumes()
-        time_steps = list(range(self.instance.get_largest_impact_horizon()))
 
         for time_step in self.sorted_time_steps:
 
@@ -116,36 +115,33 @@ class HeuristicSingleDam:
 
             for time_step_lag in time_step_lags:
 
-                # Available volume in this time step
-                available_volume = available_volumes[time_step_lag]
-
-                # The actual available volume is less, since
-                # the available volume in the next time steps should not go below zero
-                for affected_time_step in time_steps[time_step_lag + 1:]:
-                    available_volume = min(available_volume, available_volumes[affected_time_step])
+                # The actual available volume in this time step
+                # is the minimum available volume of all time steps in the future,
+                # since we cannot let any of them go below zero
+                available_volume = min(self.available_volumes[time_step_lag:])
 
                 # Assign the maximum possible flow given the actual available volume
                 assigned_flow = self.max_flow_from_available_volume(available_volume)
-                assigned_flows[time_step_lag] = assigned_flow  # noqa
+                self.assigned_flows[time_step_lag] = assigned_flow  # noqa
 
                 # Reduce the available volume in the current and next time steps
                 required_volume = self.volume_from_flow(assigned_flow)
-                available_volumes[time_step_lag:] = [
+                self.available_volumes[time_step_lag:] = [
                     vol - required_volume
-                    for vol in available_volumes[time_step_lag:]
+                    for vol in self.available_volumes[time_step_lag:]
                 ]
 
-        assert all([available_vol >= 0 for available_vol in available_volumes]), (
+        assert all([available_vol >= 0 for available_vol in self.available_volumes]), (
             "Remaining available volumes should be positive"
         )
-        assert all([0 <= flow <= self.instance.get_max_flow_of_channel(self.dam_id) for flow in assigned_flows]), (
+        assert all([0 <= flow <= self.instance.get_max_flow_of_channel(self.dam_id) for flow in self.assigned_flows]), (
             "Assigned flows should be positive and lower than the maximum flow"
         )
 
         min_vol = self.instance.get_min_vol_of_dam(self.dam_id)
-        predicted_volumes = [available_vol + min_vol for available_vol in available_volumes]
+        predicted_volumes = [available_vol + min_vol for available_vol in self.available_volumes]
 
-        return assigned_flows, predicted_volumes
+        return self.assigned_flows, predicted_volumes
 
 
 class Heuristic(Experiment):
@@ -178,6 +174,8 @@ class Heuristic(Experiment):
                 dam_id=dam_id,
                 instance=instance,
                 sorted_time_steps=sorted_time_steps,
+                flow_contribution=self.instance.get_all_incoming_flows(),
+                # TODO: for dam2, this should actually be the turbined flows of the preceding dam
                 config=config,
             )
             for dam_id in self.instance.get_ids_of_dams()

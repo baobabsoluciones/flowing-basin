@@ -429,7 +429,7 @@ class Instance(InstanceCore):
 
         return unreg_flows
     
-    def get_all_unregulated_flows_of_dam(self, idx: str):
+    def get_all_unregulated_flows_of_dam(self, idx: str) -> list:
         
         """
         
@@ -440,7 +440,7 @@ class Instance(InstanceCore):
         
         return unreg_flows
     
-    def get_all_prices(self):
+    def get_all_prices(self) -> list:
         
         """
         
@@ -450,7 +450,6 @@ class Instance(InstanceCore):
         prices = self.data["energy_prices"]
         
         return prices
-        
 
     def get_max_unregulated_flow_of_dam(self, idx: str) -> float:
 
@@ -540,3 +539,19 @@ class Instance(InstanceCore):
         """
 
         return max(self.data["energy_prices"])
+
+    def calculate_total_avg_inflow(self) -> float:
+
+        """
+        Calculate the total average inflow of the day.
+        The total average inflow is calculated by adding the average incoming and unregulated flows
+        up to the decision horizon.
+        """
+
+        incoming_flows = self.get_all_incoming_flows()[:self.get_decision_horizon()]
+        total_avg_inflow = sum(incoming_flows) / len(incoming_flows)
+        for dam_id in self.get_ids_of_dams():
+            unreg_flows = self.get_all_unregulated_flows_of_dam(dam_id)[:self.get_decision_horizon()]
+            total_avg_inflow += sum(unreg_flows) / len(unreg_flows)
+
+        return total_avg_inflow

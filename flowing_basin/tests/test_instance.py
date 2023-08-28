@@ -1,4 +1,5 @@
 from flowing_basin.core import Instance
+import pandas as pd
 
 # "../" means "go one step up"; in this case, to the flowing-basin directory
 instance = Instance.from_json("../instances/instances_base/instance1.json")
@@ -20,6 +21,16 @@ print("incoming flows (next 12 steps):", instance.get_incoming_flow(time, num_st
 print("maximum incoming flow:", instance.get_max_incoming_flow())
 print("price:", instance.get_price(time))
 print("prices (next 12 steps):", instance.get_price(time, num_steps=12))
+
+# Average inflow
+calculated_avg_inflow = instance.calculate_total_avg_inflow()
+print("total avg inflow:", calculated_avg_inflow)
+date = instance.get_start_end_datetimes()[0].date()
+daily_inflow_data = pd.read_pickle("../data/history/historical_data_daily_avg_inflow.pickle")
+avg_inflow = daily_inflow_data.loc[date, 'total_avg_inflow']
+print("total avg inflow (as stored in data):", avg_inflow)
+epsilon = 1e-4
+assert abs(calculated_avg_inflow - avg_inflow) < epsilon
 
 # Print dam info
 for dam in instance.get_ids_of_dams():

@@ -132,21 +132,19 @@ class Heuristic(Experiment):
                 available_volume = available_volumes[time_step_lag]
 
                 # The actual available volume is less, since
-                # the volume left for the next time steps should be enough to keep their (previously assigned) flows
+                # the available volume in the next time steps should not go below zero
                 for affected_time_step in time_steps[time_step_lag + 1:]:
-                    volume_already_used = self.volume_from_flow(assigned_flows[affected_time_step])
-                    remaining_volume = available_volumes[affected_time_step] - volume_already_used
-                    available_volume = min(available_volume, remaining_volume)
+                    available_volume = min(available_volume, available_volumes[affected_time_step])
 
                 # Assign the maximum possible flow given the actual available volume
                 assigned_flow = self.max_flow_from_available_volume(dam_id, available_volume)
                 assigned_flows[time_step_lag] = assigned_flow  # noqa
 
-                # Reduce the available volume in the next time steps
+                # Reduce the available volume in the current and next time steps
                 required_volume = self.volume_from_flow(assigned_flow)
-                available_volumes[time_step_lag + 1:] = [
+                available_volumes[time_step_lag:] = [
                     vol - required_volume
-                    for vol in available_volumes[time_step_lag + 1:]
+                    for vol in available_volumes[time_step_lag:]
                 ]
 
         assert all([available_vol >= 0 for available_vol in available_volumes]), (
@@ -157,10 +155,7 @@ class Heuristic(Experiment):
         )
 
         min_vol = self.instance.get_min_vol_of_dam(dam_id)
-        predicted_volumes = [
-            available_vol - self.volume_from_flow(assigned_flow) + min_vol
-            for available_vol, assigned_flow in zip(available_volumes, assigned_flows)
-        ]
+        predicted_volumes = [available_vol + min_vol for available_vol in available_volumes]
 
         return assigned_flows, predicted_volumes
 

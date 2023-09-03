@@ -41,6 +41,7 @@ class HeuristicSingleDam:
 
         # Dynamic values
         self.assigned_flows = [0 for _ in range(self.instance.get_largest_impact_horizon())]
+        self.added_volumes = self.calculate_added_volumes()
         self.available_volumes = self.calculate_available_volumes()
 
         # Simulator
@@ -94,25 +95,45 @@ class HeuristicSingleDam:
         # Calculate the available volume at every time step
         current_volume = initial_available_volume
         available_volumes = []
-        for added_volume in self.calculate_added_volumes():
+        for added_volume in self.added_volumes:
             current_volume += added_volume
             current_volume = min(current_volume, self.max_available_vol)
             available_volumes.append(current_volume)
 
         return available_volumes
 
+    def calculate_max_vol_buffer(self, time_step: int) -> float:
+
+        """
+        Calculate the amount of volume that can be taken out in the given time step
+        without affecting the future time steps at all.
+        This is given by the added volume while on maximum volume.
+        """
+
+        total_added_vol = 0.
+        running_time_step = time_step
+        while self.available_volumes[running_time_step] == self.max_available_vol:
+            total_added_vol += self.added_volumes[running_time_step]
+            running_time_step += 1
+            if running_time_step > self.time_steps[-1]:
+                break
+
+        return total_added_vol
+
     def calculate_actual_available_volume(self, time_step: int) -> float:
 
         """
         Calculate the actual available volume in the given time step.
-        This is the minimum available volume of all future time steps
+        This is, a priori, the minimum available volume of all future time steps;
+        however, time steps with maximum volume provide a buffer
+        that can be used without affecting the remaining volumes.
+
         (until the maximum volume is reached and maintained for enough time).
         The reason for this calculation is that these time steps
         cannot have an available volume below zero.
         """
 
         affected_volumes = []
-        added_volumes = self.calculate_added_volumes()
         max_flow = self.instance.get_max_flow_of_channel(self.dam_id)
 
         for running_time_step, available_vol in zip(
@@ -121,20 +142,9 @@ class HeuristicSingleDam:
 
             affected_volumes.append(available_vol)
 
-            if available_vol == self.max_available_vol:
-
-                # Calculate the volume added while on max flow
-                total_added_vols = 0.
-                for second_running_time_step, second_available_vol in zip(
-                        self.time_steps[running_time_step:], self.available_volumes[running_time_step:]
-                ):
-                    if second_available_vol != self.max_available_vol:
-                        break
-                    total_added_vols += added_volumes[second_running_time_step]
-
-                # Break if this volume is enough to satisfy any flow
-                if total_added_vols > self.volume_from_flow(max_flow):
-                    break
+            # Break if max volume buffer is enough to satisfy any flow
+            if self.calculate_max_vol_buffer(running_time_step) > self.volume_from_flow(max_flow):
+                break
 
         actual_available_volume = min(affected_volumes)
 
@@ -151,7 +161,7 @@ class HeuristicSingleDam:
         )
         print(
             f"For time step {time_step:0>3} (flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
-            f"Added     volumes: {', '.join([f'{i:0>8.2f}' for i in added_volumes])}"
+            f"Added     volumes: {', '.join([f'{i:0>8.2f}' for i in self.added_volumes])}"
         )
 
         return actual_available_volume
@@ -210,6 +220,7 @@ class HeuristicSingleDam:
             for time_step_lag in time_step_lags:
                 available_volume = self.calculate_actual_available_volume(time_step_lag)
                 self.assigned_flows[time_step_lag] = self.max_flow_from_available_volume(available_volume)  # noqa
+                self.added_volumes = self.calculate_added_volumes()
                 self.available_volumes = self.calculate_available_volumes()
 
         self.clean_flows_and_volumes()

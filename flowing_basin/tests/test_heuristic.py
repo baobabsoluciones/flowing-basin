@@ -34,19 +34,14 @@ config = HeuristicConfiguration(
 heuristic = Heuristic(config=config, instance=instance)
 
 # Sorted prices
-prices = instance.get_all_prices()
-prices_sorted = [prices[time_step] for time_step in heuristic.sort_time_steps()]
-plt.plot(prices_sorted, color='r')
-plt.show()
-
-# Available volume in dam1
-available_volumes = heuristic.single_dam_solvers['dam1'].calculate_available_volumes()
-plt.plot(available_volumes, color='b')
-plt.show()
+# prices = instance.get_all_prices()
+# prices_sorted = [prices[time_step] for time_step in heuristic.sort_time_steps()]
+# plt.plot(prices_sorted, color='r')
+# plt.show()
 
 # Plot solution for dam1
 assigned_flows, predicted_volumes = heuristic.single_dam_solvers['dam1'].solve()
-fig, ax = plt.subplots(1, 1)
+fig1, ax = plt.subplots(1, 1)
 twinax = ax.twinx()
 ax.plot(predicted_volumes, color='b', label="Predicted volume")
 ax.set_xlabel("Time (15min)")
@@ -59,12 +54,26 @@ twinax.legend(loc='upper left', bbox_to_anchor=(1.1, 0.9))
 plt.show()
 
 # Check solution
-turbined_flows, actual_flows, actual_volumes = heuristic.turbined_flows_from_assigned_flows("dam1", assigned_flows)
+actual_volumes, _, actual_flows = heuristic.single_dam_solvers['dam1'].simulate()
+fig2, axs = plt.subplots(1, 2)
 # Compare volumes:
-plt.plot(predicted_volumes, color='b', label="Predicted volume")
-plt.plot(actual_volumes, color='pink', label="Actual volume")
-plt.show()
+axs[0].set_xlabel("Time (15min)")
+axs[0].plot(predicted_volumes, color='b', label="Predicted volume")
+axs[0].plot(actual_volumes, color='c', label="Actual volume")
+axs[0].set_ylabel("Volume (m3)")
+axs[0].legend()
 # Compare flows:
-plt.plot(assigned_flows, color='g', label="Predicted volume")
-plt.plot(actual_flows, color='pink', label="Actual volume")
+axs[1].set_xlabel("Time (15min)")
+axs[1].plot(assigned_flows, color='g', label="Assigned flows")
+axs[1].plot(actual_flows, color='lime', label="Actual exiting flows")
+axs[1].set_ylabel("Flow (m3/s)")
+axs[1].legend()
 plt.show()
+
+# print([time_step for time_step in range(instance.get_largest_impact_horizon()) if abs(predicted_volumes[time_step] - actual_volumes[time_step]) > 1000])
+# for time_step in range(instance.get_largest_impact_horizon()):
+#     print(
+#         "heuristic", time_step, heuristic.single_dam_solvers['dam1'].added_volumes[time_step],
+#         assigned_flows[time_step] * instance.get_time_step_seconds(), assigned_flows[time_step],
+#         predicted_volumes[time_step]
+#     )

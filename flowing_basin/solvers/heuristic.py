@@ -22,22 +22,36 @@ class HeuristicSingleDam:
             self,
             dam_id: str,
             instance: Instance,
+            config: HeuristicConfiguration,
             sorted_time_steps: list[float],
             flow_contribution: list[float],
-            config: HeuristicConfiguration,
+            paths_power_models: dict[str, str] = None,
     ):
 
         self.dam_id = dam_id
         self.instance = instance
+        self.config = config
         self.sorted_time_steps = sorted_time_steps
         self.flow_contribution = flow_contribution
 
-        # Constant values
-        self.added_volumes = self.calculate_added_volumes()
+        # Important constants
+        self.time_steps = list(range(self.instance.get_largest_impact_horizon()))
+        self.min_vol = self.instance.get_min_vol_of_dam(self.dam_id)
+        self.max_available_vol = self.instance.get_max_vol_of_dam(self.dam_id) - self.min_vol
 
-        # Values changed while finding the heuristic solution
+        # Dynamic values
         self.assigned_flows = [0 for _ in range(self.instance.get_largest_impact_horizon())]
         self.available_volumes = self.calculate_available_volumes()
+
+        # Simulator
+        self.dam = Dam(
+            idx=self.dam_id,
+            instance=self.instance,
+            paths_power_models=paths_power_models,
+            flow_smoothing=self.config.flow_smoothing,
+            num_scenarios=1,
+            mode=self.config.mode,
+        )
 
     def volume_from_flow(self, flow: float) -> float:
 
@@ -60,8 +74,8 @@ class HeuristicSingleDam:
 
         unregulated_flows = self.instance.get_all_unregulated_flows_of_dam(self.dam_id)
         added_volumes = [
-            self.volume_from_flow(contrib + unreg)
-            for contrib, unreg in zip(self.flow_contribution, unregulated_flows)
+            self.volume_from_flow(contrib + unreg - assigned)
+            for contrib, unreg, assigned in zip(self.flow_contribution, unregulated_flows, self.assigned_flows)
         ]
 
         return added_volumes
@@ -69,25 +83,78 @@ class HeuristicSingleDam:
     def calculate_available_volumes(self) -> list[float]:
 
         """
-        List with the available volume (m3) in the dam at the end of every time step
-        This is the extra volume (i.e., volume - minimum volume) the dam would have if no flow was taken out from it
+        Obtain a list with the available volume (m3) in the dam at the end of every time step.
+        This is the extra volume (i.e., volume - minimum volume) the dam has
+        with the currently assigned flows.
         """
 
         # Calculate the initially available volume
-        initial_available_volume = (
-                self.instance.get_initial_vol_of_dam(self.dam_id) - self.instance.get_min_vol_of_dam(self.dam_id)
-        )
+        initial_available_volume = self.instance.get_initial_vol_of_dam(self.dam_id) - self.min_vol
 
         # Calculate the available volume at every time step
         current_volume = initial_available_volume
         available_volumes = []
-        for added_volume in self.added_volumes:
+        for added_volume in self.calculate_added_volumes():
             current_volume += added_volume
-            # available_volume = min(current_volume, self.instance.get_max_vol_of_dam(self.dam_id))
-            # available_volumes.append(available_volume)
+            current_volume = min(current_volume, self.max_available_vol)
             available_volumes.append(current_volume)
 
         return available_volumes
+
+    def calculate_actual_available_volume(self, time_step: int) -> float:
+
+        """
+        Calculate the actual available volume in the given time step.
+        This is the minimum available volume of all future time steps
+        (until the maximum volume is reached and maintained for enough time).
+        The reason for this calculation is that these time steps
+        cannot have an available volume below zero.
+        """
+
+        affected_volumes = []
+        added_volumes = self.calculate_added_volumes()
+        max_flow = self.instance.get_max_flow_of_channel(self.dam_id)
+
+        for running_time_step, available_vol in zip(
+                self.time_steps[time_step:], self.available_volumes[time_step:]
+        ):
+
+            affected_volumes.append(available_vol)
+
+            if available_vol == self.max_available_vol:
+
+                # Calculate the volume added while on max flow
+                total_added_vols = 0.
+                for second_running_time_step, second_available_vol in zip(
+                        self.time_steps[running_time_step:], self.available_volumes[running_time_step:]
+                ):
+                    if second_available_vol != self.max_available_vol:
+                        break
+                    total_added_vols += added_volumes[second_running_time_step]
+
+                # Break if this volume is enough to satisfy any flow
+                if total_added_vols > self.volume_from_flow(max_flow):
+                    break
+
+        actual_available_volume = min(affected_volumes)
+
+        # Print in blue the affected volumes and in red the rest
+        final_running_time_step = running_time_step
+        red = "\033[31m"
+        blue = "\033[34m"
+        black = "\033[0m"
+        print(
+            f"For time step {time_step:0>3} (flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
+            f"Available volumes: {', '.join([f'{i:0>8.2f}' for i in self.available_volumes[:time_step]])}, "
+            f"{blue}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[time_step:final_running_time_step+1]])}{black}, "
+            f"{red}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[final_running_time_step+1:]])}{black}"
+        )
+        print(
+            f"For time step {time_step:0>3} (flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
+            f"Added     volumes: {', '.join([f'{i:0>8.2f}' for i in added_volumes])}"
+        )
+
+        return actual_available_volume
 
     def max_flow_from_available_volume(self, available_volume: float) -> float:
 
@@ -100,48 +167,83 @@ class HeuristicSingleDam:
         max_flow = min(max_flow, available_volume / self.instance.get_time_step_seconds())
         return max_flow
 
+    @staticmethod
+    def clean_list(lst: list, epsilon: float = 1e-6):
+
+        """
+        Turn the very small negative values (e.g. -3.8290358538183177e-16)
+        of the list into 0.
+        If these negative values are not small, raise an error.
+        """
+
+        i = 0
+        while i < len(lst):
+            if lst[i] < 0:
+                if abs(lst[i]) < epsilon:
+                    lst[i] = 0.
+                else:
+                    raise ValueError(
+                        f"The given list has a negative value larger than {epsilon} "
+                        f"in index {i}: {lst[i]}."
+                    )
+            i += 1
+
+    def clean_flows_and_volumes(self):
+
+        """
+        Clean the assigned flows and available volumes lists
+        """
+
+        self.clean_list(self.assigned_flows)
+        self.clean_list(self.available_volumes)
+
     def solve(self) -> tuple[list[float], list[float]]:
 
         """
         Get the exiting flows (m3/s) recommended by the heuristic,
-        as well as the predicted volumes (m3)
+        as well as the predicted volumes (m3) with these recommended flow assignments.
         """
 
         verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
-
         for time_step in self.sorted_time_steps:
-
             time_step_lags = [int(time_step - lag) for lag in verification_lags if time_step - lag >= 0]
-
             for time_step_lag in time_step_lags:
+                available_volume = self.calculate_actual_available_volume(time_step_lag)
+                self.assigned_flows[time_step_lag] = self.max_flow_from_available_volume(available_volume)  # noqa
+                self.available_volumes = self.calculate_available_volumes()
 
-                # The actual available volume in this time step
-                # is the minimum available volume of all time steps in the future,
-                # since we cannot let any of them go below zero
-                available_volume = min(self.available_volumes[time_step_lag:])
-
-                # Assign the maximum possible flow given the actual available volume
-                assigned_flow = self.max_flow_from_available_volume(available_volume)
-                self.assigned_flows[time_step_lag] = assigned_flow  # noqa
-
-                # Reduce the available volume in the current and next time steps
-                required_volume = self.volume_from_flow(assigned_flow)
-                self.available_volumes[time_step_lag:] = [
-                    vol - required_volume
-                    for vol in self.available_volumes[time_step_lag:]
-                ]
-
-        assert all([available_vol >= 0 for available_vol in self.available_volumes]), (
-            "Remaining available volumes should be positive"
-        )
-        assert all([0 <= flow <= self.instance.get_max_flow_of_channel(self.dam_id) for flow in self.assigned_flows]), (
-            "Assigned flows should be positive and lower than the maximum flow"
-        )
-
-        min_vol = self.instance.get_min_vol_of_dam(self.dam_id)
-        predicted_volumes = [available_vol + min_vol for available_vol in self.available_volumes]
+        self.clean_flows_and_volumes()
+        predicted_volumes = [available_vol + self.min_vol for available_vol in self.available_volumes]
 
         return self.assigned_flows, predicted_volumes
+
+    def simulate(self) -> tuple[list[float], list[float], list[float]]:
+
+        """
+        Use the river basin simulator to get the
+        actual volumes (m3), turbined flows (m3/s), and actual exiting flows (m3/s)
+        with the current assigned flows
+        """
+
+        turbined_flows = []
+        actual_exiting_flows = []
+        actual_volumes = []
+
+        # Calculate volumes with the current assigned flows
+        self.dam.reset(instance=self.instance, flow_smoothing=self.config.flow_smoothing, num_scenarios=1)
+        for time_step in self.time_steps:
+            turbined_flow = self.dam.update(
+                price=self.instance.get_price(time_step),
+                flow_out=np.array([self.assigned_flows[time_step]]),
+                incoming_flow=self.instance.get_incoming_flow(time_step),
+                unregulated_flow=self.instance.get_unregulated_flow_of_dam(time_step, self.dam.idx),
+                turbined_flow_of_preceding_dam=np.array([0]),
+            )
+            turbined_flows.append(turbined_flow.item())
+            actual_exiting_flows.append(self.dam.flow_out_clipped2.item())
+            actual_volumes.append(self.dam.volume.item())
+
+        return actual_volumes, turbined_flows, actual_exiting_flows
 
 
 class Heuristic(Experiment):
@@ -192,42 +294,4 @@ class Heuristic(Experiment):
         sorted_time_steps = sorted(time_steps, key=lambda x: prices[x], reverse=True)
 
         return sorted_time_steps
-
-    def turbined_flows_from_assigned_flows(
-            self, dam_id: str, assigned_flows: list[float]
-    ) -> tuple[list[float], list[float], list[float]]:
-
-        """
-        Using the simulator, obtain the turbined flows (m3/s) produced by the dam with the given assigned flows,
-        as well as the actual exiting flows (m3/s) and volumes (m3)
-        """
-
-        dam = Dam(
-            idx=dam_id,
-            instance=self.instance,
-            paths_power_models=self.paths_power_models,
-            flow_smoothing=self.config.flow_smoothing,
-            num_scenarios=1,
-            mode=self.config.mode,
-        )
-
-        turbined_flows = []
-        actual_exiting_flows = []
-        actual_volumes = []
-
-        for time_step in range(self.instance.get_largest_impact_horizon()):
-
-            turbined_flow = dam.update(
-                price=self.instance.get_price(time_step),
-                flow_out=np.array([assigned_flows[time_step]]),
-                incoming_flow=self.instance.get_incoming_flow(time_step),
-                unregulated_flow=self.instance.get_unregulated_flow_of_dam(time_step, dam.idx),
-                turbined_flow_of_preceding_dam=np.array([0]),
-            )
-
-            turbined_flows.append(turbined_flow.item())
-            actual_exiting_flows.append(dam.flow_out_clipped2.item())
-            actual_volumes.append(dam.volume.item())
-
-        return turbined_flows, actual_exiting_flows, actual_volumes
 

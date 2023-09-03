@@ -196,6 +196,8 @@ class Dam:
         # Volume clipped to max value
         self.volume = np.clip(self.volume, None, self.max_volume)
 
+        # print("dams", self.time, volume_increase.item(), volume_decrease.item(), self.flow_out_clipped2.item(), self.volume.item())
+
         # Volume at the end of the decision horizon ---- #
 
         if self.time == self.decision_horizon - 1:

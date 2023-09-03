@@ -54,7 +54,7 @@ twinax.legend(loc='upper left', bbox_to_anchor=(1.1, 0.9))
 plt.show()
 
 # Check solution
-actual_volumes, _, actual_flows = heuristic.single_dam_solvers['dam1'].simulate()
+actual_volumes, _, actual_flows, dam_income = heuristic.single_dam_solvers['dam1'].simulate()
 fig2, axs = plt.subplots(1, 2)
 # Compare volumes:
 axs[0].set_xlabel("Time (15min)")
@@ -69,6 +69,9 @@ axs[1].plot(actual_flows, color='lime', label="Actual exiting flows")
 axs[1].set_ylabel("Flow (m3/s)")
 axs[1].legend()
 plt.show()
+
+# Evaluate solution
+print("TOTAL INCOME:", dam_income)
 
 # print([time_step for time_step in range(instance.get_largest_impact_horizon()) if abs(predicted_volumes[time_step] - actual_volumes[time_step]) > 1000])
 # for time_step in range(instance.get_largest_impact_horizon()):

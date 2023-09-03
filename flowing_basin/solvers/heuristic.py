@@ -105,9 +105,10 @@ class HeuristicSingleDam:
     def calculate_max_vol_buffer(self, time_step: int) -> float:
 
         """
-        Calculate the amount of volume that can be taken out in the given time step
+        Calculate the amount of volume (m3)
+        that can be taken out in the given time step
         without affecting the future time steps at all.
-        This is given by the added volume while on maximum volume.
+        This is given by the added volumes (m3) while on maximum volume.
         """
 
         total_added_vol = 0.
@@ -123,14 +124,12 @@ class HeuristicSingleDam:
     def calculate_actual_available_volume(self, time_step: int) -> float:
 
         """
-        Calculate the actual available volume in the given time step.
+        Calculate the actual available volume in the given time step
+        (i.e. the volume that, if consumed, will not leave negative volume in future time steps).
+
         This is, a priori, the minimum available volume of all future time steps;
         however, time steps with maximum volume provide a buffer
         that can be used without affecting the remaining volumes.
-
-        (until the maximum volume is reached and maintained for enough time).
-        The reason for this calculation is that these time steps
-        cannot have an available volume below zero.
         """
 
         affected_volumes = []
@@ -228,11 +227,11 @@ class HeuristicSingleDam:
 
         return self.assigned_flows, predicted_volumes
 
-    def simulate(self) -> tuple[list[float], list[float], list[float]]:
+    def simulate(self) -> tuple[list[float], list[float], list[float], float]:
 
         """
         Use the river basin simulator to get the
-        actual volumes (m3), turbined flows (m3/s), and actual exiting flows (m3/s)
+        actual volumes (m3), turbined flows (m3/s), actual exiting flows (m3/s) and total income (€)
         with the current assigned flows
         """
 
@@ -254,7 +253,9 @@ class HeuristicSingleDam:
             actual_exiting_flows.append(self.dam.flow_out_clipped2.item())
             actual_volumes.append(self.dam.volume.item())
 
-        return actual_volumes, turbined_flows, actual_exiting_flows
+        dam_income = self.dam.channel.power_group.acc_income.item()
+
+        return actual_volumes, turbined_flows, actual_exiting_flows, dam_income
 
 
 class Heuristic(Experiment):

@@ -102,13 +102,14 @@ class HeuristicSingleDam:
 
         return available_volumes
 
-    def calculate_max_vol_buffer(self, time_step: int) -> float:
+    def calculate_max_vol_buffer(self, time_step: int) -> tuple[float, int]:
 
         """
         Calculate the amount of volume (m3)
         that can be taken out in the given time step
         without affecting the future time steps at all.
         This is given by the added volumes (m3) while on maximum volume.
+        The method also returns the time step when the buffer has already ended.
         """
 
         total_unused_vol = 0.
@@ -127,7 +128,7 @@ class HeuristicSingleDam:
             if running_time_step > self.time_steps[-1]:
                 break
 
-        return total_unused_vol
+        return total_unused_vol, running_time_step
 
     def calculate_actual_available_volume(self, time_step: int) -> float:
 
@@ -138,38 +139,48 @@ class HeuristicSingleDam:
         This is, a priori, the minimum available volume of all future time steps;
         however, time steps with maximum volume provide a buffer
         that can be used without affecting the remaining volumes.
+
+        As such, the actual available volume is the maximum of the following:
+        - The minimum volume up to the FIRST max vol buffer (without exceeding this buffer);
+        - The minimum volume up to the SECOND max vol buffer (without exceeding this buffer);
+        - etc.
+        Taking the maximum of these is necessary since the first buffer may be lower than the min vol up to the second
+        (this rarely happens, though)
         """
 
         affected_volumes = []
-        max_vol_buffer = 0.
-        for running_time_step, available_vol in zip(
-                self.time_steps[time_step:], self.available_volumes[time_step:]
-        ):
-            affected_volumes.append(available_vol)
-            max_vol_buffer = self.calculate_max_vol_buffer(running_time_step)
-            if max_vol_buffer > 0.:
-                break
+        actual_available_volume = 0.
 
-        actual_available_volume = min(min(affected_volumes), max_vol_buffer)
+        running_time_step = time_step
+        while running_time_step <= self.time_steps[-1]:
+            affected_volumes.append(self.available_volumes[running_time_step])
+            max_vol_buffer, time_step_after_buffer = self.calculate_max_vol_buffer(running_time_step)
+            if max_vol_buffer > 0.:
+                actual_available_volume = max(actual_available_volume, min(min(affected_volumes), max_vol_buffer))
+                running_time_step = time_step_after_buffer
+                # break  # <-- uncomment this to consider only the first buffer
+            else:
+                running_time_step += 1
+        actual_available_volume = max(actual_available_volume, min(affected_volumes))  # <-- comment this if you break
 
         # Print in blue the affected volumes and in red the rest
-        final_running_time_step = running_time_step
-        red = "\033[31m"
-        blue = "\033[34m"
-        black = "\033[0m"
-        print(
-            f"For time step {time_step:0>3} (max vol buffer {max_vol_buffer:0>8.2f}; "
-            f"flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
-            f"Available volumes: {', '.join([f'{i:0>8.2f}' for i in self.available_volumes[:time_step]])}, "
-            f"{blue}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[time_step:final_running_time_step+1]])}{black}, "
-            f"{red}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[final_running_time_step+1:]])}{black}"
-        )
-        print(
-            f"For time step {time_step:0>3} (max vol buffer {max_vol_buffer:0>8.2f}; "
-            f"flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
-            f"Added     volumes: {', '.join([f'{i:0>8.2f}' for i in self.added_volumes])}"
-        )
-        self.clean_flows_and_volumes()
+        # final_running_time_step = running_time_step
+        # red = "\033[31m"
+        # blue = "\033[34m"
+        # black = "\033[0m"
+        # print(
+        #     f"For time step {time_step:0>3} (max vol buffer {max_vol_buffer:0>8.2f}; "
+        #     f"flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
+        #     f"Available volumes: {', '.join([f'{i:0>8.2f}' for i in self.available_volumes[:time_step]])}, "
+        #     f"{blue}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[time_step:final_running_time_step+1]])}{black}, "
+        #     f"{red}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[final_running_time_step+1:]])}{black}"
+        # )
+        # print(
+        #     f"For time step {time_step:0>3} (max vol buffer {max_vol_buffer:0>8.2f}; "
+        #     f"flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
+        #     f"Added     volumes: {', '.join([f'{i:0>8.2f}' for i in self.added_volumes])}"
+        # )
+        # self.clean_flows_and_volumes()
 
         return actual_available_volume
 

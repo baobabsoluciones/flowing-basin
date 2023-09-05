@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 NEW_SOLUTION = False
-EXAMPLE = 3
+EXAMPLE = 1
 NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
@@ -56,8 +56,8 @@ if NEW_SOLUTION:
     print("solver info:", pso.solver_info)
 else:
     # Given solution
-    pso.solution = Solution.from_json("../solutions/instance3_LPmodel_2dams_1days_time2023-08-25_13-04.json")
-    dir_name = "instance3_LPmodel_2dams_1days_time2023-08-25_13-04"
+    pso.solution = Solution.from_json("../solutions/instance1_LPmodel_2dams_1days_time2023-09-05_13-39.json")
+    dir_name = "instance1_LPmodel_2dams_1days_time2023-09-05_13-39"
 
 sol_inconsistencies = pso.solution.check()
 if sol_inconsistencies:

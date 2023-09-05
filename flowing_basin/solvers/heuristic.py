@@ -111,15 +111,23 @@ class HeuristicSingleDam:
         This is given by the added volumes (m3) while on maximum volume.
         """
 
-        total_added_vol = 0.
+        total_unused_vol = 0.
         running_time_step = time_step
         while self.available_volumes[running_time_step] == self.max_available_vol:
-            total_added_vol += self.added_volumes[running_time_step]
+            # We add the unused volume, which is the volume added when the reservoir was already full
+            vol_used = self.max_available_vol - self.available_volumes[running_time_step - 1]
+            vol_unused = self.added_volumes[running_time_step] - vol_used
+            assert vol_unused >= - 1e-6, (
+                f"Vol unused has a negative value {vol_unused} for time step {running_time_step}, with "
+                f"previous volume {self.available_volumes[running_time_step - 1]} and "
+                f"added volume {self.added_volumes[running_time_step]}."
+            )
+            total_unused_vol += vol_unused
             running_time_step += 1
             if running_time_step > self.time_steps[-1]:
                 break
 
-        return total_added_vol
+        return total_unused_vol
 
     def calculate_actual_available_volume(self, time_step: int) -> float:
 
@@ -133,19 +141,16 @@ class HeuristicSingleDam:
         """
 
         affected_volumes = []
-        max_flow = self.instance.get_max_flow_of_channel(self.dam_id)
-
+        max_vol_buffer = 0.
         for running_time_step, available_vol in zip(
                 self.time_steps[time_step:], self.available_volumes[time_step:]
         ):
-
             affected_volumes.append(available_vol)
-
-            # Break if max volume buffer is enough to satisfy any flow
-            if self.calculate_max_vol_buffer(running_time_step) > self.volume_from_flow(max_flow):
+            max_vol_buffer = self.calculate_max_vol_buffer(running_time_step)
+            if max_vol_buffer > 0.:
                 break
 
-        actual_available_volume = min(affected_volumes)
+        actual_available_volume = min(min(affected_volumes), max_vol_buffer)
 
         # Print in blue the affected volumes and in red the rest
         final_running_time_step = running_time_step
@@ -153,15 +158,18 @@ class HeuristicSingleDam:
         blue = "\033[34m"
         black = "\033[0m"
         print(
-            f"For time step {time_step:0>3} (flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
+            f"For time step {time_step:0>3} (max vol buffer {max_vol_buffer:0>8.2f}; "
+            f"flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
             f"Available volumes: {', '.join([f'{i:0>8.2f}' for i in self.available_volumes[:time_step]])}, "
             f"{blue}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[time_step:final_running_time_step+1]])}{black}, "
             f"{red}{', '.join([f'{i:0>8.2f}' for i in self.available_volumes[final_running_time_step+1:]])}{black}"
         )
         print(
-            f"For time step {time_step:0>3} (flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
+            f"For time step {time_step:0>3} (max vol buffer {max_vol_buffer:0>8.2f}; "
+            f"flow {self.max_flow_from_available_volume(actual_available_volume):0>5.2f}): "
             f"Added     volumes: {', '.join([f'{i:0>8.2f}' for i in self.added_volumes])}"
         )
+        self.clean_flows_and_volumes()
 
         return actual_available_volume
 

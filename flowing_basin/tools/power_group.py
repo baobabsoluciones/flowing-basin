@@ -165,6 +165,8 @@ class PowerGroup:
         """
 
         # Get turbined flow from past flows
+        # Note the given past_flows must NOT include the current flow, since
+        # we take the mean from first_lag - 1 to last_lag (instead of first_lag to last_lag + 1)
         first_lag = self.verification_lags[0]
         last_lag = self.verification_lags[-1]
         self.turbined_flow = np.mean(past_flows[:, first_lag - 1: last_lag], axis=1)

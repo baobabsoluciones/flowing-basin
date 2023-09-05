@@ -301,7 +301,9 @@ class Instance(InstanceCore):
         """
 
         :param idx: ID of the dam in the river basin
-        :return: Flow that goes through the channel in the beginning (m3/s)
+        :return:
+            Flow that went through the channel in the previous time steps,
+            in decreasing order (i.e., flow in time steps -1, ..., -last_lag) (m3/s)
         """
 
         return self.data["dams"][idx]["initial_lags"]

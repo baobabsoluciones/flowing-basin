@@ -3,10 +3,10 @@ from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-EXAMPLE = 1
+EXAMPLE = 3
 NUM_DAMS = 1
 NUM_DAYS = 1
-K_PARAMETER = 0
+K_PARAMETER = 2
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -28,7 +28,8 @@ config = HeuristicConfiguration(
         "dam8_dam1copy": 59627.42324,
     },
     flow_smoothing=K_PARAMETER,
-    mode="linear"
+    mode="linear",
+    maximize_final_vol=True
 )
 
 # Solution

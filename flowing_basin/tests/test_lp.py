@@ -22,7 +22,7 @@ config = LPConfiguration(
     time_limit_seconds=8*60
 )
 
-EXAMPLE = 1
+EXAMPLE = 3
 NUM_DAMS = 1
 NUM_DAYS = 1
 

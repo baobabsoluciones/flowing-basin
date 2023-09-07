@@ -10,6 +10,9 @@ class HeuristicConfiguration(Configuration):
     flow_smoothing: int = 0
     mode: str = "nonlinear"
 
+    # Maximize final volume independently of the objective final volume specified
+    maximize_final_vol: bool = False
+
     def __post_init__(self):
         valid_modes = {"linear", "nonlinear"}
         if self.mode not in valid_modes:
@@ -268,6 +271,26 @@ class HeuristicSingleDam:
         self.clean_list(self.assigned_flows)
         self.clean_list(self.available_volumes)
 
+    def adapt_flows_to_obj_vol(self, groups: list[list[int]]):
+
+        """
+        Assign zero flow at the end
+        to as many time step groups as required to satisfy the objective final volume
+        """
+
+        objective_available_volume = (
+            self.config.volume_objectives[self.dam_id] - self.min_vol
+            if not self.config.maximize_final_vol else self.max_available_vol
+        )
+        decision_horizon = self.instance.get_decision_horizon()
+        num_groups_back = 1
+        while self.available_volumes[decision_horizon - 1] < objective_available_volume:
+            for time_step in groups[-num_groups_back]:
+                self.assigned_flows[time_step] = 0
+                self.added_volumes = self.calculate_added_volumes()
+                self.available_volumes = self.calculate_available_volumes()
+            num_groups_back += 1
+
     def solve(self) -> tuple[list[float], list[float]]:
 
         """
@@ -288,6 +311,7 @@ class HeuristicSingleDam:
                 self.available_volumes = self.calculate_available_volumes()
 
         self.clean_flows_and_volumes()
+        self.adapt_flows_to_obj_vol(groups)
         predicted_volumes = [available_vol + self.min_vol for available_vol in self.available_volumes]
 
         return self.assigned_flows, predicted_volumes

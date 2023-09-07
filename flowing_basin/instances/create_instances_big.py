@@ -4,8 +4,12 @@ from datetime import datetime
 from cornflow_client.core.tools import load_json
 
 
-START = datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M")
-EXAMPLE_NUMBER = 1
+EXAMPLE_NUMBER = 3
+start_dates = {
+    1: "2021-04-03 00:00",
+    3: "2020-12-01 05:45"
+}
+start_date = datetime.strptime(start_dates[EXAMPLE_NUMBER], "%Y-%m-%d %H:%M")
 
 path_historical_data = "../data/history/historical_data.pickle"
 historical_data = pd.read_pickle(path_historical_data)
@@ -20,7 +24,7 @@ for num_dams in [1]:
             length_episodes=length_episode,
             constants=load_json(path_constants),
             historical_data=historical_data,
-            initial_row=START,
+            initial_row=start_date,
         )
 
         inconsistencies = instance.check()

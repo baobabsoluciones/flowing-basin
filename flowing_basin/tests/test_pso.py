@@ -5,7 +5,7 @@ import os
 
 NEW_SOLUTION = False
 EXAMPLE = 1
-NUM_DAMS = 2
+NUM_DAMS = 1
 NUM_DAYS = 1
 K_PARAMETER = 2
 USE_RELVARS = True
@@ -56,8 +56,8 @@ if NEW_SOLUTION:
     print("solver info:", pso.solver_info)
 else:
     # Given solution
-    pso.solution = Solution.from_json("../solutions/instance1_LPmodel_2dams_1days_time2023-09-05_13-39.json")
-    dir_name = "instance1_LPmodel_2dams_1days_time2023-09-05_13-39"
+    pso.solution = Solution.from_json("../solutions/instance1_Heuristic_1dams_1days_time2023-09-07_18-23.json")
+    dir_name = "instance1_Heuristic_1dams_1days_time2023-09-07_18-23"
 
 sol_inconsistencies = pso.solution.check()
 if sol_inconsistencies:

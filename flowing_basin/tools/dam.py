@@ -162,12 +162,14 @@ class Dam:
             else np.zeros(self.num_scenarios).reshape((1, -1))
         )
         sign_changes_each_period = (
-            previous_variations * current_assigned_variation < 0
+            previous_variations * current_assigned_variation < -1e-6  # -1e-6 instead of 0. <-- tolerance for rounding errors
         )  # Broadcasting
         sign_changes_any_period = np.sum(sign_changes_each_period, axis=0) > 0
         self.flow_out_smoothed = np.where(
             sign_changes_any_period, self.previous_flow_out, self.flow_out_assigned
         )
+
+        # print(self.time, self.flow_out_assigned, self.flow_out_smoothed, current_assigned_variation, previous_variations, sign_changes_each_period)
 
         # Flow clipped according to the flow limit of the channel
         self.flow_out_clipped1 = np.clip(

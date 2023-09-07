@@ -52,22 +52,46 @@ class HeuristicSingleDam:
             mode=self.config.mode,
         )
 
-    def sort_time_steps(self) -> list[int]:
+    def group_time_steps(self, time_steps: list[int]) -> list[list[int]]:
 
         """
-        List with the time steps sorted
-        according to the price in their lags
+        Group time steps into groups of size flows_smoothing + 1
+        If the number of time steps is NOT a multiple of flows_smoothing + 1, the last group will have a smaller size
+        (this is not a problem: the flow smoothing condition will still be met)
         """
 
-        time_steps = list(range(self.instance.get_largest_impact_horizon()))
+        group_size = self.config.flow_smoothing + 1
+        grouped_time_steps = [time_steps[i:i + group_size] for i in range(0, len(time_steps), group_size)]
+
+        return grouped_time_steps
+
+    def sort_groups(self, groups: list[list[int]]) -> list[list[int]]:
+
+        """
+        Sort the groups of time steps according to the energy price in their lags
+        """
+
+        # Calculate the weights with which we will order the groups
         prices = self.instance.get_all_prices()
-
         verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
-        weights = [prices[time_step + verification_lags[0]] for time_step in time_steps if time_step + verification_lags[0] < len(prices)]
-        weights[len(weights):] = [0 for _ in time_steps[len(weights):]]
-        sorted_time_steps = sorted(time_steps, key=lambda x: weights[x], reverse=True)
+        weights = [
+            # Calculate the avg of avgs of the group
+            sum(
+                # Calculate avg price in the lags of the time step
+                sum(
+                    prices[time_step + lag] for lag in verification_lags if time_step + lag < len(prices)
+                ) / len(verification_lags)
+                for time_step in group
+            ) / len(group)
+            for group in groups
+        ]
 
-        return sorted_time_steps
+        # Sort the groups according to the weights
+        pairs = zip(groups, weights)
+        sorted_pairs = sorted(pairs, key=lambda pair: pair[1], reverse=True)
+        sorted_grouped_time_steps, _ = zip(*sorted_pairs)
+
+        return sorted_grouped_time_steps
 
     def volume_from_flow(self, flow: float) -> float:
 
@@ -247,11 +271,17 @@ class HeuristicSingleDam:
         as well as the predicted volumes (m3) with these recommended flow assignments.
         """
 
-        for time_step in self.sort_time_steps():
-            available_volume = self.calculate_actual_available_volume(time_step)
-            self.assigned_flows[time_step] = self.max_flow_from_available_volume(available_volume)  # noqa
-            self.added_volumes = self.calculate_added_volumes()
-            self.available_volumes = self.calculate_available_volumes()
+        time_steps = list(range(self.instance.get_largest_impact_horizon()))
+        groups = self.group_time_steps(time_steps)
+        sorted_groups = self.sort_groups(groups)
+        for group in sorted_groups:
+            available_volume = min(
+                self.calculate_actual_available_volume(time_step) for time_step in group
+            ) / len(group)
+            for time_step in group:
+                self.assigned_flows[time_step] = self.max_flow_from_available_volume(available_volume)  # noqa
+                self.added_volumes = self.calculate_added_volumes()
+                self.available_volumes = self.calculate_available_volumes()
 
         self.clean_flows_and_volumes()
         predicted_volumes = [available_vol + self.min_vol for available_vol in self.available_volumes]

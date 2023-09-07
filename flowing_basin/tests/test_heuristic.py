@@ -1,11 +1,12 @@
-from flowing_basin.core import Instance
+from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 EXAMPLE = 1
-NUM_DAMS = 2
+NUM_DAMS = 1
 NUM_DAYS = 1
-K_PARAMETER = 0
+K_PARAMETER = 2
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -30,17 +31,22 @@ config = HeuristicConfiguration(
     mode="linear"
 )
 
-# Solver
+# Solution
 heuristic = Heuristic(config=config, instance=instance)
-
-# Sorted prices
-# prices = instance.get_all_prices()
-# prices_sorted = [prices[time_step] for time_step in heuristic.sort_time_steps()]
-# plt.plot(prices_sorted, color='r')
-# plt.show()
+assigned_flows, predicted_volumes = heuristic.single_dam_solvers['dam1'].solve()
+sol_dict = {
+    "dams": [
+        {
+            "flows": assigned_flows, "id": 'dam1', "volume": predicted_volumes
+        }
+    ],
+    "price": instance.get_all_prices()
+}
+path_sol = f"../solutions/instance{EXAMPLE}_Heuristic_{NUM_DAMS}dams_{NUM_DAYS}days" \
+           f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
+Solution.from_dict(sol_dict).to_json(path_sol)
 
 # Plot solution for dam1
-assigned_flows, predicted_volumes = heuristic.single_dam_solvers['dam1'].solve()
 fig1, ax = plt.subplots(1, 1)
 twinax = ax.twinx()
 ax.plot(predicted_volumes, color='b', label="Predicted volume")
@@ -69,6 +75,8 @@ axs[1].plot(actual_flows, color='lime', label="Actual exiting flows")
 axs[1].set_ylabel("Flow (m3/s)")
 axs[1].legend()
 plt.show()
+assert all([abs(actual_vol - predicted_vol) < 1e6 for actual_vol, predicted_vol in zip(actual_volumes, predicted_volumes)])
+assert all([abs(actual_flow - assigned_flow) < 1e6 for actual_flow, assigned_flow in zip(actual_flows, assigned_flows)])
 
 # Evaluate solution
 print("TOTAL INCOME:", dam_income)

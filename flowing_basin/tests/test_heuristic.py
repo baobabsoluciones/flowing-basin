@@ -6,7 +6,7 @@ from datetime import datetime
 EXAMPLE = 1
 NUM_DAMS = 1
 NUM_DAYS = 1
-K_PARAMETER = 2
+K_PARAMETER = 0
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")

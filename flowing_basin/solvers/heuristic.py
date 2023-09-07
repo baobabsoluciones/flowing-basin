@@ -155,11 +155,15 @@ class HeuristicSingleDam:
         running_time_step = time_step
         while self.available_volumes[running_time_step] == self.max_available_vol:
             # We add the unused volume, which is the volume added when the reservoir was already full
-            vol_used = self.max_available_vol - self.available_volumes[running_time_step - 1]
+            prev_available_volume = (
+                self.available_volumes[running_time_step - 1] if running_time_step - 1 >= 0
+                else self.instance.get_initial_vol_of_dam(self.dam_id) - self.min_vol
+            )
+            vol_used = self.max_available_vol - prev_available_volume
             vol_unused = self.added_volumes[running_time_step] - vol_used
             assert vol_unused >= - 1e-6, (
                 f"Vol unused has a negative value {vol_unused} for time step {running_time_step}, with "
-                f"previous volume {self.available_volumes[running_time_step - 1]} and "
+                f"previous volume {prev_available_volume} and "
                 f"added volume {self.added_volumes[running_time_step]}."
             )
             total_unused_vol += vol_unused

@@ -246,7 +246,7 @@ class HeuristicSingleDam:
 
         return self.assigned_flows, predicted_volumes
 
-    def simulate(self) -> tuple[list[float], list[float], list[float], float]:
+    def simulate(self) -> tuple[list[float], list[float], list[float], float, float]:
 
         """
         Use the river basin simulator to get the
@@ -272,9 +272,24 @@ class HeuristicSingleDam:
             actual_exiting_flows.append(self.dam.flow_out_clipped2.item())
             actual_volumes.append(self.dam.volume.item())
 
+        # Income (WITHOUT startup costs and objective final volumes)
         dam_income = self.dam.channel.power_group.acc_income.item()
 
-        return actual_volumes, turbined_flows, actual_exiting_flows, dam_income
+        # Net income (WITH startup costs and objective final volumes)
+        final_volume = self.dam.final_volume
+        volume_shortage = max(0, self.config.volume_objectives[self.dam_id] - final_volume)
+        volume_exceedance = max(0, final_volume - self.config.volume_objectives[self.dam_id])
+        num_startups = self.dam.channel.power_group.acc_num_startups
+        num_limit_zones = self.dam.channel.power_group.acc_num_times_in_limit
+        penalty = (
+                self.config.volume_shortage_penalty * volume_shortage
+                + self.config.startups_penalty * num_startups
+                + self.config.limit_zones_penalty * num_limit_zones
+        )
+        bonus = self.config.volume_exceedance_bonus * volume_exceedance
+        dam_net_income = dam_income + bonus - penalty
+
+        return actual_volumes, turbined_flows, actual_exiting_flows, dam_income, dam_net_income
 
 
 class Heuristic(Experiment):

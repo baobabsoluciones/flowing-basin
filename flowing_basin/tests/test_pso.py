@@ -64,7 +64,7 @@ if sol_inconsistencies:
     raise Exception(f"There are inconsistencies in the given solution: {sol_inconsistencies}")
 print(pso.solution.check())
 print("optimal solution:", pso.solution.data)
-pso.river_basin.deep_update(pso.solution.to_flows(), is_relvars=False)
+pso.river_basin.deep_update(pso.solution.get_exiting_flows_array(), is_relvars=False)
 print("optimal solution's objective function values:", pso.objective_function_values_env())
 print("optimal solution's full objective function value:", pso.objective_function_env())
 print("optimal solution's full objective function value (cornflow method):", pso.get_objective())

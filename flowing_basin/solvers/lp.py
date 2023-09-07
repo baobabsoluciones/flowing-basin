@@ -981,7 +981,7 @@ class LPModel(Experiment):
 
             return franjas_posteriores
 
-        print(obtener_franjas_pw_mayores(FranjasGrupos["dam2"], "Grupo_potencia1"))
+        # print(obtener_franjas_pw_mayores(FranjasGrupos["dam2"], "Grupo_potencia1"))
         """
         Restricción cómputo arranques de powergroups
         """

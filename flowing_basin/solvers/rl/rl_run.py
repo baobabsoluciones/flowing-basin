@@ -36,7 +36,7 @@ class RLRun(Experiment):
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, _, _ = self.env.step(action)
 
-        self.solution = Solution.from_flows(
+        self.solution = Solution.from_flows_array(
             self.env.river_basin.all_past_clipped_flows, dam_ids=self.instance.get_ids_of_dams()
         )
 

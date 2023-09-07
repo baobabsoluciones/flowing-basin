@@ -99,7 +99,7 @@ print(f"{avg_in_flows=}")
 # Exiting flows
 out_flows = dict()
 for dam_id in instance.get_ids_of_dams():
-    out_flows[dam_id] = solution.get_exiting_flows(dam_id)
+    out_flows[dam_id] = solution.get_exiting_flows_of_dam(dam_id)
     out_flows[dam_id] = out_flows[dam_id][0:num_times]
 print(f"{out_flows=}")
 

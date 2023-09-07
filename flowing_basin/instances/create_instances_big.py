@@ -10,7 +10,7 @@ EXAMPLE_NUMBER = 1
 path_historical_data = "../data/history/historical_data.pickle"
 historical_data = pd.read_pickle(path_historical_data)
 
-for num_dams in [4]:
+for num_dams in [1]:
 
     for num_days in [1]:
 

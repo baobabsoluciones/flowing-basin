@@ -23,7 +23,7 @@ config = LPConfiguration(
 )
 
 EXAMPLE = 1
-NUM_DAMS = 2
+NUM_DAMS = 1
 NUM_DAYS = 1
 
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -34,3 +34,23 @@ lp.solve()
 path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \
            f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
 lp.solution.to_json(path_sol)
+
+# Plot simple solution graph if there is only a single dam
+if NUM_DAMS == 1:
+
+    import matplotlib.pyplot as plt
+
+    assigned_flows = lp.solution.get_exiting_flows_of_dam('dam1')
+    predicted_volumes = lp.solution.get_volumes_of_dam('dam1')
+
+    fig1, ax = plt.subplots(1, 1)
+    twinax = ax.twinx()
+    ax.plot(predicted_volumes, color='b', label="Predicted volume")
+    ax.set_xlabel("Time (15min)")
+    ax.set_ylabel("Volume (m3)")
+    ax.legend()
+    twinax.plot(instance.get_all_prices(), color='r', label="Price")
+    twinax.plot(assigned_flows, color='g', label="Flow")
+    twinax.set_ylabel("Flow (m3/s), Price (€)")
+    twinax.legend()
+    plt.show()

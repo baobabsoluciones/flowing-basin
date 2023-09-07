@@ -46,15 +46,15 @@ twinax = ax.twinx()
 ax.plot(predicted_volumes, color='b', label="Predicted volume")
 ax.set_xlabel("Time (15min)")
 ax.set_ylabel("Volume (m3)")
-ax.legend(loc='upper left', bbox_to_anchor=(1.1, 1))
+ax.legend()
 twinax.plot(instance.get_all_prices(), color='r', label="Price")
 twinax.plot(assigned_flows, color='g', label="Flow")
 twinax.set_ylabel("Flow (m3/s), Price (€)")
-twinax.legend(loc='upper left', bbox_to_anchor=(1.1, 0.9))
+twinax.legend()
 plt.show()
 
 # Check solution
-actual_volumes, _, actual_flows, dam_income = heuristic.single_dam_solvers['dam1'].simulate()
+actual_volumes, _, actual_flows, dam_income, dam_net_income = heuristic.single_dam_solvers['dam1'].simulate()
 fig2, axs = plt.subplots(1, 2)
 # Compare volumes:
 axs[0].set_xlabel("Time (15min)")
@@ -72,6 +72,7 @@ plt.show()
 
 # Evaluate solution
 print("TOTAL INCOME:", dam_income)
+print("TOTAL INCOME (w/ startup costs and obj final volumes):", dam_net_income)
 
 # print([time_step for time_step in range(instance.get_largest_impact_horizon()) if abs(predicted_volumes[time_step] - actual_volumes[time_step]) > 1000])
 # for time_step in range(instance.get_largest_impact_horizon()):

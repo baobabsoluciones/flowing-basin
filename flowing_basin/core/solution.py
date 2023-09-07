@@ -43,7 +43,7 @@ class Solution(SolutionCore):
 
         return inconsistencies
 
-    def get_exiting_flows(self, idx: str) -> list[float]:
+    def get_exiting_flows_of_dam(self, idx: str) -> list[float]:
 
         """
         Get the assigned flows to the given dam.
@@ -59,8 +59,27 @@ class Solution(SolutionCore):
 
         return flows
 
+    def get_volumes_of_dam(self, idx: str) -> list[float]:
+
+        """
+        Get the predicted volumes of the given dam.
+
+        :param idx: ID of the dam in the river basin
+        :return: List indicating the volume of the reservoir at the end of every time step (m3)
+        """
+
+        vols = None
+        for el in self.data["dams"]:
+            if el["id"] == idx:
+                try:
+                    vols = el["volume"]
+                except KeyError:
+                    raise KeyError("The given Solution object does not have the predicted volumes stored.")
+
+        return vols
+
     @classmethod
-    def from_flows(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
+    def from_flows_array(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
 
         """
         Create solution from an array that represents
@@ -87,7 +106,7 @@ class Solution(SolutionCore):
             )
         )
 
-    def to_flows(self) -> np.ndarray:
+    def get_exiting_flows_array(self) -> np.ndarray:
 
         """
         Turn solution into an array containing the assigned flows.

@@ -330,7 +330,7 @@ class PSO(Experiment):
         # print("DEBUG - optimal particle's original unclipped flows' history")
         # print(self.river_basin.history.to_string())
         optimal_flows = self.river_basin.all_past_clipped_flows
-        self.solution = Solution.from_flows(
+        self.solution = Solution.from_flows_array(
             optimal_flows, dam_ids=self.instance.get_ids_of_dams()
         )
 
@@ -374,7 +374,7 @@ class PSO(Experiment):
             data["execution_times"].append(self.solver_info["execution_time"])
             data["objectives"].append(self.solver_info["objective"])
 
-            self.river_basin.deep_update(self.solution.to_flows(), is_relvars=False)
+            self.river_basin.deep_update(self.solution.get_exiting_flows_array(), is_relvars=False)
             obj_values = self.objective_function_values_env()
             data["incomes"].append(obj_values["income"])
             for dam_id in self.instance.get_ids_of_dams():
@@ -440,7 +440,7 @@ class PSO(Experiment):
             ), "Cannot get objective if no solution has been given and `solve` has not been called yet."
             solution = self.solution
 
-        self.river_basin.deep_update(solution.to_flows(), is_relvars=False)
+        self.river_basin.deep_update(solution.get_exiting_flows_array(), is_relvars=False)
         obj = self.objective_function_env()
 
         return obj.item()
@@ -536,7 +536,7 @@ class PSO(Experiment):
         print(f"Figure {path_cost_plot} created")
 
         # Save details and history of river basin updated with the current solution
-        self.river_basin.deep_update(self.solution.to_flows(), is_relvars=False)
+        self.river_basin.deep_update(self.solution.get_exiting_flows_array(), is_relvars=False)
 
         path_details = os.path.join(path_dir, "details.txt")
         with open(path_details, "w") as file:

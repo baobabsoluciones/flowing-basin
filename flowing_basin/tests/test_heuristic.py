@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 EXAMPLE = 3
-NUM_DAMS = 1
+NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
+MAXIMIZE_FINAL_VOL = True
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -29,64 +30,30 @@ config = HeuristicConfiguration(
     },
     flow_smoothing=K_PARAMETER,
     mode="linear",
-    maximize_final_vol=True
+    maximize_final_vol=MAXIMIZE_FINAL_VOL
 )
 
 # Solution
 heuristic = Heuristic(config=config, instance=instance)
-assigned_flows, predicted_volumes = heuristic.single_dam_solvers['dam1'].solve()
-sol_dict = {
-    "dams": [
-        {
-            "flows": assigned_flows, "id": 'dam1', "volume": predicted_volumes
-        }
-    ],
-    "price": instance.get_all_prices()
-}
+heuristic.solve()
 path_sol = f"../solutions/instance{EXAMPLE}_Heuristic_{NUM_DAMS}dams_{NUM_DAYS}days" \
            f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
-Solution.from_dict(sol_dict).to_json(path_sol)
+heuristic.solution.to_json(path_sol)
 
-# Plot solution for dam1
-fig1, ax = plt.subplots(1, 1)
-twinax = ax.twinx()
-ax.plot(predicted_volumes, color='b', label="Predicted volume")
-ax.set_xlabel("Time (15min)")
-ax.set_ylabel("Volume (m3)")
-ax.legend()
-twinax.plot(instance.get_all_prices(), color='r', label="Price")
-twinax.plot(assigned_flows, color='g', label="Flow")
-twinax.set_ylabel("Flow (m3/s), Price (€)")
-twinax.legend()
-plt.show()
+# Plot simple solution graph for each dam
+for dam_id in instance.get_ids_of_dams():
 
-# Check solution
-actual_volumes, _, actual_flows, dam_income, dam_net_income = heuristic.single_dam_solvers['dam1'].simulate()
-fig2, axs = plt.subplots(1, 2)
-# Compare volumes:
-axs[0].set_xlabel("Time (15min)")
-axs[0].plot(predicted_volumes, color='b', label="Predicted volume")
-axs[0].plot(actual_volumes, color='c', label="Actual volume")
-axs[0].set_ylabel("Volume (m3)")
-axs[0].legend()
-# Compare flows:
-axs[1].set_xlabel("Time (15min)")
-axs[1].plot(assigned_flows, color='g', label="Assigned flows")
-axs[1].plot(actual_flows, color='lime', label="Actual exiting flows")
-axs[1].set_ylabel("Flow (m3/s)")
-axs[1].legend()
-plt.show()
-assert all([abs(actual_vol - predicted_vol) < 1e6 for actual_vol, predicted_vol in zip(actual_volumes, predicted_volumes)])
-assert all([abs(actual_flow - assigned_flow) < 1e6 for actual_flow, assigned_flow in zip(actual_flows, assigned_flows)])
+    assigned_flows = heuristic.solution.get_exiting_flows_of_dam(dam_id)
+    predicted_volumes = heuristic.solution.get_volumes_of_dam(dam_id)
 
-# Evaluate solution
-print("TOTAL INCOME:", dam_income)
-print("TOTAL INCOME (w/ startup costs and obj final volumes):", dam_net_income)
-
-# print([time_step for time_step in range(instance.get_largest_impact_horizon()) if abs(predicted_volumes[time_step] - actual_volumes[time_step]) > 1000])
-# for time_step in range(instance.get_largest_impact_horizon()):
-#     print(
-#         "heuristic", time_step, heuristic.single_dam_solvers['dam1'].added_volumes[time_step],
-#         assigned_flows[time_step] * instance.get_time_step_seconds(), assigned_flows[time_step],
-#         predicted_volumes[time_step]
-#     )
+    fig, ax = plt.subplots(1, 1)
+    twinax = ax.twinx()
+    ax.plot(predicted_volumes, color='b', label="Predicted volume")
+    ax.set_xlabel("Time (15min)")
+    ax.set_ylabel("Volume (m3)")
+    ax.legend()
+    twinax.plot(instance.get_all_prices(), color='r', label="Price")
+    twinax.plot(assigned_flows, color='g', label="Flow")
+    twinax.set_ylabel("Flow (m3/s), Price (€)")
+    twinax.legend()
+    plt.show()

@@ -316,17 +316,18 @@ class HeuristicSingleDam:
 
         return self.assigned_flows, predicted_volumes
 
-    def simulate(self) -> tuple[list[float], list[float], list[float], float, float]:
+    def simulate(self) -> tuple[list[float], list[float], list[float], list[float], float, float]:
 
         """
         Use the river basin simulator to get the
-        actual volumes (m3), turbined flows (m3/s), actual exiting flows (m3/s) and total income (€)
-        with the current assigned flows
+        turbined flows (m3/s), powers (MW), actual volumes (m3), actual exiting flows (m3/s),
+        income from energy (€) and total income (€) with the current assigned flows
         """
 
         turbined_flows = []
         actual_exiting_flows = []
         actual_volumes = []
+        powers = []
 
         # Calculate volumes with the current assigned flows
         self.dam.reset(instance=self.instance, flow_smoothing=self.config.flow_smoothing, num_scenarios=1)
@@ -334,23 +335,23 @@ class HeuristicSingleDam:
             turbined_flow = self.dam.update(
                 price=self.instance.get_price(time_step),
                 flow_out=np.array([self.assigned_flows[time_step]]),
-                incoming_flow=self.instance.get_incoming_flow(time_step),
                 unregulated_flow=self.instance.get_unregulated_flow_of_dam(time_step, self.dam.idx),
-                turbined_flow_of_preceding_dam=np.array([0]),
+                flow_contribution=np.array([self.flow_contribution[time_step]])
             )
             turbined_flows.append(turbined_flow.item())
             actual_exiting_flows.append(self.dam.flow_out_clipped2.item())
             actual_volumes.append(self.dam.volume.item())
+            powers.append(self.dam.channel.power_group.power.item())
 
         # Income (WITHOUT startup costs and objective final volumes)
         dam_income = self.dam.channel.power_group.acc_income.item()
 
         # Net income (WITH startup costs and objective final volumes)
-        final_volume = self.dam.final_volume
+        final_volume = self.dam.final_volume.item()
         volume_shortage = max(0, self.config.volume_objectives[self.dam_id] - final_volume)
         volume_exceedance = max(0, final_volume - self.config.volume_objectives[self.dam_id])
-        num_startups = self.dam.channel.power_group.acc_num_startups
-        num_limit_zones = self.dam.channel.power_group.acc_num_times_in_limit
+        num_startups = self.dam.channel.power_group.acc_num_startups.item()
+        num_limit_zones = self.dam.channel.power_group.acc_num_times_in_limit.item()
         penalty = (
                 self.config.volume_shortage_penalty * volume_shortage
                 + self.config.startups_penalty * num_startups
@@ -359,7 +360,7 @@ class HeuristicSingleDam:
         bonus = self.config.volume_exceedance_bonus * volume_exceedance
         dam_net_income = dam_income + bonus - penalty
 
-        return actual_volumes, turbined_flows, actual_exiting_flows, dam_income, dam_net_income
+        return turbined_flows, powers, actual_volumes, actual_exiting_flows, dam_income, dam_net_income
 
 
 class Heuristic(Experiment):
@@ -386,14 +387,80 @@ class Heuristic(Experiment):
         self.config = config
         self.paths_power_models = paths_power_models
 
-        self.single_dam_solvers = {
-            dam_id: HeuristicSingleDam(
+    def solve(self, options: dict = None) -> dict:
+
+        """
+        Fill the `solution` attribute of the object,
+        with the solution recommended by the heuristic.
+
+        :param options: Unused argument, inherited from Experiment
+        :return: A dictionary with status codes
+        """
+
+        flows = dict()
+        volumes = dict()
+        powers = dict()
+        incomes = dict()
+
+        dams_ids_in_order = sorted(
+            self.instance.get_ids_of_dams(),
+            key=lambda dam_idx: self.instance.get_order_of_dam(dam_idx)
+        )
+        flow_contribution = self.instance.get_all_incoming_flows()
+
+        for dam_id in dams_ids_in_order:
+
+            # Get heuristic solution for this dam
+            single_dam_solver = HeuristicSingleDam(
                 dam_id=dam_id,
-                instance=instance,
-                flow_contribution=self.instance.get_all_incoming_flows(),
-                # TODO: for dam2, this should actually be the turbined flows of the preceding dam
-                config=config,
+                instance=self.instance,
+                flow_contribution=flow_contribution,
+                config=self.config,
             )
-            for dam_id in self.instance.get_ids_of_dams()
+            assigned_flows, predicted_volumes = single_dam_solver.solve()
+
+            # Simulate to get turbined flows
+            turbined_flows, powers[dam_id], volumes[dam_id], flows[dam_id], _, incomes[dam_id] = single_dam_solver.simulate()
+            print(dam_id, "INCOME FROM ENERGY:", _)
+            print(dam_id, "TOTAL INCOME:", incomes[dam_id])
+
+            # Check flows and volumes from heuristic are the same as those from the simulator
+            assert all([abs(actual_vol - predicted_vol) < 1e6 for actual_vol, predicted_vol in
+                        zip(volumes[dam_id], predicted_volumes)])
+            assert all([abs(actual_flow - assigned_flow) < 1e6 for actual_flow, assigned_flow in
+                        zip(flows[dam_id], assigned_flows)])
+            # fig2, axs = plt.subplots(1, 2)
+            # # Compare volumes:
+            # axs[0].set_xlabel("Time (15min)")
+            # axs[0].plot(predicted_volumes, color='b', label="Predicted volume")
+            # axs[0].plot(volumes[dam_id], color='c', label="Actual volume")
+            # axs[0].set_ylabel("Volume (m3)")
+            # axs[0].legend()
+            # # Compare flows:
+            # axs[1].set_xlabel("Time (15min)")
+            # axs[1].plot(assigned_flows, color='g', label="Assigned flows")
+            # axs[1].plot(flows[dam_id], color='lime', label="Actual exiting flows")
+            # axs[1].set_ylabel("Flow (m3/s)")
+            # axs[1].legend()
+            # plt.show()
+
+            # Flow contribution to the next dam
+            flow_contribution = turbined_flows
+
+        total_income = sum(incomes[dam_id] for dam_id in self.instance.get_ids_of_dams())
+        print("TOTAL INCOME", total_income)
+
+        sol_dict = {
+            "objective_function": total_income,
+            "dams": [
+                {
+                    "flows": flows[dam_id], "id": dam_id, "power": powers[dam_id], "volume": volumes[dam_id]
+                }
+                for dam_id in self.instance.get_ids_of_dams()
+            ],
+            "price": self.instance.get_all_prices()
         }
+        self.solution = Solution.from_dict(sol_dict)
+
+        return dict()
 

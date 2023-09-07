@@ -1,6 +1,7 @@
 from flowing_basin.core import Instance
 from flowing_basin.solvers import LPModel, LPConfiguration
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 config = LPConfiguration(
     volume_objectives={
@@ -23,7 +24,7 @@ config = LPConfiguration(
 )
 
 EXAMPLE = 3
-NUM_DAMS = 1
+NUM_DAMS = 2
 NUM_DAYS = 1
 
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -35,15 +36,13 @@ path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}day
            f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
 lp.solution.to_json(path_sol)
 
-# Plot simple solution graph if there is only a single dam
-if NUM_DAMS == 1:
+# Plot simple solution graph for each dam
+for dam_id in instance.get_ids_of_dams():
 
-    import matplotlib.pyplot as plt
+    assigned_flows = lp.solution.get_exiting_flows_of_dam(dam_id)
+    predicted_volumes = lp.solution.get_volumes_of_dam(dam_id)
 
-    assigned_flows = lp.solution.get_exiting_flows_of_dam('dam1')
-    predicted_volumes = lp.solution.get_volumes_of_dam('dam1')
-
-    fig1, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1)
     twinax = ax.twinx()
     ax.plot(predicted_volumes, color='b', label="Predicted volume")
     ax.set_xlabel("Time (15min)")

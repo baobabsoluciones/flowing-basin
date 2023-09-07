@@ -110,9 +110,8 @@ class Dam:
         self,
         flow_out: np.ndarray,
         price: float,
-        incoming_flow: float,
         unregulated_flow: float,
-        turbined_flow_of_preceding_dam: np.ndarray,
+        flow_contribution: np.ndarray,
     ) -> np.ndarray:
 
         """
@@ -122,11 +121,10 @@ class Dam:
             Array of shape num_scenarios with
             the flow we want to have exiting the dam in every scenario (m3/s)
         :param price: Price of energy in current time step (EUR/MWh)
-        :param incoming_flow: Incoming flow to the river basin in the current time step (m3/s)
         :param unregulated_flow: Unregulated flow entering the dam in the current time step (m3/s)
-        :param turbined_flow_of_preceding_dam:
+        :param flow_contribution:
             Array of shape num_scenarios with
-            the turbined flow of the previous dam (that is entering this dam) in every scenario (m3/s)
+            the flow entering this dam (from the river or the previous dam) in every scenario (m3/s)
         :return:
             Array of shape num_scenarios with
             the turbined flow in the power group in every scenario (m3/s)
@@ -137,11 +135,7 @@ class Dam:
         # Flow IN ---- #
 
         # Obtain flow coming into the dam from the river or the previous dam
-        self.flow_contribution = (
-            np.repeat(incoming_flow, self.num_scenarios)
-            if self.order == 1
-            else turbined_flow_of_preceding_dam
-        )
+        self.flow_contribution = flow_contribution
 
         # Obtain unregulated flow coming into the dam
         self.unregulated_flow = unregulated_flow

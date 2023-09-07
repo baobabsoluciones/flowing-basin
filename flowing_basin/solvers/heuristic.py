@@ -23,7 +23,6 @@ class HeuristicSingleDam:
             dam_id: str,
             instance: Instance,
             config: HeuristicConfiguration,
-            sorted_time_steps: list[float],
             flow_contribution: list[float],
             paths_power_models: dict[str, str] = None,
     ):
@@ -31,7 +30,6 @@ class HeuristicSingleDam:
         self.dam_id = dam_id
         self.instance = instance
         self.config = config
-        self.sorted_time_steps = sorted_time_steps
         self.flow_contribution = flow_contribution
 
         # Important constants
@@ -53,6 +51,23 @@ class HeuristicSingleDam:
             num_scenarios=1,
             mode=self.config.mode,
         )
+
+    def sort_time_steps(self) -> list[int]:
+
+        """
+        List with the time steps sorted
+        according to the price in their lags
+        """
+
+        time_steps = list(range(self.instance.get_largest_impact_horizon()))
+        prices = self.instance.get_all_prices()
+
+        verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
+        weights = [prices[time_step + verification_lags[0]] for time_step in time_steps if time_step + verification_lags[0] < len(prices)]
+        weights[len(weights):] = [0 for _ in time_steps[len(weights):]]
+        sorted_time_steps = sorted(time_steps, key=lambda x: weights[x], reverse=True)
+
+        return sorted_time_steps
 
     def volume_from_flow(self, flow: float) -> float:
 
@@ -232,14 +247,11 @@ class HeuristicSingleDam:
         as well as the predicted volumes (m3) with these recommended flow assignments.
         """
 
-        verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
-        for time_step in self.sorted_time_steps:
-            time_step_lags = [int(time_step - lag) for lag in verification_lags if time_step - lag >= 0]
-            for time_step_lag in time_step_lags:
-                available_volume = self.calculate_actual_available_volume(time_step_lag)
-                self.assigned_flows[time_step_lag] = self.max_flow_from_available_volume(available_volume)  # noqa
-                self.added_volumes = self.calculate_added_volumes()
-                self.available_volumes = self.calculate_available_volumes()
+        for time_step in self.sort_time_steps():
+            available_volume = self.calculate_actual_available_volume(time_step)
+            self.assigned_flows[time_step] = self.max_flow_from_available_volume(available_volume)  # noqa
+            self.added_volumes = self.calculate_added_volumes()
+            self.available_volumes = self.calculate_available_volumes()
 
         self.clean_flows_and_volumes()
         predicted_volumes = [available_vol + self.min_vol for available_vol in self.available_volumes]
@@ -316,28 +328,14 @@ class Heuristic(Experiment):
         self.config = config
         self.paths_power_models = paths_power_models
 
-        sorted_time_steps = self.sort_time_steps()
         self.single_dam_solvers = {
             dam_id: HeuristicSingleDam(
                 dam_id=dam_id,
                 instance=instance,
-                sorted_time_steps=sorted_time_steps,
                 flow_contribution=self.instance.get_all_incoming_flows(),
                 # TODO: for dam2, this should actually be the turbined flows of the preceding dam
                 config=config,
             )
             for dam_id in self.instance.get_ids_of_dams()
         }
-
-    def sort_time_steps(self) -> list[int]:
-
-        """
-        List with the time steps sorted by their price
-        """
-
-        time_steps = list(range(self.instance.get_largest_impact_horizon()))
-        prices = self.instance.get_all_prices()
-        sorted_time_steps = sorted(time_steps, key=lambda x: prices[x], reverse=True)
-
-        return sorted_time_steps
 

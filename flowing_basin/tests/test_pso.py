@@ -3,7 +3,7 @@ from flowing_basin.solvers import PSOConfiguration, PSO
 from datetime import datetime
 import os
 
-NEW_SOLUTION = False
+NEW_SOLUTION = True
 EXAMPLE = 1
 NUM_DAMS = 1
 NUM_DAYS = 1
@@ -69,8 +69,8 @@ print("optimal solution's objective function values:", pso.objective_function_va
 print("optimal solution's full objective function value:", pso.objective_function_env())
 print("optimal solution's full objective function value (cornflow method):", pso.get_objective())
 print(pso.river_basin.history.to_string())
-pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
-pso.river_basin.history.to_excel(os.path.join(path_parent, dir_name, "history.xlsx"))
+# pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
+# pso.river_basin.history.to_excel(os.path.join(path_parent, dir_name, "history.xlsx"))
 
 # Search for best PSO parameters ---- #
 # options_search = {"c1": [0.1, 5], "c2": [0.1, 5], "w": [0.3, 0.9], "k": [1, 2], "p": 1}

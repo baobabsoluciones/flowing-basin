@@ -14,7 +14,7 @@ start_date = datetime.strptime(start_dates[EXAMPLE_NUMBER], "%Y-%m-%d %H:%M")
 path_historical_data = "../data/history/historical_data.pickle"
 historical_data = pd.read_pickle(path_historical_data)
 
-for num_dams in [1]:
+for num_dams in [2]:
 
     for num_days in [1]:
 

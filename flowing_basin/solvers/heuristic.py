@@ -2,6 +2,7 @@ from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import Dam
 from dataclasses import dataclass
 import numpy as np
+import warnings
 
 
 @dataclass(kw_only=True)
@@ -28,17 +29,27 @@ class HeuristicSingleDam:
             config: HeuristicConfiguration,
             flow_contribution: list[float],
             paths_power_models: dict[str, str] = None,
+            do_tests: bool = True
     ):
 
         self.dam_id = dam_id
         self.instance = instance
         self.config = config
         self.flow_contribution = flow_contribution
+        self.do_tests = do_tests
 
         # Important constants
+        # The initial volume is clipped between the min and max volumes (like in the simulator)
         self.time_steps = list(range(self.instance.get_largest_impact_horizon()))
         self.min_vol = self.instance.get_min_vol_of_dam(self.dam_id)
         self.max_available_vol = self.instance.get_max_vol_of_dam(self.dam_id) - self.min_vol
+        self.initial_available_vol = max(
+            0.,
+            min(
+                self.max_available_vol,
+                self.instance.get_initial_vol_of_dam(self.dam_id) - self.min_vol
+            )
+        )
 
         # Dynamic values
         self.assigned_flows = [0 for _ in range(self.instance.get_largest_impact_horizon())]
@@ -120,7 +131,6 @@ class HeuristicSingleDam:
             self.volume_from_flow(contrib + unreg - assigned)
             for contrib, unreg, assigned in zip(self.flow_contribution, unregulated_flows, self.assigned_flows)
         ]
-
         return added_volumes
 
     def calculate_available_volumes(self) -> list[float]:
@@ -131,11 +141,8 @@ class HeuristicSingleDam:
         with the currently assigned flows.
         """
 
-        # Calculate the initially available volume
-        initial_available_volume = self.instance.get_initial_vol_of_dam(self.dam_id) - self.min_vol
-
         # Calculate the available volume at every time step
-        current_volume = initial_available_volume
+        current_volume = self.initial_available_vol
         available_volumes = []
         for added_volume in self.added_volumes:
             current_volume += added_volume
@@ -160,15 +167,17 @@ class HeuristicSingleDam:
             # We add the unused volume, which is the volume added when the reservoir was already full
             prev_available_volume = (
                 self.available_volumes[running_time_step - 1] if running_time_step - 1 >= 0
-                else self.instance.get_initial_vol_of_dam(self.dam_id) - self.min_vol
+                else self.initial_available_vol
             )
             vol_used = self.max_available_vol - prev_available_volume
             vol_unused = self.added_volumes[running_time_step] - vol_used
-            assert vol_unused >= - 1e-6, (
-                f"Vol unused has a negative value {vol_unused} for time step {running_time_step}, with "
-                f"previous volume {prev_available_volume} and "
-                f"added volume {self.added_volumes[running_time_step]}."
-            )
+            if self.do_tests:
+                assert vol_unused >= - 1e-6, (
+                    f"In dam {self.dam_id}, vol unused has a negative value {vol_unused} "
+                    f"for time step {running_time_step}, with "
+                    f"previous volume {prev_available_volume} and "
+                    f"added volume {self.added_volumes[running_time_step]}."
+                )
             total_unused_vol += vol_unused
             running_time_step += 1
             if running_time_step > self.time_steps[-1]:
@@ -241,6 +250,35 @@ class HeuristicSingleDam:
         max_flow = min(max_flow, available_volume / self.instance.get_time_step_seconds())
         return max_flow
 
+    def adapt_flows_to_volume_limits(self, groups: list[list[int]]):
+
+        """
+        Adapt the flow of every group to the current available volumes
+        This is necessary in dams where volume may impose a flow limit
+        These method should be called whenever available volumes are modified
+        :return:
+        """
+
+        if self.dam.channel.limit_flow_points is None:
+            return
+
+        for group in groups:
+            # The flow of each time step is limited by the volume at the end of the previous time step
+            # We take the minimum of these volumes for the whole group, to ensure the same flow can be assigned
+            min_volume = min(
+                (
+                    self.available_volumes[time_step - 1] + self.min_vol if time_step - 1 >= 0
+                    else self.initial_available_vol + self.min_vol
+                ) for time_step in group
+            )
+            flow_to_assign = min(
+                self.assigned_flows[group[0]],
+                self.dam.channel.get_flow_limit(np.array([min_volume])).item()
+            )
+            for time_step in group:
+                self.assigned_flows[time_step] = flow_to_assign
+        return
+
     @staticmethod
     def clean_list(lst: list, epsilon: float = 1e-6):
 
@@ -287,8 +325,9 @@ class HeuristicSingleDam:
         while self.available_volumes[decision_horizon - 1] < objective_available_volume:
             for time_step in groups[-num_groups_back]:
                 self.assigned_flows[time_step] = 0
-                self.added_volumes = self.calculate_added_volumes()
-                self.available_volumes = self.calculate_available_volumes()
+            self.added_volumes = self.calculate_added_volumes()
+            self.available_volumes = self.calculate_available_volumes()
+            self.adapt_flows_to_volume_limits(groups)
             num_groups_back += 1
 
     def solve(self) -> tuple[list[float], list[float]]:
@@ -305,10 +344,16 @@ class HeuristicSingleDam:
             available_volume = min(
                 self.calculate_actual_available_volume(time_step) for time_step in group
             ) / len(group)
+            flow_to_assign = self.max_flow_from_available_volume(available_volume)
             for time_step in group:
-                self.assigned_flows[time_step] = self.max_flow_from_available_volume(available_volume)  # noqa
-                self.added_volumes = self.calculate_added_volumes()
-                self.available_volumes = self.calculate_available_volumes()
+                self.assigned_flows[time_step] = flow_to_assign  # noqa
+            self.added_volumes = self.calculate_added_volumes()
+            self.available_volumes = self.calculate_available_volumes()
+            self.adapt_flows_to_volume_limits(groups)
+
+        # Recalculate available volumes one last time (to adapt to the new flows after volume limits)
+        self.added_volumes = self.calculate_added_volumes()
+        self.available_volumes = self.calculate_available_volumes()
 
         self.clean_flows_and_volumes()
         self.adapt_flows_to_obj_vol(groups)
@@ -377,6 +422,7 @@ class Heuristic(Experiment):
         instance: Instance,
         config: HeuristicConfiguration,
         paths_power_models: dict[str, str] = None,
+        do_tests: bool = True,
         solution: Solution = None,
     ):
 
@@ -386,6 +432,49 @@ class Heuristic(Experiment):
 
         self.config = config
         self.paths_power_models = paths_power_models
+        self.do_tests = do_tests
+
+    @staticmethod
+    def compare_flows_and_volumes(
+            assigned_flows: list[float], actual_flows: list[float],
+            predicted_vols: list[float], actual_vols: list[float], plot: bool = True
+    ) -> bool:
+
+        all_equal = True
+        for time_step, (assigned_flow, actual_flow, predicted_vol, actual_vol) in enumerate(
+                zip(assigned_flows, actual_flows, predicted_vols, actual_vols)
+        ):
+            if abs(actual_vol - predicted_vol) > 1:
+                warnings.warn(
+                    f"Actual and predicted volume in time step {time_step} are not equal: "
+                    f"actual volume is {actual_vol} m3 and predicted volume is {predicted_vol} m3."
+                )
+                all_equal = False
+            if abs(actual_flow - assigned_flow) > 0.01:
+                warnings.warn(
+                    f"Actual and assigned flow in time step {time_step} are not equal: "
+                    f"actual flow is {actual_flow} m3/s and assigned_flow is {assigned_flow} m3/s."
+                )
+                all_equal = False
+
+        if not all_equal and plot:
+            import matplotlib.pyplot as plt
+            fig2, axs = plt.subplots(1, 2)
+            # Compare volumes:
+            axs[0].set_xlabel("Time (15min)")
+            axs[0].plot(predicted_vols, color='b', label="Predicted volume")
+            axs[0].plot(actual_vols, color='c', label="Actual volume")
+            axs[0].set_ylabel("Volume (m3)")
+            axs[0].legend()
+            # Compare flows:
+            axs[1].set_xlabel("Time (15min)")
+            axs[1].plot(assigned_flows, color='g', label="Assigned flows")
+            axs[1].plot(actual_flows, color='lime', label="Actual exiting flows")
+            axs[1].set_ylabel("Flow (m3/s)")
+            axs[1].legend()
+            plt.show()
+
+        return all_equal
 
     def solve(self, options: dict = None) -> dict:
 
@@ -416,33 +505,23 @@ class Heuristic(Experiment):
                 instance=self.instance,
                 flow_contribution=flow_contribution,
                 config=self.config,
+                do_tests=self.do_tests
             )
-            assigned_flows, predicted_volumes = single_dam_solver.solve()
+            assigned_flows, predicted_vols = single_dam_solver.solve()
+            flows[dam_id] = assigned_flows
+            volumes[dam_id] = predicted_vols
 
-            # Simulate to get turbined flows
-            turbined_flows, powers[dam_id], volumes[dam_id], flows[dam_id], _, incomes[dam_id] = single_dam_solver.simulate()
+            # Simulate to get turbined flows, powers and income
+            turbined_flows, powers[dam_id], actual_vols, actual_flows, _, incomes[dam_id] = single_dam_solver.simulate()
             # print(dam_id, "INCOME FROM ENERGY:", _)
             # print(dam_id, "TOTAL INCOME:", incomes[dam_id])
 
             # Check flows and volumes from heuristic are the same as those from the simulator
-            assert all([abs(actual_vol - predicted_vol) < 1e6 for actual_vol, predicted_vol in
-                        zip(volumes[dam_id], predicted_volumes)])
-            assert all([abs(actual_flow - assigned_flow) < 1e6 for actual_flow, assigned_flow in
-                        zip(flows[dam_id], assigned_flows)])
-            # fig2, axs = plt.subplots(1, 2)
-            # # Compare volumes:
-            # axs[0].set_xlabel("Time (15min)")
-            # axs[0].plot(predicted_volumes, color='b', label="Predicted volume")
-            # axs[0].plot(volumes[dam_id], color='c', label="Actual volume")
-            # axs[0].set_ylabel("Volume (m3)")
-            # axs[0].legend()
-            # # Compare flows:
-            # axs[1].set_xlabel("Time (15min)")
-            # axs[1].plot(assigned_flows, color='g', label="Assigned flows")
-            # axs[1].plot(flows[dam_id], color='lime', label="Actual exiting flows")
-            # axs[1].set_ylabel("Flow (m3/s)")
-            # axs[1].legend()
-            # plt.show()
+            if self.do_tests:
+                assert self.compare_flows_and_volumes(
+                    assigned_flows=assigned_flows, actual_flows=actual_flows,
+                    predicted_vols=predicted_vols, actual_vols=actual_vols
+                ), f"For {dam_id}, volume and flows from heuristic do not match those form the simulator."
 
             # Flow contribution to the next dam
             flow_contribution = turbined_flows
@@ -461,6 +540,12 @@ class Heuristic(Experiment):
             "price": self.instance.get_all_prices()
         }
         self.solution = Solution.from_dict(sol_dict)
+
+        # Check flow smoothing parameter compliance
+        if self.do_tests:
+            assert self.solution.complies_with_flow_smoothing(self.config.flow_smoothing), (
+                "The solution from the heuristic does not comply with the flow smoothing parameter."
+            )
 
         return dict()
 

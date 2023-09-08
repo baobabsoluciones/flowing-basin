@@ -1,13 +1,13 @@
 from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
-import matplotlib.pyplot as plt
 from datetime import datetime
 
-EXAMPLE = 1
+EXAMPLE = '_intermediate0'
 NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
 MAXIMIZE_FINAL_VOL = False
+PLOT_SOL = True
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -38,22 +38,22 @@ heuristic = Heuristic(config=config, instance=instance)
 heuristic.solve()
 path_sol = f"../solutions/instance{EXAMPLE}_Heuristic_{NUM_DAMS}dams_{NUM_DAYS}days" \
            f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
-heuristic.solution.to_json(path_sol)
+# heuristic.solution.to_json(path_sol)
 
 # Plot simple solution graph for each dam
-for dam_id in instance.get_ids_of_dams():
-
-    assigned_flows = heuristic.solution.get_exiting_flows_of_dam(dam_id)
-    predicted_volumes = heuristic.solution.get_volumes_of_dam(dam_id)
-
-    fig, ax = plt.subplots(1, 1)
-    twinax = ax.twinx()
-    ax.plot(predicted_volumes, color='b', label="Predicted volume")
-    ax.set_xlabel("Time (15min)")
-    ax.set_ylabel("Volume (m3)")
-    ax.legend()
-    twinax.plot(instance.get_all_prices(), color='r', label="Price")
-    twinax.plot(assigned_flows, color='g', label="Flow")
-    twinax.set_ylabel("Flow (m3/s), Price (€)")
-    twinax.legend()
-    plt.show()
+if PLOT_SOL:
+    import matplotlib.pyplot as plt
+    for dam_id in instance.get_ids_of_dams():
+        assigned_flows = heuristic.solution.get_exiting_flows_of_dam(dam_id)
+        predicted_volumes = heuristic.solution.get_volumes_of_dam(dam_id)
+        fig, ax = plt.subplots(1, 1)
+        twinax = ax.twinx()
+        ax.plot(predicted_volumes, color='b', label="Predicted volume")
+        ax.set_xlabel("Time (15min)")
+        ax.set_ylabel("Volume (m3)")
+        ax.legend()
+        twinax.plot(instance.get_all_prices(), color='r', label="Price")
+        twinax.plot(assigned_flows, color='g', label="Flow")
+        twinax.set_ylabel("Flow (m3/s), Price (€)")
+        twinax.legend()
+        plt.show()

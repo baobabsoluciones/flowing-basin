@@ -3,9 +3,9 @@ from flowing_basin.solvers import PSOConfiguration, PSO
 from datetime import datetime
 import os
 
-NEW_SOLUTION = True
+NEW_SOLUTION = False
 EXAMPLE = 1
-NUM_DAMS = 1
+NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
 USE_RELVARS = True
@@ -56,8 +56,8 @@ if NEW_SOLUTION:
     print("solver info:", pso.solver_info)
 else:
     # Given solution
-    pso.solution = Solution.from_json("../solutions/instance1_Heuristic_1dams_1days_time2023-09-07_18-23.json")
-    dir_name = "instance1_Heuristic_1dams_1days_time2023-09-07_18-23"
+    pso.solution = Solution.from_json("../solutions/instance1_Heuristic_2dams_1days_time2023-09-08_14-11.json")
+    dir_name = "instance1_Heuristic_2dams_1days_time2023-09-08_14-11"
 
 sol_inconsistencies = pso.solution.check()
 if sol_inconsistencies:
@@ -69,7 +69,7 @@ print("optimal solution's objective function values:", pso.objective_function_va
 print("optimal solution's full objective function value:", pso.objective_function_env())
 print("optimal solution's full objective function value (cornflow method):", pso.get_objective())
 print(pso.river_basin.history.to_string())
-# pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
+pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
 # pso.river_basin.history.to_excel(os.path.join(path_parent, dir_name, "history.xlsx"))
 
 # Search for best PSO parameters ---- #

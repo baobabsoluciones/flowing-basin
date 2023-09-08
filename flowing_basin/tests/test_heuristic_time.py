@@ -2,7 +2,7 @@ from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from time import perf_counter
 
-EXAMPLES = [f'_intermediate{i}' for i in range(11)]
+EXAMPLES = [f'_intermediate{i}' for i in range(10)]
 NUM_REPLICATIONS = 20
 NUM_DAMS = 2
 NUM_DAYS = 1
@@ -39,10 +39,19 @@ for example in EXAMPLES:
         instance = Instance.from_json(f"../instances/instances_big/instance{example}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
         num_instances += 1
 
-        heuristic = Heuristic(config=config, instance=instance)
+        heuristic = Heuristic(config=config, instance=instance, do_tests=True)
         heuristic.solve()
         # print(heuristic.solution.data)
 
 exec_time = perf_counter() - start
 print(f"Solved {num_instances} instances in {exec_time}s.")
-# Solved 200 instances in 22.846333399997093s.
+# Solved 200 instances in 32.902009000012185s. <-- without prints and WITH TESTS
+# Solved 200 instances in 33.10179009998683s.
+# Solved 200 instances in 30.569451900024433s.
+# Solved 200 instances in 27.123247299983632s.
+# Solved 200 instances in 24.85201999999117s. <-- without prints and WITHOUT TESTS
+# Solved 200 instances in 24.950323499972s.
+# Solved 200 instances in 36.96347959997365s.
+# Solved 200 instances in 29.957258799986448s.
+# I got inconsistent results when running code with and without tests; I am not sure which is faster
+# I think running the code w/o tests is faster, but running it w/ tests may be equivalent because of assert disabling

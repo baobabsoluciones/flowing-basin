@@ -421,8 +421,8 @@ class Heuristic(Experiment):
 
             # Simulate to get turbined flows
             turbined_flows, powers[dam_id], volumes[dam_id], flows[dam_id], _, incomes[dam_id] = single_dam_solver.simulate()
-            print(dam_id, "INCOME FROM ENERGY:", _)
-            print(dam_id, "TOTAL INCOME:", incomes[dam_id])
+            # print(dam_id, "INCOME FROM ENERGY:", _)
+            # print(dam_id, "TOTAL INCOME:", incomes[dam_id])
 
             # Check flows and volumes from heuristic are the same as those from the simulator
             assert all([abs(actual_vol - predicted_vol) < 1e6 for actual_vol, predicted_vol in
@@ -448,7 +448,7 @@ class Heuristic(Experiment):
             flow_contribution = turbined_flows
 
         total_income = sum(incomes[dam_id] for dam_id in self.instance.get_ids_of_dams())
-        print("TOTAL INCOME", total_income)
+        # print("TOTAL INCOME", total_income)
 
         sol_dict = {
             "objective_function": total_income,

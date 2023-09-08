@@ -3,11 +3,11 @@ from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-EXAMPLE = 3
+EXAMPLE = 1
 NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
-MAXIMIZE_FINAL_VOL = True
+MAXIMIZE_FINAL_VOL = False
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")

@@ -2,6 +2,7 @@ from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import Dam
 from dataclasses import dataclass
 from random import random
+from math import log
 import numpy as np
 import warnings
 
@@ -15,8 +16,10 @@ class HeuristicConfiguration(Configuration):
     # Maximize final volume independently of the objective final volume specified
     maximize_final_vol: bool = False
 
-    # Randomly assign less flow than the maximum available
-    biased_random_flows: bool = False
+    # Randomly assign less flow than the maximum available by setting random_biased_flows=True
+    # If True, the prob_below_half parameter gives the probability that the assigned flow is below half the maximum
+    random_biased_flows: bool = False
+    prob_below_half: float = 0.15
 
     def __post_init__(self):
         valid_modes = {"linear", "nonlinear"}
@@ -31,6 +34,7 @@ class HeuristicSingleDam:
             dam_id: str,
             instance: Instance,
             config: HeuristicConfiguration,
+            bias_weight: float,
             flow_contribution: list[float],
             paths_power_models: dict[str, str] = None,
             do_tests: bool = True
@@ -39,6 +43,7 @@ class HeuristicSingleDam:
         self.dam_id = dam_id
         self.instance = instance
         self.config = config
+        self.bias_weight = bias_weight
         self.flow_contribution = flow_contribution
         self.do_tests = do_tests
 
@@ -254,8 +259,7 @@ class HeuristicSingleDam:
         max_flow = min(max_flow, available_volume / self.instance.get_time_step_seconds())
         return max_flow
 
-    @staticmethod
-    def generate_biased_random_number(weight: float = 4.) -> float:
+    def generate_random_biased_number(self) -> float:
 
         """
         Generate a random number between 0 and 1,
@@ -265,14 +269,14 @@ class HeuristicSingleDam:
         and then passing it through a concave function [0,1] -> [0,1];
         in this case, f(x) = x ^ (1 / weight).
 
-        :param weight: Parameter indicating how much more likely numbers close to 1 are.
+        The weight parameter indicates how much more likely numbers close to 1 are.
         If weight < 1, numbers close to 1 are actually less likely.
         If weight > 1, numbers close to 1 are more likely.
-        With the default value weight = 4, there is only a 10% chance that the number will be below 0.5.
+
         :return:
         """
 
-        return random() ** (1 / weight)
+        return random() ** (1 / self.bias_weight)
 
     def adapt_flows_to_volume_limits(self, groups: list[list[int]]):
 
@@ -364,9 +368,16 @@ class HeuristicSingleDam:
         time_steps = list(range(self.instance.get_largest_impact_horizon()))
         groups = self.group_time_steps(time_steps)
         sorted_groups = self.sort_groups(groups)
+
         for group in sorted_groups:
+
+            # Calculate the flow that should be assigned to the group
             available_volume = self.calculate_actual_available_volume(group) / len(group)
             flow_to_assign = self.max_flow_from_available_volume(available_volume)
+            if self.config.random_biased_flows:
+                flow_to_assign = self.generate_random_biased_number() * flow_to_assign
+
+            # Assign the flow and recalculate volumes
             for time_step in group:
                 self.assigned_flows[time_step] = flow_to_assign  # noqa
             self.added_volumes = self.calculate_added_volumes()
@@ -456,6 +467,9 @@ class Heuristic(Experiment):
         self.paths_power_models = paths_power_models
         self.do_tests = do_tests
 
+        # Calculate the bias weight in the random biased number generator
+        self.bias_weight = log(self.config.prob_below_half) / log(0.5)
+
     @staticmethod
     def compare_flows_and_volumes(
             assigned_flows: list[float], actual_flows: list[float],
@@ -527,7 +541,8 @@ class Heuristic(Experiment):
                 instance=self.instance,
                 flow_contribution=flow_contribution,
                 config=self.config,
-                do_tests=self.do_tests
+                bias_weight=self.bias_weight,
+                do_tests=self.do_tests,
             )
             assigned_flows, predicted_vols = single_dam_solver.solve()
             flows[dam_id] = assigned_flows

@@ -2,12 +2,12 @@ from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from datetime import datetime
 
-EXAMPLE = '_intermediate0'
+EXAMPLE = '1'
 NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
 MAXIMIZE_FINAL_VOL = False
-PLOT_SOL = True
+PLOT_SOL = False
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -36,6 +36,7 @@ config = HeuristicConfiguration(
 # Solution
 heuristic = Heuristic(config=config, instance=instance)
 heuristic.solve()
+print("Total income:", heuristic.solution.get_objective_function())
 path_sol = f"../solutions/instance{EXAMPLE}_Heuristic_{NUM_DAMS}dams_{NUM_DAYS}days" \
            f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
 # heuristic.solution.to_json(path_sol)

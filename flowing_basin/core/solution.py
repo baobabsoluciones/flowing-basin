@@ -67,7 +67,6 @@ class Solution(SolutionCore):
 
         return compliance
 
-
     def get_exiting_flows_of_dam(self, idx: str) -> list[float]:
 
         """
@@ -83,6 +82,16 @@ class Solution(SolutionCore):
                 flows = el["flows"]
 
         return flows
+
+    def get_objective_function(self) -> float:
+
+        """
+        Get the objective function value recorded in the solution.
+
+        :return:
+        """
+
+        return self.data["objective_function"]
 
     def get_volumes_of_dam(self, idx: str) -> list[float]:
 

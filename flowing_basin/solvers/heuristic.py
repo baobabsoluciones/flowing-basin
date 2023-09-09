@@ -1,6 +1,7 @@
 from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import Dam
 from dataclasses import dataclass
+from random import random
 import numpy as np
 import warnings
 
@@ -13,6 +14,9 @@ class HeuristicConfiguration(Configuration):
 
     # Maximize final volume independently of the objective final volume specified
     maximize_final_vol: bool = False
+
+    # Randomly assign less flow than the maximum available
+    biased_random_flows: bool = False
 
     def __post_init__(self):
         valid_modes = {"linear", "nonlinear"}
@@ -249,6 +253,26 @@ class HeuristicSingleDam:
         max_flow = self.instance.get_max_flow_of_channel(self.dam_id)
         max_flow = min(max_flow, available_volume / self.instance.get_time_step_seconds())
         return max_flow
+
+    @staticmethod
+    def generate_biased_random_number(weight: float = 4.) -> float:
+
+        """
+        Generate a random number between 0 and 1,
+        but numbers close to 1 are more likely than numbers close to 0.
+
+        This is achieved by generating a random number between 0 and 1
+        and then passing it through a concave function [0,1] -> [0,1];
+        in this case, f(x) = x ^ (1 / weight).
+
+        :param weight: Parameter indicating how much more likely numbers close to 1 are.
+        If weight < 1, numbers close to 1 are actually less likely.
+        If weight > 1, numbers close to 1 are more likely.
+        With the default value weight = 4, there is only a 10% chance that the number will be below 0.5.
+        :return:
+        """
+
+        return random() ** (1 / weight)
 
     def adapt_flows_to_volume_limits(self, groups: list[list[int]]):
 

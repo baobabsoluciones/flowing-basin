@@ -5,14 +5,13 @@ from itertools import product
 from math import sqrt
 
 # EXAMPLES = [f'_intermediate{i}' for i in range(11)]
-# EXAMPLES = ['1', '3']
-# NUMS_DAMS = [i for i in range(1, 9)]
-# NUM_REPLICATIONS = 200
 EXAMPLES = ['1', '3']
-NUMS_DAMS = [2]
-NUM_REPLICATIONS = 2
+NUMS_DAMS = [i for i in range(1, 9)]
+NUM_REPLICATIONS = 1
 NUM_DAYS = 1
 K_PARAMETER = 2
+RANDOM_BIASED_FLOWS = False
+PROB_BELOW_HALF = 0.15
 MAXIMIZE_FINAL_VOL = False
 
 # Configuration
@@ -33,7 +32,9 @@ config = HeuristicConfiguration(
     },
     flow_smoothing=K_PARAMETER,
     mode="linear",
-    maximize_final_vol=MAXIMIZE_FINAL_VOL
+    maximize_final_vol=MAXIMIZE_FINAL_VOL,
+    random_biased_flows=RANDOM_BIASED_FLOWS,
+    prob_below_half=PROB_BELOW_HALF,
 )
 
 obj_function_values = {(example, num_dams): [] for example, num_dams in product(EXAMPLES, NUMS_DAMS)}

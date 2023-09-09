@@ -2,12 +2,14 @@ from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from datetime import datetime
 
-EXAMPLE = '1'
-NUM_DAMS = 2
+EXAMPLE = '3'
+NUM_DAMS = 1
 NUM_DAYS = 1
 K_PARAMETER = 2
+PLOT_SOL = True
+RANDOM_BIASED_FLOWS = True
+PROB_BELOW_HALF = 0.15
 MAXIMIZE_FINAL_VOL = False
-PLOT_SOL = False
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
@@ -15,7 +17,7 @@ instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NU
 # Configuration
 config = HeuristicConfiguration(
     volume_shortage_penalty=3,
-    volume_exceedance_bonus=0.1,
+    volume_exceedance_bonus=0,
     startups_penalty=50,
     limit_zones_penalty=0,
     volume_objectives={
@@ -30,7 +32,9 @@ config = HeuristicConfiguration(
     },
     flow_smoothing=K_PARAMETER,
     mode="linear",
-    maximize_final_vol=MAXIMIZE_FINAL_VOL
+    maximize_final_vol=MAXIMIZE_FINAL_VOL,
+    random_biased_flows=RANDOM_BIASED_FLOWS,
+    prob_below_half=PROB_BELOW_HALF,
 )
 
 # Solution

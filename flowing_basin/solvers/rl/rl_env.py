@@ -372,12 +372,18 @@ class RLEnvironment(gym.Env):
 
         data["incoming_flows"] = historical_data.loc[
             initial_row: last_row_info, "incoming_flow"
-                                 ].values.tolist()
+        ].values.tolist()
         data["energy_prices"] = historical_data.loc[
             initial_row: last_row_info, "price"
-                                ].values.tolist()
+        ].values.tolist()
 
         for order, dam_id in enumerate(dam_ids):
+
+            # If dam is not dam1 or dam2,
+            # it will be e.g. dam3_dam2copy (a copy of dam2) or dam4_dam1copy (a copy of dam1)
+            if dam_id not in ["dam1", "dam2"]:
+                dam_id = dam_id[dam_id.rfind("_") + 1: dam_id.rfind("copy")]
+
             # Initial volume
             # Not to be confused with the volume at the end of the first time step
             data["dams"][order]["initial_vol"] = historical_data.loc[
@@ -387,13 +393,13 @@ class RLEnvironment(gym.Env):
             initial_lags = historical_data.loc[
                initial_row - channel_last_lags[dam_id]: initial_row - 1,
                dam_id + "_flow",
-                           ].values.tolist()
+            ].values.tolist()
             initial_lags.reverse()
             data["dams"][order]["initial_lags"] = initial_lags
 
             data["dams"][order]["unregulated_flows"] = historical_data.loc[
                 initial_row: last_row_info, dam_id + "_unreg_flow"
-                                                       ].values.tolist()
+            ].values.tolist()
 
         # Complete instance
         instance = Instance.from_dict(data)

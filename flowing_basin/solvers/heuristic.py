@@ -185,11 +185,11 @@ class HeuristicSingleDam:
 
         return total_unused_vol, running_time_step
 
-    def calculate_actual_available_volume(self, time_step: int) -> float:
+    def calculate_actual_available_volume(self, group: list[int]) -> float:
 
         """
-        Calculate the actual available volume in the given time step
-        (i.e. the volume that, if consumed, will not leave negative volume in future time steps).
+        Calculate the actual available volume of the given group of time steps
+        (i.e. the volume that, if consumed, will not leave negative volume in current or future time steps).
 
         This is, a priori, the minimum available volume of all future time steps;
         however, time steps with maximum volume provide a buffer
@@ -203,10 +203,10 @@ class HeuristicSingleDam:
         (this rarely happens, though)
         """
 
-        affected_volumes = []
+        affected_volumes = self.available_volumes[group[0]: group[-1]]
         actual_available_volume = 0.
 
-        running_time_step = time_step
+        running_time_step = group[-1]
         while running_time_step <= self.time_steps[-1]:
             affected_volumes.append(self.available_volumes[running_time_step])
             max_vol_buffer, time_step_after_buffer = self.calculate_max_vol_buffer(running_time_step)
@@ -341,9 +341,7 @@ class HeuristicSingleDam:
         groups = self.group_time_steps(time_steps)
         sorted_groups = self.sort_groups(groups)
         for group in sorted_groups:
-            available_volume = min(
-                self.calculate_actual_available_volume(time_step) for time_step in group
-            ) / len(group)
+            available_volume = self.calculate_actual_available_volume(group) / len(group)
             flow_to_assign = self.max_flow_from_available_volume(available_volume)
             for time_step in group:
                 self.assigned_flows[time_step] = flow_to_assign  # noqa

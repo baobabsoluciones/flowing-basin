@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import Dam
 from dataclasses import dataclass
-from random import random
+from random import random, choices
 from math import log
 import numpy as np
 import warnings
@@ -20,6 +20,11 @@ class HeuristicConfiguration(Configuration):
     # If True, the prob_below_half parameter gives the probability that the assigned flow is below half the maximum
     random_biased_flows: bool = False
     prob_below_half: float = 0.15
+
+    # Randomly pick groups from the list of sorted groups by setting random_biased_sorting=True
+    # If True, the common_ratio parameter indicates how likely the second, third, etc. groups are to be chosen
+    random_biased_sorting: bool = False
+    common_ratio: float = 0.6
 
     def __post_init__(self):
         valid_modes = {"linear", "nonlinear"}
@@ -114,7 +119,45 @@ class HeuristicSingleDam:
         sorted_pairs = sorted(pairs, key=lambda pair: pair[1], reverse=True)
         sorted_grouped_time_steps, _ = zip(*sorted_pairs)
 
-        return sorted_grouped_time_steps
+        return list(sorted_grouped_time_steps)
+
+    def generate_random_biased_probabilities(self, num_groups: int) -> list[float]:
+
+        """
+        Generate a probability distribution over the sorted groups,
+        such that the first group (i.e., with the highest average lagged price) has more probability than the rest.
+        """
+
+        prob = (self.config.common_ratio - 1) / (self.config.common_ratio ** num_groups - 1)
+        probs = [prob]
+        for _ in range(1, num_groups):
+            prob *= self.config.common_ratio
+            probs.append(prob)
+
+        return probs
+
+    def pick_group(self, sorted_groups: list[list[int]]) -> list[int] | None:
+
+        """
+        Choose a group from the list of sorted groups, and remove it.
+        Returns None if given list is empty.
+        """
+
+        if len(sorted_groups) == 0:
+            return None
+
+        if not self.config.random_biased_sorting:
+            chosen_group = sorted_groups[0]
+        else:
+            chosen_group = choices(
+                sorted_groups,
+                weights=self.generate_random_biased_probabilities(len(sorted_groups)),
+                k=1
+            )[0]
+
+        sorted_groups.remove(chosen_group)
+
+        return chosen_group
 
     def volume_from_flow(self, flow: float) -> float:
 
@@ -369,7 +412,7 @@ class HeuristicSingleDam:
         groups = self.group_time_steps(time_steps)
         sorted_groups = self.sort_groups(groups)
 
-        for group in sorted_groups:
+        while (group := self.pick_group(sorted_groups)) is not None:
 
             # Calculate the flow that should be assigned to the group
             available_volume = self.calculate_actual_available_volume(group) / len(group)

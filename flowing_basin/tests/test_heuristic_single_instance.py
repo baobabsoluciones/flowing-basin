@@ -1,16 +1,16 @@
-from flowing_basin.core import Instance, Solution
+from flowing_basin.core import Instance
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from datetime import datetime
 
-EXAMPLE = '1'
-NUM_DAMS = 2
+EXAMPLE = '3'
+NUM_DAMS = 8
 NUM_DAYS = 1
 K_PARAMETER = 2
-PLOT_SOL = True
+PLOT_SOL = False
 RANDOM_BIASED_FLOWS = False
 PROB_BELOW_HALF = 0.15
 MAXIMIZE_FINAL_VOL = False
-RANDOM_BIASED_SORTING = True
+RANDOM_BIASED_SORTING = False
 COMMON_RATIO = 0.6
 
 # Instance we want to solve

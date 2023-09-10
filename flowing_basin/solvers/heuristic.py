@@ -380,11 +380,24 @@ class HeuristicSingleDam:
         self.clean_list(self.assigned_flows)
         self.clean_list(self.available_volumes)
 
-    def adapt_flows_to_obj_vol(self, groups: list[list[int]]):
+    def relevant_groups_for_final_vol(self, sorted_groups: list[list[int]]) -> list[list[int]]:
 
         """
-        Assign zero flow at the end
-        to as many time step groups as required to satisfy the objective final volume
+        Select the groups that can affect the final volumes
+        (i.e., the groups after the last max or min vol time step)
+        """
+
+        running_time_step = self.instance.get_decision_horizon()
+        while self.available_volumes[running_time_step] < self.max_available_vol and running_time_step > 0:
+            running_time_step -= 1
+        relevant_groups = [group for group in sorted_groups if group[0] >= running_time_step and group[-1] <= self.instance.get_decision_horizon()]
+        return relevant_groups
+
+    def adapt_flows_to_obj_vol(self, sorted_groups: list[list[int]]):
+
+        """
+        Assign zero flow to the least important relevant groups (i.e., lowest average lagged price)
+        as many times as required to satisfy the objective final volume
         """
 
         objective_available_volume = (
@@ -392,14 +405,30 @@ class HeuristicSingleDam:
             if not self.config.maximize_final_vol else self.max_available_vol
         )
         decision_horizon = self.instance.get_decision_horizon()
-        num_groups_back = 1
-        while self.available_volumes[decision_horizon - 1] < objective_available_volume:
-            for time_step in groups[-num_groups_back]:
-                self.assigned_flows[time_step] = 0
+
+        sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_groups)
+        volume_gap = objective_available_volume - self.available_volumes[decision_horizon - 1]
+
+        while volume_gap > 0:
+
+            least_important_group = sorted_relevant_groups[-1]
+            removable_volume = self.max_available_vol - max(
+                self.available_volumes[least_important_group[0]: decision_horizon]
+            )
+            volume_to_remove = min(removable_volume, volume_gap)
+            flow_to_remove = (volume_to_remove / self.instance.get_time_step_seconds()) / len(least_important_group)
+            for time_step in least_important_group:
+                self.assigned_flows[time_step] = max(0., self.assigned_flows[time_step] - flow_to_remove)  # noqa
+
             self.added_volumes = self.calculate_added_volumes()
             self.available_volumes = self.calculate_available_volumes()
-            self.adapt_flows_to_volume_limits(groups)
-            num_groups_back += 1
+            self.adapt_flows_to_volume_limits(sorted_groups)
+
+            volume_gap = objective_available_volume - self.available_volumes[decision_horizon - 1]
+            sorted_relevant_groups.remove(least_important_group)
+            sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_relevant_groups)
+
+        assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6
 
     def solve(self) -> tuple[list[float], list[float]]:
 
@@ -411,8 +440,9 @@ class HeuristicSingleDam:
         time_steps = list(range(self.instance.get_largest_impact_horizon()))
         groups = self.group_time_steps(time_steps)
         sorted_groups = self.sort_groups(groups)
+        remaining_groups = sorted_groups[:]
 
-        while (group := self.pick_group(sorted_groups)) is not None:
+        while (group := self.pick_group(remaining_groups)) is not None:
 
             # Calculate the flow that should be assigned to the group
             available_volume = self.calculate_actual_available_volume(group) / len(group)
@@ -432,7 +462,7 @@ class HeuristicSingleDam:
         self.available_volumes = self.calculate_available_volumes()
 
         self.clean_flows_and_volumes()
-        self.adapt_flows_to_obj_vol(groups)
+        self.adapt_flows_to_obj_vol(sorted_groups)
         predicted_volumes = [available_vol + self.min_vol for available_vol in self.available_volumes]
 
         return self.assigned_flows, predicted_volumes

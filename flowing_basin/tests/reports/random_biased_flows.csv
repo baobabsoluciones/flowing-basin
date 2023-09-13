@@ -1,0 +1,3 @@
+instance,no_dams,num_trials,exec_time_s,min_val_eur,max_val_eur,avg_val_eur,std_eur
+1,5,200,70.75,12252.42,15401.09,14107.44,589.52
+3,5,200,95.16,1173.68,2495.77,1861.31,214.18

@@ -3,16 +3,25 @@ from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from time import perf_counter
 from itertools import product
 from math import sqrt
+from dataclasses import asdict
+import csv
+import json
 
 # EXAMPLES = [f'_intermediate{i}' for i in range(11)]
 EXAMPLES = ['1', '3']
-NUMS_DAMS = [i for i in range(1, 9)]
-NUM_REPLICATIONS = 1
+# NUMS_DAMS = [i for i in range(1, 9)]
+NUMS_DAMS = [5]
+NUM_REPLICATIONS = 200
 NUM_DAYS = 1
 K_PARAMETER = 2
-RANDOM_BIASED_FLOWS = False
+RANDOM_BIASED_FLOWS = True
 PROB_BELOW_HALF = 0.15
 MAXIMIZE_FINAL_VOL = False
+REPORT_NAME = "random_biased_flows"
+DECIMAL_PLACES = 2
+
+report_filepath = f"reports/{REPORT_NAME}.csv"
+config_filepath = f"reports/{REPORT_NAME}_config.json"
 
 # Configuration
 config = HeuristicConfiguration(
@@ -37,25 +46,67 @@ config = HeuristicConfiguration(
     prob_below_half=PROB_BELOW_HALF,
 )
 
-obj_function_values = {(example, num_dams): [] for example, num_dams in product(EXAMPLES, NUMS_DAMS)}
-exec_times = {(example, num_dams): 0. for example, num_dams in product(EXAMPLES, NUMS_DAMS)}
+report = [
+    ["instance", "no_dams", "num_trials", "exec_time_s", "min_val_eur", "max_val_eur", "avg_val_eur", "std_eur"]
+]
 
 for example, num_dams in product(EXAMPLES, NUMS_DAMS):
 
     start = perf_counter()
+    obj_function_values = []
 
     for replication in range(NUM_REPLICATIONS):
 
-        instance = Instance.from_json(f"../instances/instances_big/instance{example}_{num_dams}dams_{NUM_DAYS}days.json")
+        instance = Instance.from_json(
+            f"../instances/instances_big/instance{example}_{num_dams}dams_{NUM_DAYS}days.json"
+        )
 
         heuristic = Heuristic(config=config, instance=instance, do_tests=False)
         heuristic.solve()
-        obj_function_values[example, num_dams].append(heuristic.solution.get_objective_function())
+        obj_function_values.append(heuristic.solution.get_objective_function())
         # print(heuristic.solution.data)
 
+    print(f"For instance {example} with {num_dams} dams:")
+
     exec_time = perf_counter() - start
-    exec_times[example, num_dams] = exec_time
-    print(f"For instance {example} with {num_dams} dams: generated {NUM_REPLICATIONS} solutions in {exec_time}s.")
+    print(f"\tgenerated {NUM_REPLICATIONS} solutions in {exec_time}s.")
+
+    min_obj_val = min(obj_function_values)
+    max_obj_val = max(obj_function_values)
+    num_obj_val = len(obj_function_values)
+    avg_obj_val = sum(obj_function_values) / num_obj_val
+    std_obj_val = sqrt(sum([(obj_val - avg_obj_val) ** 2 for obj_val in obj_function_values]) / num_obj_val)
+    print(f"\tthe obj fun values are {obj_function_values}.")
+    print(f"\t - minimum: {min_obj_val}")
+    print(f"\t - maximum: {max_obj_val}")
+    print(f"\t - mean: {avg_obj_val}")
+    print(f"\t - standard deviation: {std_obj_val}")
+
+    report.append([
+        example, num_dams, NUM_REPLICATIONS, round(exec_time, DECIMAL_PLACES), round(min_obj_val, DECIMAL_PLACES),
+        round(max_obj_val, DECIMAL_PLACES), round(avg_obj_val, DECIMAL_PLACES), round(std_obj_val, DECIMAL_PLACES)
+    ])
+
+# Create report file
+with open(report_filepath, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(report)
+print(f"Created CSV file '{report_filepath}'.")
+print(
+    f"The information stored in '{report_filepath}' is...",
+    *[
+        ''.join([f"{el:<15.2f}" if isinstance(el, float) else f"{el:<15}" for el in row]) for row in report
+    ], sep='\n'
+)
+
+# Store configuration used
+with open(config_filepath, 'w') as file:
+    json.dump(asdict(config), file, indent=2)
+print(f"Created JSON file '{config_filepath}'.")
+print(
+    f"The information stored in '{config_filepath}' is...",
+    json.dumps(asdict(config), indent=2)
+)
 
 # Solved 200 instances in 20.582084900001064s. <-- without prints and WITH TESTS
 # Solved 200 instances in 20.029083499975968s.
@@ -63,19 +114,3 @@ for example, num_dams in product(EXAMPLES, NUMS_DAMS):
 # Solved 200 instances in 20.016695700003766s.
 # I got inconsistent results when running code with and without tests; I am not sure which is faster
 # I think running the code w/o tests is faster, but running it w/ tests may be equivalent because of assert disabling
-
-print(obj_function_values)
-print(exec_times)
-
-for example, num_dams in product(EXAMPLES, NUMS_DAMS):
-
-    print(f"Objective function values for instance {example} with {num_dams} dams:")
-    values = obj_function_values[example, num_dams]
-
-    print("Minimum:", min(values))
-    print("Maximum:", max(values))
-
-    num_values = len(values)
-    mean = sum(values) / num_values
-    print("Mean:", mean)
-    print("Standard deviation:", sqrt(sum([(val - mean) ** 2 for val in values]) / num_values))

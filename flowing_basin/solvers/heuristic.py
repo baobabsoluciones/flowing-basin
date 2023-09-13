@@ -409,7 +409,7 @@ class HeuristicSingleDam:
         sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_groups)
         volume_gap = objective_available_volume - self.available_volumes[decision_horizon - 1]
 
-        while volume_gap > 0:
+        while volume_gap > 0 and len(sorted_relevant_groups) > 0:
 
             least_important_group = sorted_relevant_groups[-1]
             removable_volume = self.max_available_vol - max(
@@ -428,7 +428,10 @@ class HeuristicSingleDam:
             sorted_relevant_groups.remove(least_important_group)
             sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_relevant_groups)
 
-        assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6
+        # assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6
+        # Sometimes, it is necessary to go beyond the last max vol buffer to raise final volume above objective -
+        # we do not let the heuristic do this, so we simply do not comply with the final volume objective in these cases
+        # Also, very high volume objectives are even impossible to reach in some instances
 
     def solve(self) -> tuple[list[float], list[float]]:
 

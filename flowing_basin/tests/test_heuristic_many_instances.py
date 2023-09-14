@@ -10,12 +10,13 @@ import json
 # EXAMPLES = [f'_intermediate{i}' for i in range(11)]
 EXAMPLES = ['1', '3']
 # EXAMPLES = ['1']
-# NUMS_DAMS = [i for i in range(1, 9)]
-NUMS_DAMS = [6, 7, 8]
-NUM_REPLICATIONS = 200
+NUMS_DAMS = [i for i in range(1, 9)]
+# NUMS_DAMS = [8]
+# NUM_REPLICATIONS = 200
+NUM_REPLICATIONS = 1
 NUM_DAYS = 1
 K_PARAMETER = 2
-RANDOM_BIASED_FLOWS = True
+RANDOM_BIASED_FLOWS = False
 PROB_BELOW_HALF = 0.15
 MAXIMIZE_FINAL_VOL = False
 SAVE_REPORT = False

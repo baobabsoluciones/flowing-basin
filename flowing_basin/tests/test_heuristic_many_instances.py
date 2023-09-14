@@ -9,14 +9,16 @@ import json
 
 # EXAMPLES = [f'_intermediate{i}' for i in range(11)]
 EXAMPLES = ['1', '3']
+# EXAMPLES = ['1']
 # NUMS_DAMS = [i for i in range(1, 9)]
-NUMS_DAMS = [5]
+NUMS_DAMS = [6, 7, 8]
 NUM_REPLICATIONS = 200
 NUM_DAYS = 1
 K_PARAMETER = 2
 RANDOM_BIASED_FLOWS = True
 PROB_BELOW_HALF = 0.15
 MAXIMIZE_FINAL_VOL = False
+SAVE_REPORT = False
 REPORT_NAME = "random_biased_flows"
 DECIMAL_PLACES = 2
 
@@ -87,26 +89,29 @@ for example, num_dams in product(EXAMPLES, NUMS_DAMS):
         round(max_obj_val, DECIMAL_PLACES), round(avg_obj_val, DECIMAL_PLACES), round(std_obj_val, DECIMAL_PLACES)
     ])
 
-# Create report file
-with open(report_filepath, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(report)
-print(f"Created CSV file '{report_filepath}'.")
+# Print results
 print(
-    f"The information stored in '{report_filepath}' is...",
+    "--------",
+    "Results:",
     *[
         ''.join([f"{el:<15.2f}" if isinstance(el, float) else f"{el:<15}" for el in row]) for row in report
-    ], sep='\n'
+    ],
+    "--------",
+    sep='\n'
 )
 
-# Store configuration used
-with open(config_filepath, 'w') as file:
-    json.dump(asdict(config), file, indent=2)
-print(f"Created JSON file '{config_filepath}'.")
-print(
-    f"The information stored in '{config_filepath}' is...",
-    json.dumps(asdict(config), indent=2)
-)
+if SAVE_REPORT:
+
+    # Create report file
+    with open(report_filepath, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(report)
+    print(f"Created CSV file '{report_filepath}'.")
+
+    # Store configuration used
+    with open(config_filepath, 'w') as file:
+        json.dump(asdict(config), file, indent=2)
+    print(f"Created JSON file '{config_filepath}'.")
 
 # Solved 200 instances in 20.582084900001064s. <-- without prints and WITH TESTS
 # Solved 200 instances in 20.029083499975968s.

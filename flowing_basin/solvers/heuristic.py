@@ -380,18 +380,19 @@ class HeuristicSingleDam:
         self.clean_list(self.assigned_flows)
         self.clean_list(self.available_volumes)
 
-    def relevant_groups_for_final_vol(self, sorted_groups: list[list[int]]) -> list[list[int]]:
+    def relevant_groups_for_final_vol(self, sorted_groups: list[list[int]]) -> tuple[list[list[int]], int]:
 
         """
         Select the groups that can affect the final volumes
-        (i.e., the groups after the last max or min vol time step)
+        (i.e., the groups after the last max or min vol time step).
+        Also returns the last time step with max volume.
         """
 
         running_time_step = self.instance.get_decision_horizon()
         while self.available_volumes[running_time_step] < self.max_available_vol and running_time_step > 0:
             running_time_step -= 1
-        relevant_groups = [group for group in sorted_groups if group[0] >= running_time_step and group[-1] <= self.instance.get_decision_horizon()]
-        return relevant_groups
+        relevant_groups = [group for group in sorted_groups if running_time_step < group[-1] < self.instance.get_decision_horizon()]
+        return relevant_groups, running_time_step
 
     def adapt_flows_to_obj_vol(self, sorted_groups: list[list[int]]):
 
@@ -406,17 +407,24 @@ class HeuristicSingleDam:
         )
         decision_horizon = self.instance.get_decision_horizon()
 
-        sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_groups)
+        sorted_relevant_groups, last_max_vol_time_step = self.relevant_groups_for_final_vol(sorted_groups)
         volume_gap = objective_available_volume - self.available_volumes[decision_horizon - 1]
 
         while volume_gap > 0 and len(sorted_relevant_groups) > 0:
 
             least_important_group = sorted_relevant_groups[-1]
+
+            # Calculate the volume to remove in this group (equal to the volume to add to the decision horizon)
             removable_volume = self.max_available_vol - max(
-                self.available_volumes[least_important_group[0]: decision_horizon]
+                self.available_volumes[least_important_group[-1]: decision_horizon]
             )
             volume_to_remove = min(removable_volume, volume_gap)
-            flow_to_remove = (volume_to_remove / self.instance.get_time_step_seconds()) / len(least_important_group)
+
+            # Calculate the flow to remove to every time step of the group
+            num_time_steps_without_max_vol = len(
+                [time_step for time_step in least_important_group if time_step > last_max_vol_time_step]
+            )
+            flow_to_remove = (volume_to_remove / self.instance.get_time_step_seconds()) / num_time_steps_without_max_vol
             for time_step in least_important_group:
                 self.assigned_flows[time_step] = max(0., self.assigned_flows[time_step] - flow_to_remove)  # noqa
 
@@ -426,12 +434,12 @@ class HeuristicSingleDam:
 
             volume_gap = objective_available_volume - self.available_volumes[decision_horizon - 1]
             sorted_relevant_groups.remove(least_important_group)
-            sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_relevant_groups)
+            sorted_relevant_groups, last_max_vol_time_step = self.relevant_groups_for_final_vol(sorted_relevant_groups)
 
-        # assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6
-        # Sometimes, it is necessary to go beyond the last max vol buffer to raise final volume above objective -
-        # we do not let the heuristic do this, so we simply do not comply with the final volume objective in these cases
-        # Also, very high volume objectives are even impossible to reach in some instances
+        # assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6, (
+        #     f"\n{self.available_volumes=}\n{self.assigned_flows=}\n"
+        # )
+        # Very high volume objectives are even impossible to reach in some instances; better to leave this assert out
 
     def solve(self) -> tuple[list[float], list[float]]:
 

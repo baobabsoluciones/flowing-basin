@@ -11,15 +11,17 @@ import json
 EXAMPLES = ['1', '3']
 # EXAMPLES = ['1']
 NUMS_DAMS = [i for i in range(1, 9)]
-# NUMS_DAMS = [8]
-# NUM_REPLICATIONS = 200
-NUM_REPLICATIONS = 1
+# NUMS_DAMS = [2]
+NUM_REPLICATIONS = 200
+# NUM_REPLICATIONS = 1
 NUM_DAYS = 1
 K_PARAMETER = 2
-RANDOM_BIASED_FLOWS = False
+RANDOM_BIASED_FLOWS = True
 PROB_BELOW_HALF = 0.15
+RANDOM_BIASED_SORTING = False
+COMMON_RATIO = 0.6
 MAXIMIZE_FINAL_VOL = False
-SAVE_REPORT = False
+SAVE_REPORT = True
 REPORT_NAME = "random_biased_flows"
 DECIMAL_PLACES = 2
 
@@ -47,6 +49,8 @@ config = HeuristicConfiguration(
     maximize_final_vol=MAXIMIZE_FINAL_VOL,
     random_biased_flows=RANDOM_BIASED_FLOWS,
     prob_below_half=PROB_BELOW_HALF,
+    random_biased_sorting=RANDOM_BIASED_SORTING,
+    common_ratio=COMMON_RATIO,
 )
 
 report = [

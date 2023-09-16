@@ -9,9 +9,9 @@ K_PARAMETER = 2
 PLOT_SOL = False
 RANDOM_BIASED_FLOWS = False
 PROB_BELOW_HALF = 0.15
-MAXIMIZE_FINAL_VOL = False
 RANDOM_BIASED_SORTING = False
 COMMON_RATIO = 0.6
+MAXIMIZE_FINAL_VOL = False
 
 # Instance we want to solve
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")

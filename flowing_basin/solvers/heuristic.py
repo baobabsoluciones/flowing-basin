@@ -103,9 +103,9 @@ class HeuristicSingleDam:
         prices = self.instance.get_all_prices()
         verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
         weights = [
-            # Calculate the avg of avgs of the group
+            # Calculate the avg of lagged prices in the group
             sum(
-                # Calculate avg price in the lags of the time step
+                # Calculate the lagged price in the time step (i.e., the avg price in the lags)
                 sum(
                     prices[time_step + lag] for lag in verification_lags if time_step + lag < len(prices)
                 ) / len(verification_lags)
@@ -419,6 +419,18 @@ class HeuristicSingleDam:
 
             # Select the group with the lowest weight or score (average lagged price)
             least_important_group = sorted_relevant_groups[-1]
+            # print(
+            #     f"\tvol in {decision_horizon - 1} = "
+            #     f"{self.available_volumes[decision_horizon - 1]} < {objective_available_volume}"
+            # )
+            # print(
+            #     f"\t{least_important_group=}",
+            #     f"{self.available_volumes=}"
+            # )
+            # print(
+            #     "\tFlows in group:", [self.assigned_flows[time_step] for time_step in least_important_group],
+            #     "Volumes in group:", [self.available_volumes[time_step] for time_step in least_important_group]
+            # )
 
             # Calculate the volume to remove in the whole group
             # This is equal to the volume to add to the decision horizon
@@ -430,13 +442,14 @@ class HeuristicSingleDam:
 
             # Calculate the volume to remove in every time step of the group
             # A priori, every time step of the group can contribute the same amount, volume_to_remove/len(group) ...
-            num_time_steps_group = len(least_important_group)
-            volume_to_remove_per_time_step = volume_to_remove / num_time_steps_group
+            relevant_time_steps = [time_step for time_step in least_important_group if time_step <= decision_horizon - 1]
+            num_relevant_time_steps = len(relevant_time_steps)
+            volume_to_remove_per_time_step = volume_to_remove / num_relevant_time_steps
 
             # ...however, this is not true when one of the time steps is close to (or in) the max vol and does not have
             # enough removable volume (it is "capped"), forcing extra volume to be removed in the remaining time steps
             num_capped_time_steps = 0
-            for time_step in least_important_group:
+            for time_step in relevant_time_steps:
                 # Increase the volume to remove in the remaining time steps if there is not enough removable volume here
                 removable_vol = self.max_available_vol - self.available_volumes[time_step]
                 if volume_to_remove_per_time_step > removable_vol:
@@ -444,13 +457,13 @@ class HeuristicSingleDam:
                     extra_volume_to_remove = volume_to_remove_per_time_step - removable_vol
                     try:
                         volume_to_remove_per_time_step += (
-                                extra_volume_to_remove / (num_time_steps_group - num_capped_time_steps)
+                                extra_volume_to_remove / (num_relevant_time_steps - num_capped_time_steps)
                         )
                     except ZeroDivisionError:
-                        # This only happens if ALL time steps of the group are capped
+                        # This only happens if ALL relevant time steps of the group are capped
                         # In this case, we simply take as much volume from all time steps as possible
                         volume_to_remove_per_time_step = self.max_available_vol - min(
-                            self.available_volumes[time_step] for time_step in least_important_group
+                            self.available_volumes[time_step] for time_step in relevant_time_steps
                         )
 
             # Reduce the calculated volume in every time step
@@ -466,8 +479,19 @@ class HeuristicSingleDam:
             sorted_relevant_groups.remove(least_important_group)
             sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_relevant_groups)
 
-        assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6
-        # Very high volume objectives are even impossible to reach in some instances; better to leave this assert out
+            # print(
+            #     "\tFlows in group:", [self.assigned_flows[time_step] for time_step in least_important_group],
+            #     "Volumes in group:", [self.available_volumes[time_step] for time_step in least_important_group]
+            # )
+            # print(
+            #     f"\tvol in {decision_horizon - 1} = "
+            #     f"{self.available_volumes[decision_horizon - 1]} < {objective_available_volume}"
+            # )
+
+        assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6, (
+            f"Objective volumes were not satisfied in {self.dam_id} with {self.assigned_flows=}."
+        )
+        # Very high volume objectives are even impossible to reach in some instances; better to leave this assert out...
 
     def solve(self) -> tuple[list[float], list[float]]:
 

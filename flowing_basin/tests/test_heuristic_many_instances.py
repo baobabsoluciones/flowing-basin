@@ -8,21 +8,21 @@ import csv
 import json
 
 # EXAMPLES = [f'_intermediate{i}' for i in range(11)]
-# EXAMPLES = ['1', '3']
-EXAMPLES = ['1']
-# NUMS_DAMS = [i for i in range(1, 9)]
-NUMS_DAMS = [1]
-NUM_REPLICATIONS = 1
+EXAMPLES = ['1', '3']
+# EXAMPLES = ['1']
+NUMS_DAMS = [i for i in range(1, 9)]
+# NUMS_DAMS = [5]
+NUM_REPLICATIONS = 200
 # NUM_REPLICATIONS = 1
 NUM_DAYS = 1
 K_PARAMETER = 2
 RANDOM_BIASED_FLOWS = False
 PROB_BELOW_HALF = 0.15
-RANDOM_BIASED_SORTING = False
+RANDOM_BIASED_SORTING = True
 COMMON_RATIO = 0.6
 MAXIMIZE_FINAL_VOL = False
-SAVE_REPORT = False
-REPORT_NAME = "greedy"  # random_biased_sorting
+SAVE_REPORT = True
+REPORT_NAME = "random_biased_sorting"
 DECIMAL_PLACES = 2
 
 report_filepath = f"reports/{REPORT_NAME}.csv"

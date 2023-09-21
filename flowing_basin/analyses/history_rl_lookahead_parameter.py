@@ -3,11 +3,11 @@ from cornflow_client.core.tools import load_json
 from math import ceil
 import pandas as pd
 
-path_constants = "../data/rl_training_data/constants_2dams.json"
+path_constants = "../data/constants/constants_2dams.json"
 constants = load_json(path_constants)
 inst_const = Instance.from_dict(constants)
 
-path_historical_data = "../data/rl_training_data/historical_data.pickle"
+path_historical_data = "../data/history/historical_data.pickle"
 historical_data = pd.read_pickle(path_historical_data)
 
 # Average incoming flows

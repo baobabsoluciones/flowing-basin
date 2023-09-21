@@ -21,11 +21,11 @@ config = RLConfiguration(
 )
 env1 = RLEnvironment(
     config=config,
-    path_constants="../data/rl_training_data/constants_2dams.json",
-    path_historical_data="../data/rl_training_data/historical_data_clean.pickle",
+    path_constants="../data/constants/constants_2dams.json",
+    path_historical_data="../data/history/historical_data_clean.pickle",
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
-# env1.instance.to_json("../data/input_example1_expanded10steps.json")
+# env1.instance.to_json("../instances/instances_rl/instance1_expanded10steps.json")
 print("instance:", env1.instance.to_dict())
 print("decision horizon:", env1.instance.get_decision_horizon())
 print("impact horizon:", env1.instance.get_largest_impact_horizon())
@@ -87,12 +87,12 @@ print(">>>> history:")
 print(env1.river_basin.history.to_string())
 
 # ENVIRONMENT 2 (WITH INSTANCE 2)
-# instance2 = Instance.from_json("../data/input_example3.json")
+# instance2 = Instance.from_json("../instances/instances_base/instance3.json")
 # env2 = RLEnvironment(
 #     instance=instance2,
 #     config=config,
-#     path_constants="../data/rl_training_data/constants_2dams.json",
-#     path_historical_data="../data/rl_training_data/historical_data.pickle",
+#     path_constants="../data/constants/constants_2dams.json",
+#     path_historical_data="../data/history/historical_data.pickle",
 # )
 
 # ENVIRONMENT 2 | Initial observation

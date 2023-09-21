@@ -135,7 +135,8 @@ class Instance(InstanceCore):
                     {
                         "The number of initial lags given to "
                         + dam_id
-                        + " does not equal the last relevant lag of the dam": f"{num_initial_lags} vs. {last_relevant_lag}"
+                        + " does not equal the last relevant lag of the dam":
+                            f"{num_initial_lags} vs. {last_relevant_lag}"
                     }
                 )
 
@@ -245,7 +246,6 @@ class Instance(InstanceCore):
         """
 
         return len(self.data["dams"])
-    
 
     def get_ids_of_dams(self) -> list[str]:
 
@@ -338,7 +338,7 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["flow_max"]
 
-    def get_flow_limit_obs_for_channel(self, idx: str) -> dict[str, list]:
+    def get_flow_limit_obs_for_channel(self, idx: str) -> dict[str, list[float]]:
 
         """
 
@@ -357,9 +357,8 @@ class Instance(InstanceCore):
             points = None
 
         return points
-    
 
-    def get_turbined_flow_obs_for_power_group(self, idx: str) -> dict[str, list]:
+    def get_turbined_flow_obs_for_power_group(self, idx: str) -> dict[str, list[float]]:
 
         """
 
@@ -422,25 +421,26 @@ class Instance(InstanceCore):
             return None
 
         unreg_flows = self.data["dams"][idx]["unregulated_flows"][
-            time : time + num_steps
+            time: time + num_steps
         ]
         if num_steps == 1:
             unreg_flows = unreg_flows[0]
 
         return unreg_flows
     
-    def get_all_unregulated_flows_of_dam(self, idx: str):
+    def get_all_unregulated_flows_of_dam(self, idx: str) -> list[float]:
         
         """
         
-        :return: All unregulated flow that enters the dam (flow that comes from the river) within the decision horizon (m3/s)
+        :return: All unregulated flow that enters the dam (flow that comes from the river)
+        within the decision horizon (m3/s)
         """
         
         unreg_flows = self.data["dams"][idx]["unregulated_flows"]
         
         return unreg_flows
     
-    def get_all_prices(self):
+    def get_all_prices(self) -> list[float]:
         
         """
         
@@ -450,7 +450,6 @@ class Instance(InstanceCore):
         prices = self.data["energy_prices"]
         
         return prices
-        
 
     def get_max_unregulated_flow_of_dam(self, idx: str) -> float:
 
@@ -483,7 +482,7 @@ class Instance(InstanceCore):
             )
             return None
 
-        incoming_flows = self.data["incoming_flows"][time : time + num_steps]
+        incoming_flows = self.data["incoming_flows"][time: time + num_steps]
         if num_steps == 1:
             incoming_flows = incoming_flows[0]
 
@@ -527,7 +526,7 @@ class Instance(InstanceCore):
             )
             return None
 
-        prices = self.data["energy_prices"][time : time + num_steps]
+        prices = self.data["energy_prices"][time: time + num_steps]
         if num_steps == 1:
             prices = prices[0]
 
@@ -540,3 +539,19 @@ class Instance(InstanceCore):
         """
 
         return max(self.data["energy_prices"])
+
+    def calculate_total_avg_inflow(self) -> float:
+
+        """
+        Calculate the total average inflow of the day.
+        The total average inflow is calculated by adding the average incoming and unregulated flows
+        up to the decision horizon.
+        """
+
+        incoming_flows = self.get_all_incoming_flows()[:self.get_decision_horizon()]
+        total_avg_inflow = sum(incoming_flows) / len(incoming_flows)
+        for dam_id in self.get_ids_of_dams():
+            unreg_flows = self.get_all_unregulated_flows_of_dam(dam_id)[:self.get_decision_horizon()]
+            total_avg_inflow += sum(unreg_flows) / len(unreg_flows)
+
+        return total_avg_inflow

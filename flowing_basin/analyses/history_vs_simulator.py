@@ -45,8 +45,8 @@ START = datetime.strptime("2021-09-29 01:00", "%Y-%m-%d %H:%M")
 # Variable values in HISTORY ---- #
 
 # Create instance
-path_constants = "../data/rl_training_data/constants_2dams.json"
-path_historical_data = "../data/rl_training_data/historical_data_reliable_only.pickle"
+path_constants = "../data/constants/constants_2dams.json"
+path_historical_data = "../data/history/historical_data_reliable_only.pickle"
 df = pd.read_pickle(path_historical_data)
 instance = RLEnvironment.create_instance(
     length_episodes=LENGTH_EPISODE,

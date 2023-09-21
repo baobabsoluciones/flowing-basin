@@ -9,29 +9,31 @@ SOLUTION = "MILP"
 NUM_DAMS = 8
 NO_TEXT = True
 
-instance = Instance.from_json(f"../data/input_example{INSTANCE}_{NUM_DAMS}dams_1days.json")
+instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
+
+# NOTE: These solution files do not exist anymore...
 if SOLUTION == "MILP":
-    solution = Solution.from_json(f"../data/output_instance{INSTANCE}_LPmodel_V2_{NUM_DAMS}dams_1days.json")
+    solution = Solution.from_json(f"../solutions/output_instance{INSTANCE}_LPmodel_V2_{NUM_DAMS}dams_1days.json")
 elif SOLUTION == "PSO_k=2":
     if INSTANCE == 1:
         if NUM_DAMS == 2:
             solution = Solution.from_json(
-                f"../data/output_instance1_PSO_2dams_1days_2023-05-17 21.36_mode=linear_k=2/solution.json"
+                f"../solutions/output_instance1_PSO_2dams_1days_2023-05-17 21.36_mode=linear_k=2/solution.json"
             )
         elif NUM_DAMS == 3:
             solution = Solution.from_json(
-                f"../data/output_instance1_PSO_3dams_1days_2023-05-17 21.55_mode=linear_k=2/solution.json"
+                f"../solutions/output_instance1_PSO_3dams_1days_2023-05-17 21.55_mode=linear_k=2/solution.json"
             )
         elif NUM_DAMS == 8:
             solution = Solution.from_json(
-                f"../data/output_instance1_PSO_8dams_1days_2023-05-18 00.12_mode=linear_k=2/solution.json"
+                f"../solutions/output_instance1_PSO_8dams_1days_2023-05-18 00.12_mode=linear_k=2/solution.json"
             )
         else:
             raise FileNotFoundError()
     elif INSTANCE == 3:
         if NUM_DAMS == 2:
             solution = Solution.from_json(
-                f"../data/output_instance3_PSO_2dams_1days_2023-05-17 17.56_mode=linear_k=2/solution.json"
+                f"../solutions/output_instance3_PSO_2dams_1days_2023-05-17 17.56_mode=linear_k=2/solution.json"
             )
         else:
             raise FileNotFoundError()
@@ -41,7 +43,7 @@ elif SOLUTION == "PSO_k=0":
     if INSTANCE == 1:
         if NUM_DAMS == 2:
             solution = Solution.from_json(
-                f"../data/output_instance1_PSO_2dams_1days_2023-07-03 16.03_mode=linear_k=0/solution.json"
+                f"../solutions/output_instance1_PSO_2dams_1days_2023-07-03 16.03_mode=linear_k=0/solution.json"
             )
         else:
             raise FileNotFoundError()

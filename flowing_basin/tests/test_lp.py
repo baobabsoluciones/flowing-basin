@@ -1,5 +1,6 @@
 from flowing_basin.core import Instance
 from flowing_basin.solvers import LPModel, LPConfiguration
+from datetime import datetime
 
 config = LPConfiguration(
     volume_objectives={
@@ -22,13 +23,14 @@ config = LPConfiguration(
 )
 
 EXAMPLE = 3
-NUM_DAMS = 6
+NUM_DAMS = 2
 NUM_DAYS = 1
 
-instance = Instance.from_json(f"../data/input_example{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
+instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
 lp = LPModel(config=config, instance=instance)
 lp.LPModel_print()
 
 lp.solve()
-path_sol = f"../data/output_instance{EXAMPLE}_LPmodel_V2_{NUM_DAMS}dams_{NUM_DAYS}days.json"
+path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \
+           f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
 lp.solution.to_json(path_sol)

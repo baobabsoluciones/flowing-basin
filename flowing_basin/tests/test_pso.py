@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 NEW_SOLUTION = False
-EXAMPLE = 3
+EXAMPLE = 1
 NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
@@ -56,21 +56,21 @@ if NEW_SOLUTION:
     print("solver info:", pso.solver_info)
 else:
     # Given solution
-    pso.solution = Solution.from_json("../solutions/instance3_LPmodel_2dams_1days_time2023-08-25_13-04.json")
-    dir_name = "instance3_LPmodel_2dams_1days_time2023-08-25_13-04"
+    pso.solution = Solution.from_json("../solutions/instance1_Heuristic_2dams_1days_time2023-09-08_14-11.json")
+    dir_name = "instance1_Heuristic_2dams_1days_time2023-09-08_14-11"
 
 sol_inconsistencies = pso.solution.check()
 if sol_inconsistencies:
     raise Exception(f"There are inconsistencies in the given solution: {sol_inconsistencies}")
 print(pso.solution.check())
 print("optimal solution:", pso.solution.data)
-pso.river_basin.deep_update(pso.solution.to_flows(), is_relvars=False)
+pso.river_basin.deep_update(pso.solution.get_exiting_flows_array(), is_relvars=False)
 print("optimal solution's objective function values:", pso.objective_function_values_env())
 print("optimal solution's full objective function value:", pso.objective_function_env())
 print("optimal solution's full objective function value (cornflow method):", pso.get_objective())
 print(pso.river_basin.history.to_string())
 pso.save_solution_info(path_parent=path_parent, dir_name=dir_name)
-pso.river_basin.history.to_excel(os.path.join(path_parent, dir_name, "history.xlsx"))
+# pso.river_basin.history.to_excel(os.path.join(path_parent, dir_name, "history.xlsx"))
 
 # Search for best PSO parameters ---- #
 # options_search = {"c1": [0.1, 5], "c2": [0.1, 5], "w": [0.3, 0.9], "k": [1, 2], "p": 1}

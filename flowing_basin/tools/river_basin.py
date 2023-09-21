@@ -20,14 +20,6 @@ class RiverBasin:
         paths_power_models: dict[str, str] = None,
     ):
 
-        valid_modes = {"linear", "nonlinear"}
-        if mode not in valid_modes:
-            raise ValueError(f"Invalid value for 'mode': {mode}. Allowed values are {valid_modes}")
-        if mode == "nonlinear" and paths_power_models is None:
-            raise TypeError(
-                "Parameter 'paths_power_models' is required when 'mode' is 'nonlinear', but it was not given."
-            )
-
         # Number of scenarios (e.g. candidate solutions) for which to do calculations at the same time
         self.num_scenarios = num_scenarios
 
@@ -354,14 +346,18 @@ class RiverBasin:
         turbined_flow_of_preceding_dam = np.zeros(self.num_scenarios)
         for dam_index, dam in enumerate(self.dams):
             # Update dam with the flow we take from it, and the incoming and/or unregulated flow it receives
+            flow_contribution = (
+                np.repeat(self.instance.get_incoming_flow(self.time), self.num_scenarios)
+                if dam.order == 1
+                else turbined_flow_of_preceding_dam
+            )
             turbined_flow = dam.update(
                 price=self.instance.get_price(self.time),
                 flow_out=flows[dam_index],
-                incoming_flow=self.instance.get_incoming_flow(self.time),
                 unregulated_flow=self.instance.get_unregulated_flow_of_dam(
                     self.time, dam.idx
                 ),
-                turbined_flow_of_preceding_dam=turbined_flow_of_preceding_dam,
+                flow_contribution=flow_contribution
             )
             turbined_flow_of_preceding_dam = turbined_flow
 

@@ -110,9 +110,8 @@ class Dam:
         self,
         flow_out: np.ndarray,
         price: float,
-        incoming_flow: float,
         unregulated_flow: float,
-        turbined_flow_of_preceding_dam: np.ndarray,
+        flow_contribution: np.ndarray,
     ) -> np.ndarray:
 
         """
@@ -122,11 +121,10 @@ class Dam:
             Array of shape num_scenarios with
             the flow we want to have exiting the dam in every scenario (m3/s)
         :param price: Price of energy in current time step (EUR/MWh)
-        :param incoming_flow: Incoming flow to the river basin in the current time step (m3/s)
         :param unregulated_flow: Unregulated flow entering the dam in the current time step (m3/s)
-        :param turbined_flow_of_preceding_dam:
+        :param flow_contribution:
             Array of shape num_scenarios with
-            the turbined flow of the previous dam (that is entering this dam) in every scenario (m3/s)
+            the flow entering this dam (from the river or the previous dam) in every scenario (m3/s)
         :return:
             Array of shape num_scenarios with
             the turbined flow in the power group in every scenario (m3/s)
@@ -137,11 +135,7 @@ class Dam:
         # Flow IN ---- #
 
         # Obtain flow coming into the dam from the river or the previous dam
-        self.flow_contribution = (
-            np.repeat(incoming_flow, self.num_scenarios)
-            if self.order == 1
-            else turbined_flow_of_preceding_dam
-        )
+        self.flow_contribution = flow_contribution
 
         # Obtain unregulated flow coming into the dam
         self.unregulated_flow = unregulated_flow
@@ -162,12 +156,14 @@ class Dam:
             else np.zeros(self.num_scenarios).reshape((1, -1))
         )
         sign_changes_each_period = (
-            previous_variations * current_assigned_variation < 0
+            previous_variations * current_assigned_variation < -1e-6  # -1e-6 instead of 0. <-- tolerance for rounding errors
         )  # Broadcasting
         sign_changes_any_period = np.sum(sign_changes_each_period, axis=0) > 0
         self.flow_out_smoothed = np.where(
             sign_changes_any_period, self.previous_flow_out, self.flow_out_assigned
         )
+
+        # print(self.time, self.flow_out_assigned, self.flow_out_smoothed, current_assigned_variation, previous_variations, sign_changes_each_period)
 
         # Flow clipped according to the flow limit of the channel
         self.flow_out_clipped1 = np.clip(
@@ -195,6 +191,8 @@ class Dam:
 
         # Volume clipped to max value
         self.volume = np.clip(self.volume, None, self.max_volume)
+
+        # print("dams", self.time, volume_increase.item(), volume_decrease.item(), self.flow_out_clipped2.item(), self.volume.item())
 
         # Volume at the end of the decision horizon ---- #
 

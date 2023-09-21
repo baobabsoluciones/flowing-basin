@@ -11,7 +11,7 @@ river_basin = RiverBasin(instance=instance, paths_power_models=paths_power_model
 solution = Solution.from_json("../solutions/output_instance1_LPmodel_V2_2dams_1days.json")
 print(solution.check())
 for dam_id in instance.get_ids_of_dams():
-    print(solution.get_exiting_flows(dam_id))
+    print(solution.get_exiting_flows_of_dam(dam_id))
 
-# river_basin.deep_update_flows(solution.to_flows())
+# river_basin.deep_update_flows(solution.get_exiting_flows_array())
 # print(river_basin.history)

@@ -43,7 +43,31 @@ class Solution(SolutionCore):
 
         return inconsistencies
 
-    def get_exiting_flows(self, idx: str) -> list[float]:
+    def complies_with_flow_smoothing(self, flow_smoothing: int, epsilon: float = 1e-6) -> bool:
+
+        """
+        Indicates whether the solution complies with the given flow smoothing parameter or not
+
+        :param flow_smoothing:
+        :param epsilon: Small tolerance for rounding errors
+        :return:
+        """
+
+        compliance = True
+        for el in self.data["dams"]:
+            flows = el["flows"]
+            variations = []
+            previous_flow = 0  # We do not have access to the instance, so we assume it is 0
+            for flow in flows:
+                current_variation = flow - previous_flow
+                if any([current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]):
+                    compliance = False
+                variations.append(current_variation)
+                previous_flow = flow
+
+        return compliance
+
+    def get_exiting_flows_of_dam(self, idx: str) -> list[float]:
 
         """
         Get the assigned flows to the given dam.
@@ -59,8 +83,37 @@ class Solution(SolutionCore):
 
         return flows
 
+    def get_objective_function(self) -> float:
+
+        """
+        Get the objective function value recorded in the solution.
+
+        :return:
+        """
+
+        return self.data["objective_function"]
+
+    def get_volumes_of_dam(self, idx: str) -> list[float]:
+
+        """
+        Get the predicted volumes of the given dam.
+
+        :param idx: ID of the dam in the river basin
+        :return: List indicating the volume of the reservoir at the end of every time step (m3)
+        """
+
+        vols = None
+        for el in self.data["dams"]:
+            if el["id"] == idx:
+                try:
+                    vols = el["volume"]
+                except KeyError:
+                    raise KeyError("The given Solution object does not have the predicted volumes stored.")
+
+        return vols
+
     @classmethod
-    def from_flows(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
+    def from_flows_array(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
 
         """
         Create solution from an array that represents
@@ -87,7 +140,7 @@ class Solution(SolutionCore):
             )
         )
 
-    def to_flows(self) -> np.ndarray:
+    def get_exiting_flows_array(self) -> np.ndarray:
 
         """
         Turn solution into an array containing the assigned flows.

@@ -16,6 +16,15 @@ class PowerGroup:
         mode: str,
     ):
 
+        valid_modes = {"linear", "nonlinear"}
+        if mode not in valid_modes:
+            raise ValueError(f"Invalid value for 'mode': {mode}. Allowed values are {valid_modes}")
+
+        if mode == "nonlinear" and paths_power_models is None:
+            raise TypeError(
+                "Parameter 'paths_power_models' is required when 'mode' is 'nonlinear', but it was not given."
+            )
+
         self.num_scenarios = num_scenarios
         self.mode = mode
 
@@ -156,6 +165,8 @@ class PowerGroup:
         """
 
         # Get turbined flow from past flows
+        # Note the given past_flows must NOT include the current flow, since
+        # we take the mean from first_lag - 1 to last_lag (instead of first_lag to last_lag + 1)
         first_lag = self.verification_lags[0]
         last_lag = self.verification_lags[-1]
         self.turbined_flow = np.mean(past_flows[:, first_lag - 1: last_lag], axis=1)

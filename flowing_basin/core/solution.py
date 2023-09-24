@@ -46,6 +46,30 @@ class Solution(SolutionCore):
                 }
             )
 
+        # If the volumes and powers of the dams are provided, they should be the same as the number of flows
+        inconsistent_dams = dict(volumes=[], powers=[])
+        for dam_id in self.get_ids_of_dams():
+            vols = self.data["dams"][dam_id].get("volume")
+            if vols is not None:
+                if len(vols) != num_flows_first_dam:
+                    inconsistent_dams["volumes"].append((dam_id, len(vols)))
+            powers = self.data["dams"][dam_id].get("power")
+            if powers is not None:
+                if len(powers) != num_flows_first_dam:
+                    inconsistent_dams["powers"].append((dam_id, len(powers)))
+        for concept in ["volumes", "powers"]:
+            if len(inconsistent_dams[concept]) != 0:
+                inconsistencies.update(
+                    {
+                        f"The number of {concept} of some dams does not equal the number of flows":
+                            [
+                                f"The number of {concept} in dam {dam_id} is {num_of_concept}, "
+                                f"but the number of flows is {num_flows_first_dam}."
+                                for dam_id, num_of_concept in inconsistent_dams[concept]
+                            ]
+                    }
+                )
+
         # The objective function history values must all have the same length
         if self.data.get("objective_history") is not None:
 

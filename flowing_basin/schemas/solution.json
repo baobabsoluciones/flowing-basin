@@ -118,7 +118,7 @@
                             "startups": {
                                 "type": "number"
                             },
-                            "times_in_limit": {
+                            "limit_zones": {
                                 "type": "number"
                             },
                             "volume_shortage_m3": {

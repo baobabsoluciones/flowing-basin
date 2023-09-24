@@ -44,6 +44,8 @@ class RiverBasin:
         # Time-dependent attributes
         self.time = None
         self.all_past_clipped_flows = None
+        self.all_past_volumes = None
+        self.all_past_powers = None
         self.history = None
 
         # Initialize the time-dependent attributes (variables)
@@ -58,10 +60,26 @@ class RiverBasin:
         # Identifier of the time step (increases with each update)
         self.time = -1
 
-        # Record of flows exiting the dams, initialized as an empty array of the correct shape
+        # Record of flows exiting the dams,
+        # initialized as an empty array of the correct shape (num_time_steps x num_dams x num_scenarios)
         self.all_past_clipped_flows = np.array([]).reshape(
             (0, self.instance.get_num_dams(), self.num_scenarios)
         )
+
+        # Record of volumes and powers of each dam,
+        # initialized as empty arrays of the correct shape (num_time_steps x num_scenarios)
+        self.all_past_volumes = {
+            dam_id: np.array([]).reshape(
+                (0, self.num_scenarios)
+            )
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+        self.all_past_powers = {
+            dam_id: np.array([]).reshape(
+                (0, self.num_scenarios)
+            )
+            for dam_id in self.instance.get_ids_of_dams()
+        }
 
         # Data frame that will contain all states of the river basin throughout time
         self.history = self.create_history()
@@ -345,6 +363,7 @@ class RiverBasin:
         # The first dam has no preceding dam
         turbined_flow_of_preceding_dam = np.zeros(self.num_scenarios)
         for dam_index, dam in enumerate(self.dams):
+
             # Update dam with the flow we take from it, and the incoming and/or unregulated flow it receives
             flow_contribution = (
                 np.repeat(self.instance.get_incoming_flow(self.time), self.num_scenarios)
@@ -361,6 +380,11 @@ class RiverBasin:
             )
             turbined_flow_of_preceding_dam = turbined_flow
 
+            # Update all past volumes and powers of dam
+            self.all_past_volumes[dam.idx] = np.vstack((self.all_past_volumes[dam.idx], dam.volume))
+            self.all_past_powers[dam.idx] = np.vstack((self.all_past_powers[dam.idx], dam.channel.power_group.power))
+
+        # Update all past flows
         self.all_past_clipped_flows = np.concatenate(
             [
                 self.all_past_clipped_flows,

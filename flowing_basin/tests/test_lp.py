@@ -10,6 +10,10 @@ PLOT_SOL = False
 SAVE_SOLUTION = False
 TIME_LIMIT_MINUTES = 0.5
 
+path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json"
+path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \
+           f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
+
 config = LPConfiguration(
     volume_shortage_penalty=3,
     volume_exceedance_bonus=0,
@@ -30,14 +34,12 @@ config = LPConfiguration(
     time_limit_seconds=TIME_LIMIT_MINUTES * 60
 )
 
-instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
+instance = Instance.from_json(path_instance)
 lp = LPModel(config=config, instance=instance)
 lp.LPModel_print()
 lp.solve()
 
 if SAVE_SOLUTION:
-    path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \
-               f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
     lp.solution.to_json(path_sol)
 
 # Plot simple solution graph for each dam

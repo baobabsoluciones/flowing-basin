@@ -266,6 +266,20 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["order"]
 
+    def get_dam_id_from_order(self, order: int) -> str:
+
+        """
+
+        :param order: Order of the dam in the river basin, from 1 to num_dams
+        :return: ID of the dam in the river basin
+        """
+
+        for dam_id in self.get_ids_of_dams():
+            if self.get_order_of_dam(dam_id) == order:
+                return dam_id
+
+        raise ValueError(f"The given dam order, {order}, has no corresponding dam ID.")
+
     def get_initial_vol_of_dam(self, idx: str) -> float:
 
         """

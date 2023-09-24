@@ -11,18 +11,17 @@ import time
 from datetime import datetime
 import os
 import typing
-import my_pyswarms as ps
-from my_pyswarms.utils.plotters import plot_cost_history
-from my_pyswarms.utils.search import RandomSearch
-# Download my_pyswarms with pip install git+https://github.com/RodrigoCastroF/my-pyswarms
+import pyswarms as ps
+from pyswarms.utils.plotters import plot_cost_history
+from pyswarms.utils.search import RandomSearch
+import pyswarms.backend as P
+from pyswarms.backend.topology import Star
 
 
 @dataclass(kw_only=True)
 class PSOConfiguration(Configuration):  # noqa
 
     num_particles: int
-    max_iterations: int
-    max_time: int
 
     # PySwarms optimizer options
     cognitive_coefficient: float
@@ -33,14 +32,28 @@ class PSOConfiguration(Configuration):  # noqa
     use_relvars: bool
     max_relvar: float = 0.5  # Used only when use_relvars=True
 
+    # Max iterations OR max time
+    max_iterations: int = None
+    max_time: float = None
+
     # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"
 
     def __post_init__(self):
+
+        # Assert given mode is valid
         valid_modes = {"linear", "nonlinear"}
         if self.mode not in valid_modes:
             raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
+
+        # Turn not given max iterations or max time into infinity
+        if self.max_iterations is None and self.max_time is None:
+            raise ValueError("You need to specify a maximum number of iterations or a time limit (or both).")
+        if self.max_iterations is None:
+            self.max_iterations = float('inf')  # noqa
+        if self.max_time is None:
+            self.max_time = float('inf')
 
 
 class PSO(Experiment):
@@ -50,11 +63,14 @@ class PSO(Experiment):
         config: PSOConfiguration,
         paths_power_models: dict[str, str] = None,
         solution: Solution = None,
+        verbose: bool = True
     ):
 
         super().__init__(instance=instance, solution=solution)
         if solution is None:
             self.solution = None
+
+        self.verbose = verbose
 
         # Information of how the solution was found
         self.solver_info = dict()
@@ -255,7 +271,7 @@ class PSO(Experiment):
 
         return -income - bonus + penalty
 
-    def calculate_objective_function(
+    def calc_objective_function(
         self, swarm: np.ndarray, is_relvars: bool
     ) -> np.ndarray:
 
@@ -268,38 +284,63 @@ class PSO(Experiment):
         )
         return self.objective_function_env()
 
-    def optimize(
-        self, options: dict[str, float], num_particles: int, max_iters: int, max_time: int = None
-    ) -> tuple[float, np.ndarray]:
+    def optimize(self, options: dict[str, float]) -> tuple[float, np.ndarray]:
 
         """
         :param options: Dictionary with options given to the PySwarms optimizer
          - "c1": cognitive coefficient.
          - "c2": social coefficient
          - "w": inertia weight
-        :param num_particles: Number of particles of the swarm
-        :param max_iters: Max number of iterations with which to run the PSO
-        :param max_time: Max number of seconds with which to run the PSO
         :return: Best objective function value found
         """
 
-        optimizer = ps.single.GlobalBestPSO(
-            n_particles=num_particles,
+        # Create a Star topology (to implement Global Best PSO)
+        topology = Star()
+
+        # Create a swarm
+        swarm = P.create_swarm(
+            n_particles=self.config.num_particles,
             dimensions=self.num_dimensions,
             options=options,
             bounds=self.bounds,
+            init_pos=None
         )
 
-        kwargs = {
-            "is_relvars": self.config.use_relvars
-        }  # Argument of `self.calculate_objective_function`
-        cost, position = optimizer.optimize(
-            self.calculate_objective_function, iters=max_iters, **kwargs, max_time=max_time
-        )
+        start_time = time.perf_counter()
+        current_time = 0.
+        num_iters = 0
+        cost_history = []
+        if self.verbose:
+            print(f"{'Iteration':<15}{'Time (s)':<15}{'Objective (€)':<15}")
 
-        self.objective_function_history = optimizer.cost_history
+        while current_time < self.config.max_time and num_iters < self.config.max_iterations:
 
-        return cost, position
+            # Update personal best
+            swarm.current_cost = self.calc_objective_function(swarm.position, is_relvars=self.config.use_relvars)
+            if num_iters == 0:
+                swarm.pbest_cost = self.calc_objective_function(swarm.pbest_pos, is_relvars=self.config.use_relvars)
+            swarm.pbest_pos, swarm.pbest_cost = P.compute_pbest(swarm)
+
+            # Update global best
+            if np.min(swarm.pbest_cost) < swarm.best_cost:
+                swarm.best_pos, swarm.best_cost = topology.compute_gbest(swarm)
+            cost_history.append(swarm.best_cost)
+            if self.verbose:
+                print(f"{num_iters:<15}{current_time:<15.2f}{-swarm.best_cost:<15.2f}")
+
+            # Update position and velocity matrices
+            swarm.velocity = topology.compute_velocity(swarm)
+            swarm.position = topology.compute_position(swarm)
+
+            # Next iteration
+            current_time = time.perf_counter() - start_time
+            num_iters += 1
+
+        self.objective_function_history = cost_history
+        if self.verbose:
+            print(f"Optimization finished.\nBest position is {swarm.best_pos}\nBest cost is {swarm.best_cost}")
+
+        return swarm.best_cost, swarm.best_pos
 
     def solve(self, options: dict = None) -> dict:
 
@@ -316,10 +357,7 @@ class PSO(Experiment):
             "c2": self.config.social_coefficient,
             "w": self.config.inertia_weight
         }
-        cost, optimal_particle = self.optimize(
-            options=ps_options, num_particles=self.config.num_particles,
-            max_iters=self.config.max_iterations, max_time=self.config.max_time
-        )
+        cost, optimal_particle = self.optimize(options=ps_options)
         end_time = time.perf_counter()
         execution_time = end_time - start_time
 
@@ -382,7 +420,8 @@ class PSO(Experiment):
                     obj_values[f"{dam_id}_exceedance"]
                     - obj_values[f"{dam_id}_shortage"]
                 )
-        print(data)
+        if self.verbose:
+            print(data)
 
         # Get mean and confidence interval of each variable (assuming it follows a normal distribution)
         alfa = 1 - confidence
@@ -418,7 +457,7 @@ class PSO(Experiment):
             n_particles=num_particles,
             dimensions=self.num_dimensions,
             bounds=self.bounds,
-            objective_func=self.calculate_objective_function,
+            objective_func=self.calc_objective_function,
             options=options,
             iters=num_iters_each_test,
             n_selection_iters=num_iters_selection,
@@ -522,18 +561,21 @@ class PSO(Experiment):
 
         path_dir = os.path.join(path_parent, dir_name)
         os.mkdir(path_dir)
-        print(f"Directory {path_dir} created")
+        if self.verbose:
+            print(f"Directory {path_dir} created")
 
         # Save current solution
         path_sol = os.path.join(path_dir, "solution.json")
         self.solution.to_json(path_sol)
-        print(f"JSON file {path_sol} created")
+        if self.verbose:
+            print(f"JSON file {path_sol} created")
 
         # Save cost plot
         path_cost_plot = os.path.join(path_dir, "cost_plot.png")
         self.plot_cost()
         plt.savefig(path_cost_plot)
-        print(f"Figure {path_cost_plot} created")
+        if self.verbose:
+            print(f"Figure {path_cost_plot} created")
 
         # Save details and history of river basin updated with the current solution
         self.river_basin.deep_update(self.solution.get_exiting_flows_array(), is_relvars=False)
@@ -542,9 +584,11 @@ class PSO(Experiment):
         with open(path_details, "w") as file:
             self.write_details_sol(file)
             self.write_details_env(file)
-        print(f"Text file {path_details} created")
+        if self.verbose:
+            print(f"Text file {path_details} created")
 
         path_history_plot = os.path.join(path_dir, "history_plot.png")
         self.river_basin.plot_history()
         plt.savefig(path_history_plot)
-        print(f"Figure {path_history_plot} created")
+        if self.verbose:
+            print(f"Figure {path_history_plot} created")

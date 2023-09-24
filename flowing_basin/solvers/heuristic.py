@@ -488,10 +488,13 @@ class HeuristicSingleDam:
             #     f"{self.available_volumes[decision_horizon - 1]} < {objective_available_volume}"
             # )
 
-        assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6, (
-            f"Objective volumes were not satisfied in {self.dam_id} with {self.assigned_flows=}."
-        )
-        # Very high volume objectives are even impossible to reach in some instances; better to leave this assert out...
+        # Check the objective final volumes are now satisfied
+        if self.do_tests:
+            assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6, (
+                f"Objective volumes were not satisfied in {self.dam_id} with {self.assigned_flows=}."
+            )
+            # Very high volume objectives are even impossible to reach in some instances;
+            # better to leave this assert out...
 
     def solve(self) -> tuple[list[float], list[float]]:
 

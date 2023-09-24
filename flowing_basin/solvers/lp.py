@@ -24,7 +24,7 @@ class LPConfiguration:
     MIPGap: float
 
     # Solver timeout
-    time_limit_seconds: int
+    time_limit_seconds: float
 
 
 class LPModel(Experiment):

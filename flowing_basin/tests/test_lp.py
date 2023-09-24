@@ -3,9 +3,12 @@ from flowing_basin.solvers import LPModel, LPConfiguration
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-EXAMPLE = 3
-NUM_DAMS = 8
+EXAMPLE = 1
+NUM_DAMS = 2
 NUM_DAYS = 1
+PLOT_SOL = False
+SAVE_SOLUTION = False
+TIME_LIMIT_MINUTES = 0.5
 
 config = LPConfiguration(
     volume_shortage_penalty=3,
@@ -24,32 +27,34 @@ config = LPConfiguration(
     },
     step_min=4,
     MIPGap=0.01,
-    time_limit_seconds=15*60
+    time_limit_seconds=TIME_LIMIT_MINUTES * 60
 )
 
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
 lp = LPModel(config=config, instance=instance)
 lp.LPModel_print()
-
 lp.solve()
-path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \
-           f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
-lp.solution.to_json(path_sol)
+
+if SAVE_SOLUTION:
+    path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \
+               f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
+    lp.solution.to_json(path_sol)
 
 # Plot simple solution graph for each dam
-for dam_id in instance.get_ids_of_dams():
+if PLOT_SOL:
+    for dam_id in instance.get_ids_of_dams():
 
-    assigned_flows = lp.solution.get_exiting_flows_of_dam(dam_id)
-    predicted_volumes = lp.solution.get_volumes_of_dam(dam_id)
+        assigned_flows = lp.solution.get_exiting_flows_of_dam(dam_id)
+        predicted_volumes = lp.solution.get_volumes_of_dam(dam_id)
 
-    fig, ax = plt.subplots(1, 1)
-    twinax = ax.twinx()
-    ax.plot(predicted_volumes, color='b', label="Predicted volume")
-    ax.set_xlabel("Time (15min)")
-    ax.set_ylabel("Volume (m3)")
-    ax.legend()
-    twinax.plot(instance.get_all_prices(), color='r', label="Price")
-    twinax.plot(assigned_flows, color='g', label="Flow")
-    twinax.set_ylabel("Flow (m3/s), Price (€)")
-    twinax.legend()
-    plt.show()
+        fig, ax = plt.subplots(1, 1)
+        twinax = ax.twinx()
+        ax.plot(predicted_volumes, color='b', label="Predicted volume")
+        ax.set_xlabel("Time (15min)")
+        ax.set_ylabel("Volume (m3)")
+        ax.legend()
+        twinax.plot(instance.get_all_prices(), color='r', label="Price")
+        twinax.plot(assigned_flows, color='g', label="Flow")
+        twinax.set_ylabel("Flow (m3/s), Price (€)")
+        twinax.legend()
+        plt.show()

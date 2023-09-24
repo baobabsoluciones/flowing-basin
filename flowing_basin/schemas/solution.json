@@ -2,6 +2,27 @@
     "$schema": "http://json-schema.org/schema#",
     "type": "object",
     "properties": {
+        "instance_datetimes": {
+            "type": "object",
+            "properties": {
+                "start": {
+                    "type": "string"
+                },
+                "end_decisions": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "start",
+                "end_decisions"
+            ]
+        },
+        "solution_datetime": {
+            "type": "string"
+        },
+        "solver": {
+            "type": "string"
+        },
         "configuration": {
             "type": "object",
             "properties": {

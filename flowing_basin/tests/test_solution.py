@@ -13,14 +13,26 @@ inconsistencies = solution.check()
 if inconsistencies:
     raise Exception(f"There are inconsistencies in the data: {inconsistencies}")
 
+# Print general info
+instance_datetimes = solution.get_instance_start_end_datetimes()
+if instance_datetimes is not None:
+    print(
+        f"The instance solved starts at {instance_datetimes[0].strftime('%Y-%m-%d %H:%M')} "
+        f"and ends at {instance_datetimes[1].strftime('%Y-%m-%d %H:%M')}."
+    )
+solution_datetime = solution.get_solution_datetime()
+if solution_datetime is not None:
+    print(
+        f"The solution was obtained at {solution_datetime.strftime('%Y-%m-%d %H:%M')} "
+        f"using solver {solution.get_solver()}."
+    )
+print("Objective function (€):", solution.get_objective_function())
+
 # Print dam info
 for dam_id in solution.get_ids_of_dams():
     print(f"{dam_id} flows:", solution.get_exiting_flows_of_dam(dam_id))
     print(f"{dam_id} volumes:", solution.get_volumes_of_dam(dam_id))
     print(f"{dam_id} powers:", solution.get_powers_of_dam(dam_id))
-
-# Print general info
-print("Objective function (€):", solution.get_objective_function())
 
 # Check with river basin simulator
 instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")

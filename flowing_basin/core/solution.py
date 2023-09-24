@@ -2,6 +2,7 @@ from cornflow_client import SolutionCore
 from cornflow_client.core.tools import load_json
 import os
 import pickle
+from datetime import datetime
 import numpy as np
 
 
@@ -175,6 +176,44 @@ class Solution(SolutionCore):
                 previous_flow = flow
 
         return compliance
+
+    def get_instance_start_end_datetimes(self) -> tuple[datetime, datetime] | None:
+
+        """
+
+        :return: Starting datetime and final datetime (decision horizon) of the solved instance
+        """
+
+        instance_datetimes = self.data.get("instance_datetimes")
+        if instance_datetimes is not None:
+            instance_datetimes = (
+                datetime.strptime(instance_datetimes["start"], "%Y-%m-%d %H:%M"),
+                datetime.strptime(instance_datetimes["end_decisions"], "%Y-%m-%d %H:%M")
+            )
+
+        return instance_datetimes
+
+    def get_solution_datetime(self) -> datetime | None:
+
+        """
+
+        :return: Date and time of when the solution was created
+        """
+
+        solution_datetime = self.data.get("solution_datetime")
+        if solution_datetime is not None:
+            solution_datetime = datetime.strptime(solution_datetime, "%Y-%m-%d %H:%M")
+
+        return solution_datetime
+
+    def get_solver(self) -> str | None:
+
+        """
+
+        :return: Solver used to get the current solution
+        """
+
+        return self.data.get("solver")
 
     def get_ids_of_dams(self) -> list[str]:
 

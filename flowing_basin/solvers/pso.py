@@ -382,90 +382,6 @@ class PSO(Experiment):
             status=STATUS_UNDEFINED,
         )
 
-    def study_configuration(
-        self,
-        num_replications: int = 20,
-        confidence: float = 0.95,
-    ):
-
-        """
-        Get the mean and confidence interval of
-        the income, objective function and final volume exceedances
-        that the current PSO configuration gives.
-        """
-
-        # Dictionaries that will store the data and the results
-        data = results = {
-            "execution_times": [],
-            "objectives": [],
-            "incomes": [],
-            **{
-                "volume_exceedances_" + dam_id: []
-                for dam_id in self.instance.get_ids_of_dams()
-            },
-        }
-
-        # Execute `solve` multiple times to fill data
-        for i in range(num_replications):
-
-            self.solve()
-            data["execution_times"].append(self.solver_info["execution_time"])
-            data["objectives"].append(self.solver_info["objective"])
-
-            self.river_basin.deep_update(self.solution.get_exiting_flows_array(), is_relvars=False)
-            obj_values = self.objective_function_values_env()
-            data["incomes"].append(obj_values["income"])
-            for dam_id in self.instance.get_ids_of_dams():
-                data[f"volume_exceedances_{dam_id}"].append(
-                    obj_values[f"{dam_id}_exceedance"]
-                    - obj_values[f"{dam_id}_shortage"]
-                )
-        if self.verbose:
-            print(data)
-
-        # Get mean and confidence interval of each variable (assuming it follows a normal distribution)
-        alfa = 1 - confidence
-        for variable, values in data.items():
-            a = np.array(values)
-            n = a.size
-            mean, std_error = np.mean(a), scipy.stats.sem(a)
-            h = std_error * scipy.stats.t.ppf(1 - alfa / 2.0, n - 1)
-            results[variable] = [mean, mean - h, mean + h]
-
-        return results
-
-    def search_best_options(
-        self,
-        options: dict[str, list[float]],
-        num_particles: int = 200,
-        num_iters_selection: int = 100,
-        num_iters_each_test: int = 10,
-    ) -> tuple[float, dict]:
-
-        """
-        Use PySwarm's RandomSearch method to find the best options.
-
-        :param options: Dictionary with the combinations of options to try
-        :param num_particles: Number of particles of the swarm in every execution
-        :param num_iters_selection: Number of different combinations tried
-        :param num_iters_each_test: Number of iterations with which every combination is tried
-        :return: Best cost and the parameter configuration with which it was achieved.
-        """
-
-        g = RandomSearch(
-            ps.single.GlobalBestPSO,
-            n_particles=num_particles,
-            dimensions=self.num_dimensions,
-            bounds=self.bounds,
-            objective_func=self.calc_objective_function,
-            options=options,
-            iters=num_iters_each_test,
-            n_selection_iters=num_iters_selection,
-        )
-        best_score, best_options = g.search()
-
-        return best_score, best_options
-
     def get_objective(self, solution: Solution = None) -> float:
 
         """
@@ -474,9 +390,10 @@ class PSO(Experiment):
         """
 
         if solution is None:
-            assert (
-                self.solution is not None
-            ), "Cannot get objective if no solution has been given and `solve` has not been called yet."
+            if self.solution is None:
+                raise ValueError(
+                    "Cannot get objective if no solution has been given and `solve` has not been called yet."
+                )
             solution = self.solution
 
         self.river_basin.deep_update(solution.get_exiting_flows_array(), is_relvars=False)

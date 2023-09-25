@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 EXAMPLE = 1
 NUM_DAMS = 3
 NUM_DAYS = 1
-PLOT_SOL = True
+PLOT_SOL = False
 SAVE_SOLUTION = True
 TIME_LIMIT_MINUTES = 0.25
 

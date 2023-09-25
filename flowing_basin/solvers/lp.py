@@ -2,6 +2,8 @@ from flowing_basin.core import Instance, Solution, Experiment
 import pulp as lp
 from dataclasses import dataclass, asdict
 from datetime import datetime
+import tempfile
+import os
 
 
 @dataclass
@@ -247,7 +249,48 @@ class LPModel(Experiment):
 
         print(len(Price), len(T), len(Q0))
 
+    @staticmethod
+    def parse_gurobi_output(output: str) -> tuple[list[float], list[float], list[float]]:
+
+        """
+        Parse the output of the Gurobi solver
+        to get the objective function values, gap values, and time stamps
+        during the execution.
+        """
+
+        # Position of relevant info in table (from the right)
+        LOWER_BOUND_POS = 5
+        GAP_POS = 3
+        TIME_POS = 1
+
+        max_pos = max(LOWER_BOUND_POS, GAP_POS, TIME_POS)
+
+        incumbent_values = []
+        gap_values = []
+        time_values = []
+
+        for line in output.split('\n'):
+
+            values = line.split()
+
+            # Continue to next iteration if line does not have the desired info (GAP% and TIMEs)
+            if len(values) < max_pos:
+                continue
+            if values[-GAP_POS].find("%") == -1 or values[-TIME_POS].find("s") == -1:
+                continue
+
+            incumbent_values.append(float(values[-LOWER_BOUND_POS]))
+            gap_values.append(float(values[-GAP_POS].replace("%", "")))
+            time_values.append(float(values[-TIME_POS].replace("s", "")))
+
+        assert len(incumbent_values) == len(gap_values) == len(time_values), (
+            "The length of the objective function values, gap values, and time stamps must be equal."
+        )
+
+        return incumbent_values, gap_values, time_values
+
     def solve(self, options: dict = None) -> dict:
+
         # LP Problem
         lpproblem = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
 
@@ -1017,14 +1060,20 @@ class LPModel(Experiment):
         )
 
         # Solver
-        # solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
+        solver_output = tempfile.NamedTemporaryFile(delete=False)
         solver = lp.GUROBI_CMD(
             gapRel=self.config.MIPGap,
             timeLimit=self.config.time_limit_seconds,
-            logPath="example3.txt"
-        )
-        # Other arguments: https://coin-or.github.io/pulp/technical/solvers.html#pulp.apis.GUROBI_CMD
+            logPath=solver_output.name
+        )  # Other arguments: https://coin-or.github.io/pulp/technical/solvers.html#pulp.apis.GUROBI_CMD
         lpproblem.solve(solver)
+        solver_output.close()
+
+        # Parse solver output to get history data
+        with open(solver_output.name, 'r') as file:
+            output = file.read()
+        obj_fun_values, gap_values, time_stamps = self.parse_gurobi_output(output)
+        os.remove(solver_output.name)
 
         # Caracterización de la solución
         print("--------Función objetivo--------")
@@ -1107,10 +1156,11 @@ class LPModel(Experiment):
                 solver="MILP",
                 configuration=asdict(self.config),
                 objective_function=lp.value(lpproblem.objective),
-                # objective_history=dict(
-                #     objective_values_eur=obj_fun_values,
-                #     time_stamps_s=time_stamps,
-                # ),
+                objective_history=dict(
+                    objective_values_eur=obj_fun_values,
+                    gap_values_pct=gap_values,
+                    time_stamps_s=time_stamps,
+                ),
                 dams=[
                     dict(
                         id=dam_id,

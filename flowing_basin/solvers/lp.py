@@ -1,6 +1,7 @@
 from flowing_basin.core import Instance, Solution, Experiment
 import pulp as lp
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from datetime import datetime
 
 
 @dataclass
@@ -1045,32 +1046,70 @@ class LPModel(Experiment):
         for var in qtb.values():
             print(f"{var.name}: {var.value()}")
 
-        # solution.json
-        qsalida = {dam_id: [] for dam_id in I}
-        for var in qs.values():
-            for dam_id in I:
-                if dam_id == var.name[var.name.index("'") + 1: var.name.rindex("'")]:
-                    qsalida[dam_id].append(var.value())
-        potencia = {dam_id: [] for dam_id in I}
-        for var in pot.values():
-            for dam_id in I:
-                if dam_id == var.name[var.name.index("'") + 1: var.name.rindex("'")]:
-                    potencia[dam_id].append(var.value())
-        volumenes = {dam_id: [] for dam_id in I}
-        for var in vol.values():
-            for dam_id in I:
-                if dam_id == var.name[var.name.index("'") + 1: var.name.rindex("'")]:
-                    volumenes[dam_id].append(var.value())
-        sol_dict = {
-            "objective_function": lp.value(lpproblem.objective),
-            "dams": [
-                {
-                    "flows": qsalida[dam_id], "id": dam_id, "power": potencia[dam_id], "volume": volumenes[dam_id]
-                }
-                for dam_id in I
-            ],
-            "price": Price
+        # Values stored in solution
+        exiting_flows = {dam_id: [var.value() for var in qs.values() if dam_id in var.name] for dam_id in I}
+        powers = {dam_id: [var.value() for var in pot.values() if dam_id in var.name] for dam_id in I}
+        volumes = {dam_id: [var.value() for var in vol.values() if dam_id in var.name] for dam_id in I}
+
+        # Objective function details
+        income_from_energy = {
+            dam_id: [var.value() for var in pot_embalse.values() if dam_id in var.name][0] for dam_id in I
         }
-        self.solution = Solution.from_dict(sol_dict)
+        limit_zones = {dam_id: [var.value() for var in zl_tot.values() if dam_id in var.name][0] for dam_id in I}
+        startups = {dam_id: [var.value() for var in pwch_tot.values() if dam_id in var.name][0] for dam_id in I}
+        vol_exceedance = {dam_id: [var.value() for var in pos_desv.values() if dam_id in var.name][0] for dam_id in I}
+        vol_shortage = {dam_id: [var.value() for var in neg_desv.values() if dam_id in var.name][0] for dam_id in I}
+        values_from_vol = {dam_id: [var.value() for var in cost_desv.values() if dam_id in var.name][0] for dam_id in I}
+        total_dam_incomes = {
+            dam_id:
+                income_from_energy[dam_id]
+                - startups[dam_id] * self.config.startups_penalty
+                - limit_zones[dam_id] * self.config.limit_zones_penalty
+                + values_from_vol[dam_id]
+            for dam_id in I
+        }
+
+        # Get datetimes of instance and solution
+        format_datetime = "%Y-%m-%d %H:%M"
+        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
+        start_datetime = start_datetime.strftime(format_datetime)
+        end_datetime = end_datetime.strftime(format_datetime)
+        solution_datetime = datetime.now().strftime(format_datetime)
+
+        # Save solution object
+        self.solution = Solution.from_dict(
+            dict(
+                instance_datetimes=dict(
+                    start=start_datetime,
+                    end_decisions=end_datetime
+                ),
+                solution_datetime=solution_datetime,
+                solver="MILP",
+                configuration=asdict(self.config),
+                objective_function=lp.value(lpproblem.objective),
+                # objective_history=dict(
+                #     objective_values_eur=obj_fun_values,
+                #     time_stamps_s=time_stamps,
+                # ),
+                dams=[
+                    dict(
+                        id=dam_id,
+                        flows=exiting_flows[dam_id],
+                        power=powers[dam_id],
+                        volume=volumes[dam_id],
+                        objective_function_details=dict(
+                            total_income_eur=total_dam_incomes[dam_id],
+                            income_from_energy_eur=income_from_energy[dam_id],
+                            startups=startups[dam_id],
+                            limit_zones=limit_zones[dam_id],
+                            volume_shortage_m3=vol_shortage[dam_id],
+                            volume_exceedance_m3=vol_exceedance[dam_id]
+                        )
+                    )
+                    for dam_id in self.instance.get_ids_of_dams()
+                ],
+                price=self.instance.get_all_prices(),
+            )
+        )
 
         return dict()

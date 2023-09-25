@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 EXAMPLE = 1
 NUM_DAMS = 2
 NUM_DAYS = 1
-PLOT_SOL = False
-SAVE_SOLUTION = False
-TIME_LIMIT_MINUTES = 0.5
+PLOT_SOL = True
+SAVE_SOLUTION = True
+TIME_LIMIT_MINUTES = 1
 
 path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json"
 path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \
@@ -38,6 +38,12 @@ instance = Instance.from_json(path_instance)
 lp = LPModel(config=config, instance=instance)
 lp.LPModel_print()
 lp.solve()
+
+# Check solution
+sol_inconsistencies = lp.solution.check()
+if sol_inconsistencies:
+    raise Exception(f"There are inconsistencies in the given solution: {sol_inconsistencies}")
+print("Optimal solution:", lp.solution.data)
 
 # Save solution
 if SAVE_SOLUTION:

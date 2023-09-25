@@ -1,9 +1,10 @@
 from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import Dam
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from random import random, choices
 from math import log
 import numpy as np
+from datetime import datetime
 import warnings
 
 
@@ -533,12 +534,12 @@ class HeuristicSingleDam:
 
         return self.assigned_flows, predicted_volumes
 
-    def simulate(self) -> tuple[list[float], list[float], list[float], list[float], float, float]:
+    def simulate(self) -> tuple[list[float], list[float], list[float], list[float], dict[str, float | int]]:
 
         """
         Use the river basin simulator to get the
         turbined flows (m3/s), powers (MW), actual volumes (m3), actual exiting flows (m3/s),
-        income from energy (€) and total income (€) with the current assigned flows
+        and dictionary with objective function details
         """
 
         turbined_flows = []
@@ -577,7 +578,16 @@ class HeuristicSingleDam:
         bonus = self.config.volume_exceedance_bonus * volume_exceedance
         dam_net_income = dam_income + bonus - penalty
 
-        return turbined_flows, powers, actual_volumes, actual_exiting_flows, dam_income, dam_net_income
+        obj_fun_details = dict(
+            total_income_eur=dam_net_income,
+            income_from_energy_eur=dam_income,
+            startups=num_startups,
+            limit_zones=num_limit_zones,
+            volume_shortage_m3=volume_shortage,
+            volume_exceedance_m3=volume_exceedance
+        )
+
+        return turbined_flows, powers, actual_volumes, actual_exiting_flows, obj_fun_details
 
 
 class Heuristic(Experiment):
@@ -664,7 +674,7 @@ class Heuristic(Experiment):
         flows = dict()
         volumes = dict()
         powers = dict()
-        incomes = dict()
+        obj_fun_details = dict()
 
         dams_ids_in_order = sorted(
             self.instance.get_ids_of_dams(),
@@ -688,9 +698,9 @@ class Heuristic(Experiment):
             volumes[dam_id] = predicted_vols
 
             # Simulate to get turbined flows, powers and income
-            turbined_flows, powers[dam_id], actual_vols, actual_flows, _, incomes[dam_id] = single_dam_solver.simulate()
-            # print(dam_id, "INCOME FROM ENERGY:", _)
-            # print(dam_id, "TOTAL INCOME:", incomes[dam_id])
+            (
+                turbined_flows, powers[dam_id], actual_vols, actual_flows, obj_fun_details[dam_id]
+            ) = single_dam_solver.simulate()
 
             # Check flows and volumes from heuristic are the same as those from the simulator
             if self.do_tests:
@@ -702,19 +712,39 @@ class Heuristic(Experiment):
             # Flow contribution to the next dam
             flow_contribution = turbined_flows
 
-        total_income = sum(incomes[dam_id] for dam_id in self.instance.get_ids_of_dams())
-        # print("TOTAL INCOME", total_income)
+        # Add dam incomes to get total income
+        total_income = sum(
+            obj_fun_details[dam_id]["total_income_eur"] for dam_id in self.instance.get_ids_of_dams()
+        )
 
-        sol_dict = {
-            "objective_function": total_income,
-            "dams": [
-                {
-                    "flows": flows[dam_id], "id": dam_id, "power": powers[dam_id], "volume": volumes[dam_id]
-                }
+        # Get datetimes
+        format_datetime = "%Y-%m-%d %H:%M"
+        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
+        start_datetime = start_datetime.strftime(format_datetime)
+        end_datetime = end_datetime.strftime(format_datetime)
+        solution_datetime = datetime.now().strftime(format_datetime)
+
+        sol_dict = dict(
+            instance_datetimes=dict(
+                start=start_datetime,
+                end_decisions=end_datetime
+            ),
+            solution_datetime=solution_datetime,
+            solver="Heuristic",
+            configuration=asdict(self.config),
+            objective_function=total_income,
+            dams=[
+                dict(
+                    id=dam_id,
+                    flows=flows[dam_id],
+                    power=powers[dam_id],
+                    volume=volumes[dam_id],
+                    objective_function_details=obj_fun_details[dam_id]
+                )
                 for dam_id in self.instance.get_ids_of_dams()
             ],
-            "price": self.instance.get_all_prices()
-        }
+            price=self.instance.get_all_prices(),
+        )
         self.solution = Solution.from_dict(sol_dict)
 
         # Check flow smoothing parameter compliance

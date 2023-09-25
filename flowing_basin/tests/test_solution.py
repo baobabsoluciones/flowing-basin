@@ -4,8 +4,8 @@ from matplotlib import pyplot as plt
 
 INSTANCE = 1
 NUM_DAMS = 2
-SOLVER = "PSO"
-SOL_DATETIME = "2023-09-25_13-20"
+SOLVER = "Heuristic"
+SOL_DATETIME = "2023-09-25_14-07"
 PLOT_SOL = True
 
 solution = Solution.from_json(f"../solutions/instance{INSTANCE}_{SOLVER}_{NUM_DAMS}dams_1days_time{SOL_DATETIME}.json")

@@ -7,7 +7,7 @@ EXAMPLE = 1
 NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
-USE_RELVARS = False
+USE_RELVARS = True
 TIME_LIMIT_MINUTES = 1
 
 path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json"

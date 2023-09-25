@@ -4,7 +4,6 @@ from dataclasses import dataclass, asdict
 from random import random, choices
 from math import log
 import numpy as np
-from datetime import datetime
 import warnings
 
 
@@ -443,7 +442,9 @@ class HeuristicSingleDam:
 
             # Calculate the volume to remove in every time step of the group
             # A priori, every time step of the group can contribute the same amount, volume_to_remove/len(group) ...
-            relevant_time_steps = [time_step for time_step in least_important_group if time_step <= decision_horizon - 1]
+            relevant_time_steps = [
+                time_step for time_step in least_important_group if time_step <= decision_horizon - 1
+            ]
             num_relevant_time_steps = len(relevant_time_steps)
             volume_to_remove_per_time_step = volume_to_remove / num_relevant_time_steps
 
@@ -718,11 +719,7 @@ class Heuristic(Experiment):
         )
 
         # Get datetimes
-        format_datetime = "%Y-%m-%d %H:%M"
-        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
-        start_datetime = start_datetime.strftime(format_datetime)
-        end_datetime = end_datetime.strftime(format_datetime)
-        solution_datetime = datetime.now().strftime(format_datetime)
+        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
 
         sol_dict = dict(
             instance_datetimes=dict(
@@ -754,4 +751,3 @@ class Heuristic(Experiment):
             )
 
         return dict()
-

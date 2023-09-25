@@ -5,7 +5,8 @@ INSTANCE = 1
 NUM_DAMS = 2
 SOLUTIONS = [
     ("PSO", "2023-09-25_00-51"),
-    ("PSO", "2023-09-25_13-20")
+    ("PSO", "2023-09-25_13-20"),
+    ("LPmodel", "2023-09-26_07-39")
 ]
 
 # Load solutions
@@ -19,5 +20,6 @@ solutions = {
 fig, ax = plt.subplots()
 for sol_info, solution in solutions.items():
     solution.plot_objective_values(ax, label=f"{sol_info}")
+ax.set_ylim(bottom=0)  # Call AFTER plotting to automatically have the top adjusted
 ax.legend()
 plt.show()

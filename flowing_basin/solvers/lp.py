@@ -1,7 +1,6 @@
 from flowing_basin.core import Instance, Solution, Experiment
 import pulp as lp
 from dataclasses import dataclass, asdict
-from datetime import datetime
 import tempfile
 import os
 
@@ -282,10 +281,6 @@ class LPModel(Experiment):
             incumbent_values.append(float(values[-LOWER_BOUND_POS]))
             gap_values.append(float(values[-GAP_POS].replace("%", "")))
             time_values.append(float(values[-TIME_POS].replace("s", "")))
-
-        assert len(incumbent_values) == len(gap_values) == len(time_values), (
-            "The length of the objective function values, gap values, and time stamps must be equal."
-        )
 
         return incumbent_values, gap_values, time_values
 
@@ -1139,11 +1134,7 @@ class LPModel(Experiment):
         }
 
         # Get datetimes of instance and solution
-        format_datetime = "%Y-%m-%d %H:%M"
-        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
-        start_datetime = start_datetime.strftime(format_datetime)
-        end_datetime = end_datetime.strftime(format_datetime)
-        solution_datetime = datetime.now().strftime(format_datetime)
+        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
 
         # Save solution object
         self.solution = Solution.from_dict(

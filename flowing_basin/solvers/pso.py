@@ -5,7 +5,6 @@ import numpy as np
 from dataclasses import dataclass, asdict
 import warnings
 import time
-from datetime import datetime
 import pyswarms.backend as P
 from pyswarms.backend.topology import Star
 
@@ -362,11 +361,7 @@ class PSO(Experiment):
         obj_fun_values = list(obj_fun_values)
 
         # Get datetimes
-        format_datetime = "%Y-%m-%d %H:%M"
-        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
-        start_datetime = start_datetime.strftime(format_datetime)
-        end_datetime = end_datetime.strftime(format_datetime)
-        solution_datetime = datetime.now().strftime(format_datetime)
+        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
 
         # Store solution in attribute
         self.solution = Solution.from_dict(

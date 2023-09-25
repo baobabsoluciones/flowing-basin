@@ -5,6 +5,7 @@ import pickle
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
+import warnings
 
 
 class Solution(SolutionCore):
@@ -281,6 +282,30 @@ class Solution(SolutionCore):
 
         return self.data.get("objective_function")
 
+    def get_history_time_stamps(self) -> list[float] | None:
+
+        """
+        Get the time stamps for the history of objective function values (or gap values)
+        """
+
+        time_stamps = self.data.get("objective_history")
+        if time_stamps is not None:
+            time_stamps = time_stamps["time_stamps_s"]
+
+        return time_stamps
+
+    def get_history_values(self) -> list[float] | None:
+
+        """
+        Get the history of objective function values
+        """
+
+        values = self.data.get("objective_history")
+        if values is not None:
+            values = values["objective_values_eur"]
+
+        return values
+
     def get_volumes_of_dam(self, idx: str) -> list[float] | None:
 
         """
@@ -362,6 +387,11 @@ class Solution(SolutionCore):
 
     def plot_solution_for_dam(self, dam_id: str, ax: plt.Axes):
 
+        """
+        Plot the exiting flow and volume of the dam at each time step,
+        on top of the graph of the price of energy
+        """
+
         flows = self.get_exiting_flows_of_dam(dam_id)
         volumes = self.get_volumes_of_dam(dam_id)
 
@@ -376,3 +406,17 @@ class Solution(SolutionCore):
         twinax.plot(flows, color='g', label="Flow")
         twinax.set_ylabel("Flow (m3/s), Price (€)")
         twinax.legend()
+
+    def plot_objective_values(self, ax: plt.Axes, **kwargs):
+
+        """
+        Plot history's objective function values
+        """
+
+        time_stamps = self.get_history_time_stamps()
+        values = self.get_history_values()
+        if time_stamps is None or values is None:
+            warnings.warn("This solution object does not have the time stamps or objective function values recorded.")
+            return
+
+        ax.plot(time_stamps, values, **kwargs)

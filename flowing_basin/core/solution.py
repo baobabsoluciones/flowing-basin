@@ -4,6 +4,7 @@ import os
 import pickle
 from datetime import datetime
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Solution(SolutionCore):
@@ -46,7 +47,7 @@ class Solution(SolutionCore):
                 }
             )
 
-        # If the volumes and powers of the dams are provided, they should be the same as the number of flows
+        # If the volumes and powers of the dams are provided, their length should be the same as the number of flows
         inconsistent_dams = dict(volumes=[], powers=[])
         for dam_id in self.get_ids_of_dams():
             vols = self.data["dams"][dam_id].get("volume")
@@ -69,6 +70,17 @@ class Solution(SolutionCore):
                             ]
                     }
                 )
+
+        # The number of prices provided should be the same as the number of flows
+        num_prices = len(self.data["price"])
+        if num_prices != num_flows_first_dam:
+            inconsistencies.update(
+                {
+                    f"The number of prices does not equal the number of flows":
+                        f"The number of prices is {num_prices}, "
+                        f"but the number of flows is {num_flows_first_dam}."
+                }
+            )
 
         # The objective function history values must all have the same length
         if self.data.get("objective_history") is not None:
@@ -291,6 +303,15 @@ class Solution(SolutionCore):
 
         return self.data["dams"][idx].get("power")
 
+    def get_all_prices(self) -> list[float] | None:
+
+        """
+
+        :return: The price of energy (EUR/MWh) in all time steps of the solved instance
+        """
+
+        return self.data.get("price")
+
     @classmethod
     def from_flows_array(cls, flows: np.ndarray, dam_ids: list[str]) -> "Solution":
 
@@ -338,3 +359,20 @@ class Solution(SolutionCore):
         flows = flows.reshape((-1, len(self.data["dams"]), 1))
 
         return flows
+
+    def plot_solution_for_dam(self, dam_id: str, ax: plt.Axes):
+
+        flows = self.get_exiting_flows_of_dam(dam_id)
+        volumes = self.get_volumes_of_dam(dam_id)
+
+        ax.plot(volumes, color='b', label="Predicted volume")
+        ax.set_xlabel("Time (15min)")
+        ax.set_ylabel("Volume (m3)")
+        ax.set_title(f"Solution for {dam_id}")
+        ax.legend()
+
+        twinax = ax.twinx()
+        twinax.plot(self.get_all_prices(), color='r', label="Price")
+        twinax.plot(flows, color='g', label="Flow")
+        twinax.set_ylabel("Flow (m3/s), Price (€)")
+        twinax.legend()

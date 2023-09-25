@@ -1,12 +1,14 @@
 from flowing_basin.core import Instance, Solution
 from flowing_basin.tools import RiverBasin
-import numpy as np
+from matplotlib import pyplot as plt
 
 INSTANCE = 1
 NUM_DAMS = 2
+SOLVER = "PSO"
+SOL_DATETIME = "2023-09-25_13-20"
+PLOT_SOL = True
 
-solution = Solution.from_json(f"../solutions/instance{INSTANCE}_LPmodel_{NUM_DAMS}dams_1days_time2023-09-05_13-39.json")
-# solution = Solution.from_json(f"../solutions/instance{INSTANCE}_Heuristic_{NUM_DAMS}dams_1days_time2023-09-07_22-11.json")
+solution = Solution.from_json(f"../solutions/instance{INSTANCE}_{SOLVER}_{NUM_DAMS}dams_1days_time{SOL_DATETIME}.json")
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = solution.check()
@@ -33,6 +35,14 @@ for dam_id in solution.get_ids_of_dams():
     print(f"{dam_id} flows:", solution.get_exiting_flows_of_dam(dam_id))
     print(f"{dam_id} volumes:", solution.get_volumes_of_dam(dam_id))
     print(f"{dam_id} powers:", solution.get_powers_of_dam(dam_id))
+print("Prices:", solution.get_all_prices())
+
+# Plot solution
+if PLOT_SOL:
+    for dam_id in solution.get_ids_of_dams():
+        fig, ax = plt.subplots()
+        solution.plot_solution_for_dam(dam_id, ax)
+        plt.show()
 
 # Check with river basin simulator
 instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")

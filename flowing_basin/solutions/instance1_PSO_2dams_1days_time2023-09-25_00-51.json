@@ -4,7 +4,7 @@
         "flow_smoothing": 2,
         "inertia_weight": 0.4424113459034113,
         "limit_zones_penalty": 0,
-        "max_iterations": Infinity,
+        "max_iterations": null,
         "max_relvar": 1,
         "max_time": 60,
         "mode": "linear",

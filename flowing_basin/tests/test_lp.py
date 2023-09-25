@@ -39,24 +39,13 @@ lp = LPModel(config=config, instance=instance)
 lp.LPModel_print()
 lp.solve()
 
+# Save solution
 if SAVE_SOLUTION:
     lp.solution.to_json(path_sol)
 
 # Plot simple solution graph for each dam
 if PLOT_SOL:
     for dam_id in instance.get_ids_of_dams():
-
-        assigned_flows = lp.solution.get_exiting_flows_of_dam(dam_id)
-        predicted_volumes = lp.solution.get_volumes_of_dam(dam_id)
-
-        fig, ax = plt.subplots(1, 1)
-        twinax = ax.twinx()
-        ax.plot(predicted_volumes, color='b', label="Predicted volume")
-        ax.set_xlabel("Time (15min)")
-        ax.set_ylabel("Volume (m3)")
-        ax.legend()
-        twinax.plot(instance.get_all_prices(), color='r', label="Price")
-        twinax.plot(assigned_flows, color='g', label="Flow")
-        twinax.set_ylabel("Flow (m3/s), Price (€)")
-        twinax.legend()
+        fig, ax = plt.subplots()
+        lp.solution.plot_solution_for_dam(dam_id, ax)
         plt.show()

@@ -39,13 +39,9 @@ class PSOConfiguration(Configuration):  # noqa
         if self.mode not in valid_modes:
             raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
-        # Turn not given max iterations or max time into infinity
+        # Assert a max iterations or max time is given
         if self.max_iterations is None and self.max_time is None:
             raise ValueError("You need to specify a maximum number of iterations or a time limit (or both).")
-        if self.max_iterations is None:
-            self.max_iterations = float('inf')  # noqa
-        if self.max_time is None:
-            self.max_time = float('inf')
 
 
 class PSO(Experiment):
@@ -310,8 +306,16 @@ class PSO(Experiment):
         if self.verbose:
             print(f"{'Iteration':<15}{'Time (s)':<15}{'Objective (€)':<15}")
 
+        # Set maximum number of iterations or time limit
+        max_iters = self.config.max_iterations
+        if max_iters is None:
+            max_iters = float('inf')
+        max_time = self.config.max_time
+        if max_time is None:
+            max_time = float('inf')
+
         # Optimization loop
-        while current_time < self.config.max_time and num_iters < self.config.max_iterations:
+        while current_time < max_time and num_iters < max_iters:
 
             # Update personal best
             swarm.current_cost = self.calculate_cost(swarm.position, is_relvars=self.config.use_relvars)

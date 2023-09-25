@@ -1006,10 +1006,9 @@ class LPModel(Experiment):
         for i in I:
             lpproblem += pwch_tot[i] == lp.lpSum(pwch[(i, t, pg)] for t in T for pg in FranjasGrupos[i])
 
-
         # Objective Function
         lpproblem += lp.lpSum(
-            #tpot[t] * Price[t]
+            # tpot[t] * Price[t]
             pot_embalse[i]
             + cost_desv[i]
             - zl_tot[i] * PenZL
@@ -1017,10 +1016,14 @@ class LPModel(Experiment):
             for i in I
         )
 
-        # Solve
+        # Solver
         # solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
-        solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap, timeLimit=self.config.time_limit_seconds)
-        # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)  # <-- caca
+        solver = lp.GUROBI_CMD(
+            gapRel=self.config.MIPGap,
+            timeLimit=self.config.time_limit_seconds,
+            logPath="example3.txt"
+        )
+        # Other arguments: https://coin-or.github.io/pulp/technical/solvers.html#pulp.apis.GUROBI_CMD
         lpproblem.solve(solver)
 
         # Caracterización de la solución
@@ -1046,20 +1049,37 @@ class LPModel(Experiment):
         for var in qtb.values():
             print(f"{var.name}: {var.value()}")
 
+        def get_dam_id(name: str) -> str:
+            if name.find("copy") == -1:
+                return name[name.index("dam"): name.index("dam") + 4]
+            else:
+                return name[name.index("dam"): name.index("copy") + 4]
+
         # Values stored in solution
-        exiting_flows = {dam_id: [var.value() for var in qs.values() if dam_id in var.name] for dam_id in I}
-        powers = {dam_id: [var.value() for var in pot.values() if dam_id in var.name] for dam_id in I}
-        volumes = {dam_id: [var.value() for var in vol.values() if dam_id in var.name] for dam_id in I}
+        exiting_flows = {dam_id: [var.value() for var in qs.values() if get_dam_id(var.name) == dam_id] for dam_id in I}
+        powers = {dam_id: [var.value() for var in pot.values() if get_dam_id(var.name) == dam_id] for dam_id in I}
+        volumes = {dam_id: [var.value() for var in vol.values() if get_dam_id(var.name) == dam_id] for dam_id in I}
 
         # Objective function details
+        print([(get_dam_id(var.name), var.value()) for var in pot_embalse.values()])
         income_from_energy = {
-            dam_id: [var.value() for var in pot_embalse.values() if dam_id in var.name][0] for dam_id in I
+            dam_id: [var.value() for var in pot_embalse.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
         }
-        limit_zones = {dam_id: [var.value() for var in zl_tot.values() if dam_id in var.name][0] for dam_id in I}
-        startups = {dam_id: [var.value() for var in pwch_tot.values() if dam_id in var.name][0] for dam_id in I}
-        vol_exceedance = {dam_id: [var.value() for var in pos_desv.values() if dam_id in var.name][0] for dam_id in I}
-        vol_shortage = {dam_id: [var.value() for var in neg_desv.values() if dam_id in var.name][0] for dam_id in I}
-        values_from_vol = {dam_id: [var.value() for var in cost_desv.values() if dam_id in var.name][0] for dam_id in I}
+        limit_zones = {
+            dam_id: [var.value() for var in zl_tot.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        startups = {
+            dam_id: [var.value() for var in pwch_tot.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        vol_exceedance = {
+            dam_id: [var.value() for var in pos_desv.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        vol_shortage = {
+            dam_id: [var.value() for var in neg_desv.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        values_from_vol = {
+            dam_id: [var.value() for var in cost_desv.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
         total_dam_incomes = {
             dam_id:
                 income_from_energy[dam_id]

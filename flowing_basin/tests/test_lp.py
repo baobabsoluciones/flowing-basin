@@ -4,11 +4,11 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 EXAMPLE = 1
-NUM_DAMS = 2
+NUM_DAMS = 3
 NUM_DAYS = 1
 PLOT_SOL = True
 SAVE_SOLUTION = True
-TIME_LIMIT_MINUTES = 1
+TIME_LIMIT_MINUTES = 0.25
 
 path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json"
 path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \

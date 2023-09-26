@@ -23,6 +23,9 @@ class LPConfiguration:
     # Gap for the solution
     MIPGap: float
 
+    # Solver timeout
+    time_limit_seconds: int
+
 
 class LPModel(Experiment):
     def __init__(
@@ -323,7 +326,7 @@ class LPModel(Experiment):
 
         print(len(Price), len(T), len(Q0), len(L["dam1"]), len(L["dam2"]))
 
-    def solve(self, options: dict) -> dict:
+    def solve(self, options: dict = None) -> dict:
         # LP Problem
         lpproblem = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
 
@@ -1083,7 +1086,7 @@ class LPModel(Experiment):
 
         # Solve
         # solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
-        solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap)
+        solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap, timeLimit=self.config.time_limit_seconds)
         # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)  # <-- caca
         lpproblem.solve(solver)
 

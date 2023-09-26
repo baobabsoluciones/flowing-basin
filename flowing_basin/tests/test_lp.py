@@ -3,9 +3,10 @@ from flowing_basin.solvers import LPModel, LPConfiguration
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-EXAMPLE = 3
-NUM_DAMS = 8
+EXAMPLE = 1
+NUM_DAMS = 2
 NUM_DAYS = 1
+TIME_LIMIT_MINUTES = 1
 
 config = LPConfiguration(
     volume_shortage_penalty=3,
@@ -24,7 +25,7 @@ config = LPConfiguration(
     },
     step_min=4,
     MIPGap=0.01,
-    time_limit_seconds=15*60
+    time_limit_seconds=TIME_LIMIT_MINUTES*60
 )
 
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")

@@ -89,8 +89,21 @@ class PsoRbo(Experiment):
         flows = np.array([]).reshape(
             (self.instance.get_largest_impact_horizon(), self.instance.get_num_dams(), 0)
         )
-        for particle in range(self.config.num_particles):
-            heuristic = Heuristic(config=self.config, instance=self.instance, do_tests=True)
+
+        # First particle - greedy solution (heuristic)
+        heuristic = Heuristic(config=self.config, instance=self.instance, greedy=True, do_tests=True)
+        heuristic.solve()
+        flows = np.concatenate(
+            [
+                flows,
+                heuristic.solution.get_flows_array(),
+            ],
+            axis=2,
+        )
+
+        # Remaining particles - random biased solutions (RBO)
+        for particle in range(1, self.config.num_particles):
+            heuristic = Heuristic(config=self.config, instance=self.instance, greedy=False, do_tests=True)
             heuristic.solve()
             flows = np.concatenate(
                 [

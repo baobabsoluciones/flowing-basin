@@ -76,4 +76,14 @@ river_basin.reset()
 river_basin.deep_update_relvars(relvars, fast_mode=True)
 clipped_flows2 = river_basin.all_past_clipped_flows
 # print(clipped_flows2)
-assert (clipped_flows1 == clipped_flows2).all()
+assert (clipped_flows1 == clipped_flows2).all()  # noqa
+
+# Test `generate_initial_solutions` method
+flows = pso_rbo.generate_initial_solutions()
+obj_fun_values1 = - pso_rbo.pso.calculate_cost(pso_rbo.pso.reshape_as_swarm(flows), is_relvars=False)
+obj_fun_mean, obj_fun_max, obj_fun_min = np.mean(obj_fun_values1), np.max(obj_fun_values1), np.min(obj_fun_values1)
+print("Mean:", obj_fun_mean, "Max:", obj_fun_max, "Min:", obj_fun_min)
+obj_fun_values2 = - pso_rbo.pso.calculate_cost(pso_rbo.pso.reshape_as_swarm(
+    pso_rbo.relvars_from_flows(flows)
+), is_relvars=True)
+assert (np.abs(obj_fun_values1 - obj_fun_values2) < 1e-4).all()  # noqa

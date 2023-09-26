@@ -42,6 +42,7 @@ class HeuristicSingleDam:
             bias_weight: float,
             flow_contribution: list[float],
             paths_power_models: dict[str, str] = None,
+            greedy: bool = False,
             do_tests: bool = True
     ):
 
@@ -50,6 +51,7 @@ class HeuristicSingleDam:
         self.config = config
         self.bias_weight = bias_weight
         self.flow_contribution = flow_contribution
+        self.greedy = greedy
         self.do_tests = do_tests
 
         # Important constants
@@ -146,7 +148,7 @@ class HeuristicSingleDam:
         if len(sorted_groups) == 0:
             return None
 
-        if not self.config.random_biased_sorting:
+        if not self.config.random_biased_sorting or self.greedy:
             chosen_group = sorted_groups[0]
         else:
             chosen_group = choices(
@@ -515,7 +517,7 @@ class HeuristicSingleDam:
             # Calculate the flow that should be assigned to the group
             available_volume = self.calculate_actual_available_volume(group) / len(group)
             flow_to_assign = self.max_flow_from_available_volume(available_volume)
-            if self.config.random_biased_flows:
+            if self.config.random_biased_flows and not self.greedy:
                 flow_to_assign = self.generate_random_biased_number() * flow_to_assign
 
             # Assign the flow and recalculate volumes
@@ -605,6 +607,7 @@ class Heuristic(Experiment):
         instance: Instance,
         config: HeuristicConfiguration,
         paths_power_models: dict[str, str] = None,
+        greedy: bool = False,
         do_tests: bool = True,
         solution: Solution = None,
     ):
@@ -615,6 +618,7 @@ class Heuristic(Experiment):
 
         self.config = config
         self.paths_power_models = paths_power_models
+        self.greedy = greedy
         self.do_tests = do_tests
 
         # Calculate the bias weight in the random biased number generator
@@ -692,6 +696,7 @@ class Heuristic(Experiment):
                 flow_contribution=flow_contribution,
                 config=self.config,
                 bias_weight=self.bias_weight,
+                greedy=self.greedy,
                 do_tests=self.do_tests,
             )
             assigned_flows, predicted_vols = single_dam_solver.solve()

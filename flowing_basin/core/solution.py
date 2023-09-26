@@ -201,8 +201,8 @@ class Solution(SolutionCore):
         """
 
         compliance = True
-        for dam in self.data["dams"].values():
-            flows = dam["flows"]
+        for dam_id in self.get_ids_of_dams():
+            flows = self.get_exiting_flows_of_dam(dam_id)
             variations = []
             previous_flow = 0  # We do not have access to the instance, so we assume it is 0
             for flow in flows:
@@ -251,6 +251,15 @@ class Solution(SolutionCore):
         """
 
         return self.data.get("solver")
+
+    def get_num_dams(self) -> int:
+
+        """
+
+        :return: The number of dams in the river basin
+        """
+
+        return len(self.data["dams"])
 
     def get_ids_of_dams(self) -> list[str]:
 
@@ -365,7 +374,7 @@ class Solution(SolutionCore):
             )
         )
 
-    def get_exiting_flows_array(self) -> np.ndarray:
+    def get_flows_array(self) -> np.ndarray:
 
         """
         Turn solution into an array containing the assigned flows.
@@ -375,13 +384,13 @@ class Solution(SolutionCore):
             the flows that should go through each channel in every time step (m3/s)
         """
 
-        flows_p = [dam["flows"] for dam in self.data["dams"].values()]
+        flows_p = [self.get_exiting_flows_of_dam(dam_id) for dam_id in self.get_ids_of_dams()]
 
         # Transpose array, reshaping it from num_dams x num_time_steps, to num_time_steps x num_dams
         flows = np.transpose(flows_p)
 
         # Reshape array from num_time_steps x num_dams, to num_time_steps x num_dams x 1
-        flows = flows.reshape((-1, len(self.data["dams"]), 1))
+        flows = flows.reshape((-1, self.get_num_dams(), 1))
 
         return flows
 

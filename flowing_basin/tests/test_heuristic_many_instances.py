@@ -21,7 +21,7 @@ PROB_BELOW_HALF = 0.15
 RANDOM_BIASED_SORTING = True
 COMMON_RATIO = 0.6
 MAXIMIZE_FINAL_VOL = False
-SAVE_REPORT = True
+SAVE_REPORT = False
 REPORT_NAME = "random_biased_complete"
 DECIMAL_PLACES = 2
 
@@ -68,7 +68,7 @@ for example, num_dams in product(EXAMPLES, NUMS_DAMS):
             f"../instances/instances_big/instance{example}_{num_dams}dams_{NUM_DAYS}days.json"
         )
 
-        heuristic = Heuristic(config=config, instance=instance, do_tests=False)
+        heuristic = Heuristic(config=config, instance=instance, do_tests=True)
         heuristic.solve()
         obj_function_values.append(heuristic.solution.get_objective_function())
         # print(heuristic.solution.data)

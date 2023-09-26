@@ -272,11 +272,13 @@ class PSO(Experiment):
         )
         return - self.env_objective_function()
 
-    def solve(self, options: dict = None) -> dict:
+    def solve(self, initial_solutions: np.ndarray = None, options: dict = None) -> dict:
 
         """
         Fill the 'solution' attribute of the object, with the optimal solution found by the PSO algorithm.
 
+        :param initial_solutions: Array of shape num_time_steps x num_dams x num_particles with
+            the initial solutions (flows or relvars)
         :param options: Unused argument, inherited from Experiment
         :return: A dictionary with status codes
         """
@@ -290,12 +292,14 @@ class PSO(Experiment):
             "c2": self.config.social_coefficient,
             "w": self.config.inertia_weight
         }
+        if initial_solutions is not None:
+            initial_solutions = self.reshape_as_swarm(initial_solutions)
         swarm = P.create_swarm(
             n_particles=self.config.num_particles,
             dimensions=self.num_dimensions,
             options=swarm_options,
             bounds=self.bounds,
-            init_pos=None
+            init_pos=initial_solutions
         )
 
         start_time = time.perf_counter()
@@ -414,7 +418,7 @@ class PSO(Experiment):
                 )
             solution = self.solution
 
-        self.river_basin.deep_update(solution.get_exiting_flows_array(), is_relvars=False)
+        self.river_basin.deep_update(solution.get_flows_array(), is_relvars=False)
         obj = self.env_objective_function()
 
         return obj.item()

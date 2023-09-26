@@ -47,7 +47,7 @@ if PLOT_SOL:
 # Check with river basin simulator
 instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
 river_basin = RiverBasin(instance=instance, mode="linear")
-flows = solution.get_exiting_flows_array()
+flows = solution.get_flows_array()
 river_basin.deep_update_flows(flows)
 actual_flows = river_basin.all_past_clipped_flows
 print("Flows array:", flows.tolist())

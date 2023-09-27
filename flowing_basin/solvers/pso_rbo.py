@@ -1,7 +1,9 @@
 from flowing_basin.core import Experiment, Instance, Solution
 from flowing_basin.solvers import PSOConfiguration, HeuristicConfiguration, PSO, Heuristic
+from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 from dataclasses import dataclass
 import numpy as np
+from time import perf_counter
 
 
 @dataclass(kw_only=True)
@@ -20,7 +22,8 @@ class PsoRbo(Experiment):
             instance: Instance,
             config: PsoRboConfiguration,
             paths_power_models: dict[str, str] = None,
-            solution: Solution = None
+            solution: Solution = None,
+            verbose: bool = True
     ):
 
         super().__init__(instance=instance, solution=solution)
@@ -28,7 +31,14 @@ class PsoRbo(Experiment):
             self.solution = None
 
         self.config = config
-        self.pso = PSO(instance=self.instance, config=self.config, paths_power_models=paths_power_models)
+        self.verbose = verbose
+
+        self.pso = PSO(
+            instance=self.instance,
+            config=self.config,
+            paths_power_models=paths_power_models,
+            verbose=self.verbose
+        )
 
     def relvars_from_flows(self, clipped_flows: np.ndarray) -> np.ndarray:
 
@@ -117,5 +127,27 @@ class PsoRbo(Experiment):
 
     def solve(self, options: dict = None) -> dict:
 
-        pass
+        # Generate initial solutions (RBO)
+        rbo_start_time = perf_counter()
+        initial_flows_or_relvars = self.generate_initial_solutions()
+        if self.config.use_relvars:
+            initial_flows_or_relvars = self.relvars_from_flows(initial_flows_or_relvars)
+        rbo_exec_time = perf_counter() - rbo_start_time
+        if self.verbose:
+            print(
+                f"Generated {self.config.num_particles} initial solutions in {rbo_exec_time}s "
+                f"with {self.config.random_biased_sorting=} and {self.config.random_biased_flows=}."
+            )
+
+        # Execute PSO
+        self.pso.solve(
+            initial_solutions=initial_flows_or_relvars,
+            time_offset=rbo_exec_time
+        )
+        self.solution = self.pso.solution
+
+        return dict(
+            status_sol=SOLUTION_STATUS_FEASIBLE,
+            status=STATUS_UNDEFINED,
+        )
 

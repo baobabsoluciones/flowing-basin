@@ -272,13 +272,15 @@ class PSO(Experiment):
         )
         return - self.env_objective_function()
 
-    def solve(self, initial_solutions: np.ndarray = None, options: dict = None) -> dict:
+    def solve(self, initial_solutions: np.ndarray = None, time_offset: float = 0., options: dict = None) -> dict:
 
         """
         Fill the 'solution' attribute of the object, with the optimal solution found by the PSO algorithm.
 
         :param initial_solutions: Array of shape num_time_steps x num_dams x num_particles with
             the initial solutions (flows or relvars)
+        :param time_offset: Starting time of the algorithm in seconds
+            (used if there is any preprocessing before PSO, e.g. RBO), defaults to 0
         :param options: Unused argument, inherited from Experiment
         :return: A dictionary with status codes
         """
@@ -303,7 +305,7 @@ class PSO(Experiment):
         )
 
         start_time = time.perf_counter()
-        current_time = 0.
+        current_time = time_offset
         num_iters = 0
         obj_fun_history = []
         if self.verbose:
@@ -338,7 +340,7 @@ class PSO(Experiment):
             swarm.position = topology.compute_position(swarm)
 
             # Next iteration
-            current_time = time.perf_counter() - start_time
+            current_time = time.perf_counter() - start_time + time_offset
             num_iters += 1
 
         if self.verbose:

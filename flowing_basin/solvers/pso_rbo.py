@@ -8,6 +8,10 @@ from time import perf_counter
 
 @dataclass(kw_only=True)
 class PsoRboConfiguration(PSOConfiguration, HeuristicConfiguration):
+
+    # Fraction of particles (between 0 and 1) that are initialized with RBO
+    fraction_rbo_init: float = 0.5
+
     def __post_init__(self):
         if not self.random_biased_flows and not self.random_biased_sorting:
             raise ValueError(
@@ -85,14 +89,17 @@ class PsoRbo(Experiment):
             relvars = np.vstack((relvars, [relvar]))
             old_flow = flow
 
+        # assert (relvars >= -1.).all() and (relvars <= 1.).all()
+
         return relvars
 
-    def generate_initial_solutions(self) -> np.ndarray:
+    def generate_rbo_flows(self, num_solutions: int) -> np.ndarray:
 
         """
+        Generate a number of solutions using Random Biased Optimization (based on the Heuristic).
 
         :return:
-            Array of shape num_time_steps x num_dams x num_scenarios with the initial solutions, represented as
+            Array of shape num_time_steps x num_dams x num_solutions with the RBO solutions, represented as
             the flows that go through each channel in every time step for every scenario (m3/s)
         """
 
@@ -100,19 +107,20 @@ class PsoRbo(Experiment):
             (self.instance.get_largest_impact_horizon(), self.instance.get_num_dams(), 0)
         )
 
-        # First particle - greedy solution (heuristic)
-        heuristic = Heuristic(config=self.config, instance=self.instance, greedy=True, do_tests=True)
-        heuristic.solve()
-        flows = np.concatenate(
-            [
-                flows,
-                heuristic.solution.get_flows_array(),
-            ],
-            axis=2,
-        )
+        # First solution - greedy solution (heuristic)
+        if num_solutions > 0:
+            heuristic = Heuristic(config=self.config, instance=self.instance, greedy=True, do_tests=True)
+            heuristic.solve()
+            flows = np.concatenate(
+                [
+                    flows,
+                    heuristic.solution.get_flows_array(),
+                ],
+                axis=2,
+            )
 
-        # Remaining particles - random biased solutions (RBO)
-        for particle in range(1, self.config.num_particles):
+        # Remaining solutions - random biased solutions (RBO)
+        for _ in range(1, num_solutions):
             heuristic = Heuristic(config=self.config, instance=self.instance, greedy=False, do_tests=True)
             heuristic.solve()
             flows = np.concatenate(
@@ -123,26 +131,84 @@ class PsoRbo(Experiment):
                 axis=2,
             )
 
+        if self.verbose:
+            print(
+                f"Generated {num_solutions} solutions using RBO (Heuristic) "
+                f"with {self.config.random_biased_sorting=} and {self.config.random_biased_flows=}."
+            )
+
+        return flows
+
+    def generate_random_flows(self, num_solutions: int):
+
+        """
+        Generate a number of random solutions.
+
+         :return:
+            Array of shape num_time_steps x num_dams x num_solutions with random solutions, represented as
+            the flows that go through each channel in every time step for every scenario (m3/s)
+        """
+
+        # Random numbers between 0 and 1
+        flows = np.random.rand(
+            self.instance.get_largest_impact_horizon(), self.instance.get_num_dams(), num_solutions
+        )
+
+        # Random numbers between 0 and max_flow
+        flows = flows * np.array(
+            [
+                self.instance.get_max_flow_of_channel(dam_id)
+                for dam_id in self.instance.get_ids_of_dams()
+            ]
+        ).reshape((1, -1, 1))
+
+        if self.verbose:
+            print(f"Generated {num_solutions} random solutions.")
+
+        return flows
+
+    def generate_initial_flows(self):
+
+        """
+
+        :return:
+            Array of shape num_time_steps x num_dams x num_particles with the initial solutions, represented as
+            the flows that go through each channel in every time step for every scenario (m3/s)
+        """
+
+        num_sols_rbo = round(self.config.fraction_rbo_init * self.config.num_particles)
+        num_sols_random = self.config.num_particles - num_sols_rbo
+
+        rbo_flows = self.generate_rbo_flows(num_sols_rbo)
+        random_flows = self.generate_random_flows(num_sols_random)
+
+        flows = np.concatenate(
+            [
+                rbo_flows,
+                random_flows,
+            ],
+            axis=2,
+        )
+
         return flows
 
     def solve(self, options: dict = None) -> dict:
 
         # Generate initial solutions (RBO)
-        rbo_start_time = perf_counter()
-        initial_flows_or_relvars = self.generate_initial_solutions()
+        initialization_start_time = perf_counter()
+        initial_flows_or_relvars = self.generate_initial_flows()
         if self.config.use_relvars:
             initial_flows_or_relvars = self.relvars_from_flows(initial_flows_or_relvars)
-        rbo_exec_time = perf_counter() - rbo_start_time
+        initialization_exec_time = perf_counter() - initialization_start_time
         if self.verbose:
             print(
-                f"Generated {self.config.num_particles} initial solutions in {rbo_exec_time}s "
-                f"with {self.config.random_biased_sorting=} and {self.config.random_biased_flows=}."
+                f"Generated a total of {self.config.num_particles} initial solutions in {initialization_exec_time}s."
             )
 
         # Execute PSO
         self.pso.solve(
             initial_solutions=initial_flows_or_relvars,
-            time_offset=rbo_exec_time,
+            time_offset=initialization_exec_time,
             solver="PSO-RBO"
         )
         self.solution = self.pso.solution

@@ -32,9 +32,9 @@ def test_relvars_from_flows():
     assert (clipped_flows1 == clipped_flows2).all()  # noqa
 
 
-def test_generate_initial_solutions():
+def test_generate_rbo_flows():
 
-    flows = pso_rbo.generate_initial_solutions()
+    flows = pso_rbo.generate_rbo_flows(10)
     obj_fun_values1 = - pso_rbo.pso.calculate_cost(pso_rbo.pso.reshape_as_swarm(flows), is_relvars=False)
     obj_fun_mean, obj_fun_max, obj_fun_min = np.mean(obj_fun_values1), np.max(obj_fun_values1), np.min(obj_fun_values1)
     print("Mean:", obj_fun_mean, "Max:", obj_fun_max, "Min:", obj_fun_min)
@@ -53,6 +53,7 @@ RANDOM_BIASED_FLOWS = True
 PROB_BELOW_HALF = 0.15
 RANDOM_BIASED_SORTING = True
 COMMON_RATIO = 0.6
+FRAC_RBO_INIT = 0.5
 TIME_LIMIT_MINUTES = 0.5
 
 path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_1days.json"
@@ -87,6 +88,7 @@ config = PsoRboConfiguration(
     prob_below_half=PROB_BELOW_HALF,
     random_biased_sorting=RANDOM_BIASED_SORTING,
     common_ratio=COMMON_RATIO,
+    fraction_rbo_init=FRAC_RBO_INIT,
 )
 print(config)
 
@@ -94,7 +96,7 @@ instance = Instance.from_json(path_instance)
 pso_rbo = PsoRbo(instance=instance, config=config)
 print(pso_rbo.pso.config)
 
-# Test `relvars_from_flows` and `generate_initial_solutions` methods (slow)
+# Test `relvars_from_flows` and `generate_rbo_flows` methods (slow)
 # test_relvars_from_flows()
 # test_generate_initial_solutions()
 

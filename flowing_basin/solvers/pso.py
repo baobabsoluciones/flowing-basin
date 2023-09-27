@@ -272,7 +272,9 @@ class PSO(Experiment):
         )
         return - self.env_objective_function()
 
-    def solve(self, initial_solutions: np.ndarray = None, time_offset: float = 0., options: dict = None) -> dict:
+    def solve(
+        self, initial_solutions: np.ndarray = None, time_offset: float = 0., solver: str = "PSO", options: dict = None
+    ) -> dict:
 
         """
         Fill the 'solution' attribute of the object, with the optimal solution found by the PSO algorithm.
@@ -281,6 +283,7 @@ class PSO(Experiment):
             the initial solutions (flows or relvars)
         :param time_offset: Starting time of the algorithm in seconds
             (used if there is any preprocessing before PSO, e.g. RBO), defaults to 0
+        :param solver: Solver to indicate in the stored solution (e.g. PSO or PSO-RBO), defaults to PSO
         :param options: Unused argument, inherited from Experiment
         :return: A dictionary with status codes
         """
@@ -377,7 +380,7 @@ class PSO(Experiment):
                     end_decisions=end_datetime
                 ),
                 solution_datetime=solution_datetime,
-                solver="PSO",
+                solver=solver,
                 configuration=asdict(self.config),
                 objective_function=self.env_objective_function().item(),
                 objective_history=dict(

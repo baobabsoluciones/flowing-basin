@@ -142,7 +142,8 @@ class PsoRbo(Experiment):
         # Execute PSO
         self.pso.solve(
             initial_solutions=initial_flows_or_relvars,
-            time_offset=rbo_exec_time
+            time_offset=rbo_exec_time,
+            solver="PSO-RBO"
         )
         self.solution = self.pso.solution
 

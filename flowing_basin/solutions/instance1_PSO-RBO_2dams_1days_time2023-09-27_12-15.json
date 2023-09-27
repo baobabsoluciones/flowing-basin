@@ -941,5 +941,5 @@
         35.95
     ],
     "solution_datetime": "2023-09-27 12:16",
-    "solver": "PSO"
+    "solver": "PSO-RBO"
 }

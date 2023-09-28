@@ -6,7 +6,8 @@ from dataclasses import dataclass, asdict
 import warnings
 import time
 import pyswarms.backend as P
-from pyswarms.backend.topology import Star
+from pyswarms.backend.handlers import BoundaryHandler
+from pyswarms.backend.topology import Star, Ring, VonNeumann, Pyramid, Random
 
 
 @dataclass(kw_only=True)
@@ -14,7 +15,7 @@ class PSOConfiguration(Configuration):  # noqa
 
     num_particles: int
 
-    # PySwarms optimizer options
+    # Continuous PySwarms optimizer options
     cognitive_coefficient: float
     social_coefficient: float
     inertia_weight: float
@@ -22,6 +23,10 @@ class PSOConfiguration(Configuration):  # noqa
     # Particles represent flows, or flow variations? In the second case, are they capped?
     use_relvars: bool
     max_relvar: float = 0.5  # Used only when use_relvars=True
+
+    # Discrete PySwarms optimizer options
+    bounds_handling: str = "periodic"
+    topology: str = "star"
 
     # Max iterations OR max time
     max_iterations: int = None
@@ -33,10 +38,18 @@ class PSOConfiguration(Configuration):  # noqa
 
     def __post_init__(self):
 
-        # Assert given mode is valid
-        valid_modes = {"linear", "nonlinear"}
-        if self.mode not in valid_modes:
-            raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
+        # Assert given string values are valid
+        valid_attr_values = dict(
+            mode={"linear", "nonlinear"},
+            bounds_handling={"periodic", "nearest", "intermediate", "shrink", "reflective", "random"},
+            topology={"star", "ring", "von_neumann", "pyramid", "random"}
+        )
+        for attr_name, valid_values in valid_attr_values:
+            if getattr(self, attr_name) not in valid_values:
+                raise ValueError(
+                    f"Invalid value for '{attr_name}': {getattr(self, attr_name)}. "
+                    f"Allowed values are {valid_values}"
+                )
 
         # Assert a max iterations or max time is given
         if self.max_iterations is None and self.max_time is None:
@@ -288,8 +301,10 @@ class PSO(Experiment):
         :return: A dictionary with status codes
         """
 
-        # Create a Star topology (to implement Global Best PSO)
-        topology = Star()
+        # Choose a topology
+        topology = {
+            "star": Star(), "ring": Ring(), "von_neumann": VonNeumann(), "pyramid": Pyramid(), "random": Random()
+        }[self.config.topology]
 
         # Create a swarm
         swarm_options = {
@@ -306,6 +321,10 @@ class PSO(Experiment):
             bounds=self.bounds,
             init_pos=initial_solutions
         )
+
+        # Choose a handler for out-of-bounds particles
+        boundary_handler = BoundaryHandler(strategy=self.config.bounds_handling)
+        boundary_handler.memory = swarm.position
 
         start_time = time.perf_counter()
         current_time = time_offset
@@ -339,8 +358,8 @@ class PSO(Experiment):
                 print(f"{num_iters:<15}{current_time:<15.2f}{-swarm.best_cost:<15.2f}")
 
             # Update position and velocity matrices
-            swarm.velocity = topology.compute_velocity(swarm)
-            swarm.position = topology.compute_position(swarm)
+            swarm.velocity = topology.compute_velocity(swarm, bounds=self.bounds)
+            swarm.position = topology.compute_position(swarm, bounds=self.bounds, bh=boundary_handler)
 
             # Next iteration
             current_time = time.perf_counter() - start_time + time_offset
@@ -348,6 +367,9 @@ class PSO(Experiment):
 
         if self.verbose:
             print(f"Optimization finished.\nBest position is {swarm.best_pos}\nBest cost is {swarm.best_cost}")
+
+        # Assert optimal party is between bounds
+        assert (swarm.best_pos >= self.bounds[0]).all() and (swarm.best_pos <= self.bounds[1]).all()
 
         # Get clipped optimal flows, and the corresponding volumes and powers of each dam
         self.river_basin.deep_update(

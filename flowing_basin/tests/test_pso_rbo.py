@@ -54,7 +54,7 @@ PROB_BELOW_HALF = 0.15
 RANDOM_BIASED_SORTING = True
 COMMON_RATIO = 0.6
 FRAC_RBO_INIT = 0.5
-TIME_LIMIT_MINUTES = 0.5
+TIME_LIMIT_MINUTES = 1
 
 path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_1days.json"
 path_sol = f"../solutions/instance{EXAMPLE}_PSO-RBO_{NUM_DAMS}dams_1days" \

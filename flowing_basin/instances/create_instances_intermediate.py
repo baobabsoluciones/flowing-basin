@@ -3,7 +3,7 @@ from flowing_basin.solvers.rl import RLEnvironment
 import pandas as pd
 from datetime import datetime, time
 
-CREATE_INSTANCES = False
+CREATE_INSTANCES = True
 
 path_daily_inflow_data = "../data/history/historical_data_daily_avg_inflow.pickle"
 daily_inflow_data = pd.read_pickle(path_daily_inflow_data)
@@ -23,7 +23,8 @@ sorted_daily_inflow = daily_inflow_data.sort_values(by='total_avg_inflow')
 # print(sorted_daily_inflow)
 
 # Select percentiles 0% 10% .. 100% from driest to rainiest
-percentile_indices = [int((percentile / 100) * (len(sorted_daily_inflow) - 1)) for percentile in range(0, 101, 10)]
+percentiles = list(range(0, 101, 10))
+percentile_indices = [int((percentile / 100) * (len(sorted_daily_inflow) - 1)) for percentile in percentiles]
 print("Percenile indeces:", percentile_indices)
 selected_rows = sorted_daily_inflow.iloc[percentile_indices]
 # print("Selected rows:", selected_rows)
@@ -50,4 +51,4 @@ if CREATE_INSTANCES:
         if inconsistencies:
             raise Exception(f"There are inconsistencies in the data: {inconsistencies}")
 
-        instance.to_json(f"instances_base/instance_intermediate{index}.json")
+        instance.to_json(f"instances_base/instance_percentile{percentiles[index]:>02}.json")

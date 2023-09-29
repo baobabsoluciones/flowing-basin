@@ -26,6 +26,10 @@ class LPConfiguration:
     # Solver timeout
     time_limit_seconds: int
 
+    # Number of periods during which the flow through the channel may not vary in order to change the sense
+    #of the flow's change
+    flow_smoothing: int
+
 
 class LPModel(Experiment):
     def __init__(
@@ -190,6 +194,10 @@ class LPModel(Experiment):
         """
         TMin = self.config.step_min
         """
+        Parámetro franjas sin cambio en el caudal de salida: K
+        """
+        K = self.config.flow_smoothing
+        """
         Parámetro precio en cada franja (€/MWh): Price
         """
         Price = self.instance.get_all_prices()
@@ -310,6 +318,7 @@ class LPModel(Experiment):
         print(f"{VMax=}")
         print(f"{VMin=}")
         print(f"{TMin=}")
+        print(f"{K=}")
         print(f"{Price=}")
         print(f"{IniLags=}")
         print(f"{VolFinal=}")
@@ -475,10 +484,20 @@ class LPModel(Experiment):
             dam_id: self.instance.get_min_vol_of_dam(dam_id)
             for dam_id in self.instance.get_ids_of_dams()
         }
+
+        #CON TMIN
         """
         Parámetro franjas sin cambio en el caudal de salida: TMin
         """
-        TMin = self.config.step_min
+        #TMin = self.config.step_min
+
+        #CON K FORMA CARLOS Y ÁLVARO
+        """
+        Parámetro franjas sin cambio en el caudal de salida: K
+        """
+        K = self.config.flow_smoothing
+
+
         """
         Parámetro precio en cada franja (€/MWh): Price
         """
@@ -645,12 +664,38 @@ class LPModel(Experiment):
         qch = lp.LpVariable.dicts(
             "Cambio caudal ", [(i, t) for i in I for t in T], cat=lp.LpContinuous
         )
+
+        #CON TMIN
         """
         Variable binaria: y
         1 si hay variación de caudal en la franja
         0 si no hay variación de caudal en la franja
         """
-        y = lp.LpVariable.dicts("01Variacion ", [(i, t) for i in I for t in T], cat=lp.LpBinary)
+        #y = lp.LpVariable.dicts("01Variacion ", [(i, t) for i in I for t in T], cat=lp.LpBinary)
+
+        #CON K FORMA CARLOS
+        """
+        Variable binaria: x+
+        1 si hay variación positiva de caudal en la franja
+        0 si no hay variación positiva de caudal en la franja
+        """
+        x_pos = lp.LpVariable.dicts("01VariacionPos ", [(i, t) for i in I for t in T], cat=lp.LpBinary)
+        """
+        Variable binaria: x-
+        1 si hay variación negativa de caudal en la franja
+        0 si no hay variación negativa de caudal en la franja
+        """
+        x_neg = lp.LpVariable.dicts("01VariacionNeg ", [(i, t) for i in I for t in T], cat=lp.LpBinary)
+
+        #CON K FORMA ÁLVARO
+        """
+        Variable binaria: x+
+        1 si hay variación nula de caudal en la franja
+        0 si no hay variación nula de caudal en la franja
+        """
+        #x_0 = lp.LpVariable.dicts("01VariacionNula ", [(i, t) for i in I for t in T], cat=lp.LpBinary)
+
+
         """
         Variable asociada al IP with Piecewise Linear Functions
         de Winston en relación a la curva Potencia - Caudal turbinado
@@ -797,47 +842,6 @@ class LPModel(Experiment):
                 ) * (1 / len(L[i])) + lp.lpSum(qs[(i, t - l)] for l in L[i] if t - l >= 0) * (
                                      1 / len(L[i])
                              )
-                # Forma Rodri
-                """if i == "dam1" or i[i.rfind("_") + 1: i.rfind("copy")] == "dam1":
-                    if t == T[0]:
-                        lpproblem += qtb[(i, t)] == IniLags[i][0]
-                    if t >= 1:
-                        lpproblem += qtb[(i, t)] == qs[(i, t-1)]
-                if i == "dam2" or i[i.rfind("_") + 1: i.rfind("copy")] == "dam2":
-                    if t == T[0]:
-                        lpproblem += qtb[(i, t)] == (
-                            IniLags[i][2]
-                            + IniLags[i][3]
-                            + IniLags[i][4]
-                        ) / 3
-                    if t == 1:
-                        lpproblem += qtb[(i, t)] == (
-                            IniLags[i][1]
-                            + IniLags[i][2]
-                            + IniLags[i][3]
-                        ) / 3
-                    if t == 2:
-                        lpproblem += qtb[(i, t)] == (
-                            IniLags[i][0]
-                            + IniLags[i][1]
-                            + IniLags[i][2]
-                        ) / 3
-                    if t == 3:
-                        lpproblem += qtb[(i, t)] == (
-                            qs[(i, 0)] + IniLags[i][0] + IniLags[i][1]
-                        ) / 3
-                    if t == 4:
-                        lpproblem += qtb[(i, t)] == (
-                            qs[(i, 1)] + qs[(i, 0)] + IniLags[i][0]
-                        ) / 3
-                    if t == 5:
-                        lpproblem += qtb[(i, t)] == (
-                            qs[(i, 2)] + qs[(i, 1)] + qs[(i, 0)]
-                        ) / 3
-                    if t >= 6:
-                        lpproblem += qtb[(i, t)] == lp.lpSum(
-                            (qs[(i, t - l)]) * (1 / 3) for l in range(3,6)
-                        )"""
         """
         Restricción asociada al IP with Piecewise Linear Functions de Winston
         en referencia a la curva Potencia - Caudal turbinado
@@ -948,30 +952,86 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 if t == T[0]:
-                    lpproblem += qch[(i, t)] == 0  # qs[(i, t)] - IniLags[i][0]
+                    lpproblem += qch[(i, t)] == qs[(i, t)] - IniLags[i][0]
                 else:
                     lpproblem += qch[(i, t)] == qs[(i, t)] - qs[(i, t - 1)]
+
+        #CON TMIN
         """
         Restricción para contabilizar variación caudal en cada franja
         """
-        for i in I:
-            for t in T:
-                lpproblem += qch[(i, t)] <= y[(i, t)] * QMax[i]
+        #for i in I:
+        #    for t in T:
+        #        lpproblem += qch[(i, t)] <= y[(i, t)] * QMax[i]
         """
         Restricción para contabilizar variación caudal en cada franja
         """
-        for i in I:
-            for t in T:
-                lpproblem += -qch[(i, t)] <= y[(i, t)] * QMax[i]
+        #for i in I:
+        #    for t in T:
+        #        lpproblem += -qch[(i, t)] <= y[(i, t)] * QMax[i]
         """
         Restricción acotar cambios de caudal en tmin franjas
         """
+        #for i in I:
+        #    for t in T:
+        #        lpproblem += (
+        #                lp.lpSum(y[(i, t + t1)] for t1 in range(0, TMin) if t + t1 <= len(T) - 1)
+        #                <= 1
+        #        )
+
+        #CON K FORMA CARLOS
+        """
+        Restricción para contabilizar variación positiva de caudal en cada franja
+        """
         for i in I:
             for t in T:
-                lpproblem += (
-                        lp.lpSum(y[(i, t + t1)] for t1 in range(0, TMin) if t + t1 <= len(T) - 1)
-                        <= 1
-                )
+                lpproblem += qch[(i, t)] <= x_pos[(i, t)] * QMax[i]
+        """
+        Restricción para contabilizar variación negativa de caudal en cada franja
+        """
+        for i in I:
+            for t in T:
+                lpproblem += -qch[(i, t)] <= x_neg[(i, t)] * QMax[i]
+        """
+        Restricción para que solo se cuenta la variación correcta
+        """
+        for i in I:
+            for t in T:
+                lpproblem += x_pos[(i, t)] + x_neg[(i, t)] <= 1
+
+        #CON K FORMA ÁLVARO
+        """
+        Resticción para contabilizar variaciones nulas de caudal en cada franja
+        """
+        #for i in I:
+        #    for t in T:
+        #        if t == T[0]:
+        #            lpproblem += x_0[(i, t)] >= (qs[(i, t)] - IniLags[i][0]) * (1 / QMax[i]) + 1 - 2 * x_pos[
+        #                (i, t)] - 2 * x_neg[(i, t)]
+        #            lpproblem += x_0[(i, t)] <= (IniLags[i][0] - qs[(i, t)]) * (1 / QMax[i]) + 1 + 2 * x_pos[
+        #                (i, t)] + 2 * x_neg[(i, t)]
+        #        else:
+        #            lpproblem += x_0[(i, t)] >= (qs[(i, t)] - qs[(i, t-1)]) * (1 / QMax[i]) + 1 - 2 * x_pos[
+        #                (i, t)] - 2 * x_neg[(i, t)]
+        #            lpproblem += x_0[(i, t)] <= (qs[(i, t-1)] - qs[(i, t)]) * (1 / QMax[i]) + 1 + 2 * x_pos[
+        #                (i, t)] + 2 * x_neg[(i, t)]
+        """
+        Restricción para que solo se cuenta la variación correcta
+        """
+        #for i in I:
+        #    for t in T:
+        #        lpproblem += x_pos[(i, t)] + x_neg[(i, t)] + x_0[(i, t)] == 1
+
+        """
+        Restricción golpe de ariete
+        """
+        for i in I:
+            for t in T:
+                for k in range(1, K+1):
+                    if t - k >= 0:
+                        lpproblem += x_pos[(i, t)] + x_neg[(i, t - k)] <= 1
+                        lpproblem += x_neg[(i, t)] + x_pos[(i, t - k)] <= 1
+
         """
         Restricción volumen máximo
         """
@@ -1110,7 +1170,9 @@ class LPModel(Experiment):
         print("--------Arranques grupos de potencia--------")
         for var in pwch_tot.values():
             print(f"{var.name}: {var.value()}")
-        for var in qtb.values():
+        for var in qs.values():
+            print(f"{var.name}: {var.value()}")
+        for var in vol.values():
             print(f"{var.name}: {var.value()}")
         # solution.json
         qsalida = {dam_id: [] for dam_id in I}

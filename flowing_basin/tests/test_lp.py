@@ -25,7 +25,8 @@ config = LPConfiguration(
     },
     step_min=4,
     MIPGap=0.01,
-    time_limit_seconds=TIME_LIMIT_MINUTES*60
+    time_limit_seconds=TIME_LIMIT_MINUTES*60,
+    flow_smoothing=2
 )
 
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")

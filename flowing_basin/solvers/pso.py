@@ -44,7 +44,7 @@ class PSOConfiguration(Configuration):  # noqa
             bounds_handling={"periodic", "nearest", "intermediate", "shrink", "reflective", "random"},
             topology={"star", "ring", "von_neumann", "pyramid", "random"}
         )
-        for attr_name, valid_values in valid_attr_values:
+        for attr_name, valid_values in valid_attr_values.items():
             if getattr(self, attr_name) not in valid_values:
                 raise ValueError(
                     f"Invalid value for '{attr_name}': {getattr(self, attr_name)}. "

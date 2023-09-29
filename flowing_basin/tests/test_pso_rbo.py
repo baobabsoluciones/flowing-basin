@@ -44,7 +44,7 @@ def test_generate_rbo_flows():
     assert (np.abs(obj_fun_values1 - obj_fun_values2) < 1e-4).all()  # noqa
 
 
-SAVE_SOLUTION = True
+SAVE_SOLUTION = False
 EXAMPLE = 3
 NUM_DAMS = 2
 K_PARAMETER = 2
@@ -54,7 +54,7 @@ PROB_BELOW_HALF = 0.15
 RANDOM_BIASED_SORTING = True
 COMMON_RATIO = 0.6
 FRAC_RBO_INIT = 0.5
-TIME_LIMIT_MINUTES = 1
+TIME_LIMIT_MINUTES = 0.4
 
 path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_1days.json"
 path_sol = f"../solutions/instance{EXAMPLE}_PSO-RBO_{NUM_DAMS}dams_1days" \

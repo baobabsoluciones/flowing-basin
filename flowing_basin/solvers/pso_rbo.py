@@ -13,6 +13,11 @@ class PsoRboConfiguration(PSOConfiguration, HeuristicConfiguration):
     fraction_rbo_init: float = 0.5
 
     def __post_init__(self):
+
+        # Call the __post_init__ of parent classes
+        PSOConfiguration.__post_init__(self)
+        HeuristicConfiguration.__post_init__(self)
+
         if not self.random_biased_flows and not self.random_biased_sorting:
             raise ValueError(
                 "Both random biased flows and sorting are False. "

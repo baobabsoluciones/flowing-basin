@@ -45,7 +45,7 @@ def test_generate_rbo_flows():
 
 
 SAVE_SOLUTION = True
-EXAMPLE = 1
+EXAMPLE = 3
 NUM_DAMS = 2
 K_PARAMETER = 2
 USE_RELVARS = True
@@ -60,20 +60,14 @@ path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_1d
 path_sol = f"../solutions/instance{EXAMPLE}_PSO-RBO_{NUM_DAMS}dams_1days" \
            f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
 
+instance = Instance.from_json(path_instance)
 config = PsoRboConfiguration(
     volume_shortage_penalty=3,
     volume_exceedance_bonus=0,
     startups_penalty=50,
     limit_zones_penalty=0,
     volume_objectives={
-        "dam1": 59627.42324,
-        "dam2": 31010.43613642857,
-        "dam3_dam2copy": 31010.43613642857,
-        "dam4_dam2copy": 31010.43613642857,
-        "dam5_dam1copy": 59627.42324,
-        "dam6_dam1copy": 59627.42324,
-        "dam7_dam2copy": 31010.43613642857,
-        "dam8_dam1copy": 59627.42324,
+        dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
     },
     use_relvars=USE_RELVARS,
     max_relvar=1,
@@ -92,7 +86,6 @@ config = PsoRboConfiguration(
 )
 print(config)
 
-instance = Instance.from_json(path_instance)
 pso_rbo = PsoRbo(instance=instance, config=config)
 print(pso_rbo.pso.config)
 

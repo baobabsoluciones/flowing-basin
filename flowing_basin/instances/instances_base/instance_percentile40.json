@@ -1,6 +1,7 @@
 {
     "dams": [
         {
+            "final_vol": 45797.063015619664,
             "flow_limit": {
                 "exists": false
             },
@@ -157,6 +158,7 @@
             "vol_min": 34045.0
         },
         {
+            "final_vol": 20719.534804762723,
             "flow_limit": {
                 "exists": true,
                 "observed_flows": [

@@ -48,6 +48,7 @@ for example in EXAMPLES:
             print(dam)
             print("order:", instance.get_order_of_dam(dam))
             print("initial volume:", instance.get_initial_vol_of_dam(dam))
+            print("final volume:", instance.get_historical_final_vol_of_dam(dam))
             print("min volume:", instance.get_min_vol_of_dam(dam))
             print("max volume:", instance.get_max_vol_of_dam(dam))
             print("initial lags:", instance.get_initial_lags_of_channel(dam))

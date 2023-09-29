@@ -290,6 +290,18 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["initial_vol"]
 
+    def get_historical_final_vol_of_dam(self, idx: str) -> float | None:
+
+        """
+        Get the historical final volume of the given dam.
+        This method may return None as this is an optional field of the instance.
+
+        :param idx: ID of the dam in the river basin
+        :return: The previously observed volume of the dam in the decision horizon (m3)
+        """
+
+        return self.data["dams"][idx].get("final_vol")
+
     def get_min_vol_of_dam(self, idx: str) -> float:
 
         """

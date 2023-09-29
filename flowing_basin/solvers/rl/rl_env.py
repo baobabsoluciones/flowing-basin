@@ -381,6 +381,7 @@ class RLEnvironment(gym.Env):
 
             # If dam is not dam1 or dam2,
             # it will be e.g. dam3_dam2copy (a copy of dam2) or dam4_dam1copy (a copy of dam1)
+            original_dam_id = dam_id
             if dam_id not in ["dam1", "dam2"]:
                 dam_id = dam_id[dam_id.rfind("_") + 1: dam_id.rfind("copy")]
 
@@ -397,9 +398,15 @@ class RLEnvironment(gym.Env):
             initial_lags.reverse()
             data["dams"][order]["initial_lags"] = initial_lags
 
-            data["dams"][order]["unregulated_flows"] = historical_data.loc[
-                initial_row: last_row_info, dam_id + "_unreg_flow"
-            ].values.tolist()
+            # Unregulated flow
+            # We will only consider the unregulated flow of the original dams,
+            # and not of the artificially created extra dams
+            if original_dam_id in ["dam1", "dam2"]:
+                data["dams"][order]["unregulated_flows"] = historical_data.loc[
+                    initial_row: last_row_info, dam_id + "_unreg_flow"
+                ].values.tolist()
+            else:
+                data["dams"][order]["unregulated_flows"] = [0 for _ in range(initial_row, last_row_info + 1)]
 
         # Complete instance
         instance = Instance.from_dict(data)

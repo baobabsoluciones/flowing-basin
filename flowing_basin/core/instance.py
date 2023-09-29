@@ -565,9 +565,14 @@ class Instance(InstanceCore):
         """
 
         incoming_flows = self.get_all_incoming_flows()[:self.get_decision_horizon()]
+        # print("Incoming flows:", incoming_flows)
+        # print("Incoming flow mean:", sum(incoming_flows)/len(incoming_flows))
         total_avg_inflow = sum(incoming_flows) / len(incoming_flows)
         for dam_id in self.get_ids_of_dams():
             unreg_flows = self.get_all_unregulated_flows_of_dam(dam_id)[:self.get_decision_horizon()]
+            # print(dam_id, "unregulated flows:", unreg_flows)
+            # print(dam_id, "unregulated flow mean:", sum(unreg_flows) / len(unreg_flows))
             total_avg_inflow += sum(unreg_flows) / len(unreg_flows)
+        # print("Total avg inflow:", total_avg_inflow)
 
         return total_avg_inflow

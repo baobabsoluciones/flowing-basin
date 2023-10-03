@@ -258,13 +258,13 @@ class LPModel(Experiment):
             for y in range(len(startup_flows[i])):
                 for w in range(len(QtBP[i])):
                     if (startup_flows[i][y] - QtBP[i][w]) <= 0.1 and (startup_flows[i][y] - QtBP[i][w]) >= -0.1:
-                        startup_flows[i][y] = QtBP[i][w]
+                        QtBP[i][w] = startup_flows[i][y]
 
         for i in I:
             for y in range(len(shutdown_flows[i])):
                 for w in range(len(QtBP[i])):
                     if (shutdown_flows[i][y] - QtBP[i][w]) <= 0.1 and (shutdown_flows[i][y] - QtBP[i][w]) >= -0.1:
-                        shutdown_flows[i][y] = QtBP[i][w]
+                        QtBP[i][w] = shutdown_flows[i][y]
         """
         Parámetro zonas límite de cada embalse
         en la curva Potencia - Caudal turbinado: ZonaLimitePQ
@@ -770,9 +770,9 @@ class LPModel(Experiment):
         )
         """
         Variable beneficio por falta o exceso respecto
-        al volumen objetivo (€): cost_desv
+        al volumen objetivo (€): ben_desv
         """
-        cost_desv = lp.LpVariable.dicts(
+        ben_desv = lp.LpVariable.dicts(
             "Beneficio por desviación volumen del ",
             [i for i in I],
             cat=lp.LpContinuous,
@@ -907,9 +907,14 @@ class LPModel(Experiment):
         for i in I:
             for t in T:
                 if QmaxBP[i] != None:
-                    lpproblem += vol[(i, t)] == lp.lpSum(
-                        z_vq[(i, t, bp)] * VolBP[i][bp - 1] for bp in BreakPointsVQ[i]
-                    )
+                    if t == T[0]:
+                        lpproblem += V0[i] == lp.lpSum(
+                            z_vq[(i, t, bp)] * VolBP[i][bp - 1] for bp in BreakPointsVQ[i]
+                        )
+                    else:
+                        lpproblem += vol[(i, t - 1)] == lp.lpSum(
+                            z_vq[(i, t, bp)] * VolBP[i][bp - 1] for bp in BreakPointsVQ[i]
+                        )
         """
         Restricción asociada al IP with Piecewise Linear Functions de Winston
         en referencia a la curva Volumen - Caudal máximo
@@ -1078,7 +1083,7 @@ class LPModel(Experiment):
         respecto al objetivo
         """
         for i in I:
-            lpproblem += cost_desv[i] == pos_desv[i] * BonusVol - neg_desv[i] * PenVol
+            lpproblem += ben_desv[i] == pos_desv[i] * BonusVol - neg_desv[i] * PenVol
         """
         Restricción número total de franjas en zona límite para cada embalse
         """
@@ -1141,7 +1146,7 @@ class LPModel(Experiment):
             )
         # Objective Function
         lpproblem += lp.lpSum(
-            pot_embalse[i] + cost_desv[i] - zl_tot[i] * PenZL - pwch_tot[i] * PenSU for i in I
+            pot_embalse[i] + ben_desv[i] - zl_tot[i] * PenZL - pwch_tot[i] * PenSU for i in I
         )
 
         # Solve
@@ -1162,7 +1167,7 @@ class LPModel(Experiment):
             print(f"{var.name} (m3): {var.value()}")
         for var in neg_desv.values():
             print(f"{var.name} (m3): {var.value()}")
-        for var in cost_desv.values():
+        for var in ben_desv.values():
             print(f"{var.name} (€): {var.value()}")
         print("--------Zonas límite--------")
         for var in zl_tot.values():
@@ -1170,10 +1175,15 @@ class LPModel(Experiment):
         print("--------Arranques grupos de potencia--------")
         for var in pwch_tot.values():
             print(f"{var.name}: {var.value()}")
-        for var in qs.values():
-            print(f"{var.name}: {var.value()}")
-        for var in vol.values():
-            print(f"{var.name}: {var.value()}")
+        for var in pwch.values():
+            if var.value() != 0:
+                print(f"{var.name}: {var.value()}")
+        for var in w_pq.values():
+            if var.value() != 0:
+                print(f"{var.name}: {var.value()}")
+        for var in qtb.values():
+            if var.value() != 0:
+                print(f"{var.name}: {var.value()}")
         # solution.json
         qsalida = {dam_id: [] for dam_id in I}
         for var in qs.values():

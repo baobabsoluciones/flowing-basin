@@ -389,7 +389,7 @@ class HeuristicSingleDam:
         (i.e., the groups after the last max or min vol time step).
         """
 
-        running_time_step = self.instance.get_decision_horizon()
+        running_time_step = self.instance.get_decision_horizon() - 1
         while self.available_volumes[running_time_step] < self.max_available_vol and running_time_step > 0:
             running_time_step -= 1
 
@@ -397,11 +397,14 @@ class HeuristicSingleDam:
         # in the same time step (since we are storing the final volume of each time step)
         relevant_groups = [
             group for group in sorted_groups
-            if group[-1] > running_time_step and group[0] <= self.instance.get_decision_horizon() - 1
+            if (
+                group[-1] > running_time_step and
+                group[0] <= self.instance.get_decision_horizon() - 1
+            )
         ]
         return relevant_groups
 
-    def adapt_flows_to_obj_vol(self, sorted_groups: list[list[int]]):
+    def adapt_flows_to_obj_vol(self, sorted_groups: list[list[int]], epsilon: float = 1e-6):
 
         """
         Assign zero flow to the least important relevant groups (i.e., lowest average lagged price)
@@ -425,10 +428,7 @@ class HeuristicSingleDam:
             #     f"\tvol in {decision_horizon - 1} = "
             #     f"{self.available_volumes[decision_horizon - 1]} < {objective_available_volume}"
             # )
-            # print(
-            #     f"\t{least_important_group=}",
-            #     f"{self.available_volumes=}"
-            # )
+            # print(f"\t{least_important_group=}")
             # print(
             #     "\tFlows in group:", [self.assigned_flows[time_step] for time_step in least_important_group],
             #     "Volumes in group:", [self.available_volumes[time_step] for time_step in least_important_group]
@@ -441,6 +441,7 @@ class HeuristicSingleDam:
             ) if least_important_group[-1] < decision_horizon else 0.
             removable_volume_in_next_groups = self.max_available_vol - highest_vol_in_next_groups
             volume_to_remove = min(removable_volume_in_next_groups, volume_gap)
+            # print(f"\t{volume_to_remove=}")
 
             # Calculate the volume to remove in every time step of the group
             # A priori, every time step of the group can contribute the same amount, volume_to_remove/len(group) ...
@@ -449,6 +450,7 @@ class HeuristicSingleDam:
             ]
             num_relevant_time_steps = len(relevant_time_steps)
             volume_to_remove_per_time_step = volume_to_remove / num_relevant_time_steps
+            # print(f"\t{volume_to_remove_per_time_step=}")
 
             # ...however, this is not true when one of the time steps is close to (or in) the max vol and does not have
             # enough removable volume (it is "capped"), forcing extra volume to be removed in the remaining time steps
@@ -463,12 +465,14 @@ class HeuristicSingleDam:
                         volume_to_remove_per_time_step += (
                                 extra_volume_to_remove / (num_relevant_time_steps - num_capped_time_steps)
                         )
+                        # print(f"\t{volume_to_remove_per_time_step=}")
                     except ZeroDivisionError:
                         # This only happens if ALL relevant time steps of the group are capped
                         # In this case, we simply take as much volume from all time steps as possible
                         volume_to_remove_per_time_step = self.max_available_vol - min(
                             self.available_volumes[time_step] for time_step in relevant_time_steps
                         )
+                        # print(f"\t{volume_to_remove_per_time_step=} (<- all capped)")
 
             # Reduce the calculated volume in every time step
             flow_to_remove = volume_to_remove_per_time_step / self.instance.get_time_step_seconds()
@@ -491,11 +495,17 @@ class HeuristicSingleDam:
             #     f"\tvol in {decision_horizon - 1} = "
             #     f"{self.available_volumes[decision_horizon - 1]} < {objective_available_volume}"
             # )
+            #
+            # print(f"{self.available_volumes=}")
+            # print(f"{sorted_relevant_groups=}")
 
         # Check the objective final volumes are now satisfied
         if self.do_tests:
-            assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6, (
-                f"Objective volumes were not satisfied in {self.dam_id} with {self.assigned_flows=}."
+            assert self.available_volumes[decision_horizon - 1] > objective_available_volume - epsilon, (
+                f"Objective volumes were not satisfied in {self.dam_id}; "
+                f"final volume is {self.available_volumes[decision_horizon - 1]}, "
+                f"but objective is {objective_available_volume}. "
+                f"Assigned flows: {self.assigned_flows=}."
             )
             # Very high volume objectives are even impossible to reach in some instances;
             # better to leave this assert out...

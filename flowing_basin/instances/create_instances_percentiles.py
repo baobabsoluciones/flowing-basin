@@ -5,6 +5,7 @@ from datetime import datetime, time
 
 CREATE_INSTANCES = True
 PERCENTILES = list(range(0, 101, 10))  # percentiles 0% 10% .. 100% from driest to rainiest
+# PERCENTILES = [25, 75]
 
 path_daily_inflow_data = "../data/history/historical_data_daily_avg_inflow.pickle"
 daily_inflow_data = pd.read_pickle(path_daily_inflow_data)

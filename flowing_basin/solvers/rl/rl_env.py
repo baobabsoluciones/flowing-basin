@@ -410,9 +410,11 @@ class RLEnvironment(gym.Env):
 
             # Final volume: volume at the decision horizon in the historical record
             # Optional field that may be used to set the objective final volumes for the solvers
-            data["dams"][order]["final_vol"] = historical_data.loc[
+            final_vol = historical_data.loc[
                 last_row_decisions + 1, dam_id + "_vol"
             ]
+            final_vol = min(final_vol, data["dams"][order]["vol_max"])
+            data["dams"][order]["final_vol"] = final_vol
 
         # Complete instance
         instance = Instance.from_dict(data)

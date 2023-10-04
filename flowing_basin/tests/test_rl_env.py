@@ -1,4 +1,3 @@
-from flowing_basin.core import Instance
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 import numpy as np
 from stable_baselines3.common.env_checker import check_env
@@ -10,7 +9,7 @@ INITIAL_ROW = "2021-03-27 11:30"
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 config = RLConfiguration(
     startups_penalty=50,
-    limit_zones_penalty=50,
+    limit_zones_penalty=0,
     mode="linear",
     flow_smoothing=2,
     num_prices=16,
@@ -25,6 +24,9 @@ env1 = RLEnvironment(
     path_historical_data="../data/history/historical_data_clean.pickle",
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
+check_env(env1)
+
+# Instance inside environment
 # env1.instance.to_json("../instances/instances_rl/instance1_expanded10steps.json")
 print("instance:", env1.instance.to_dict())
 print("decision horizon:", env1.instance.get_decision_horizon())
@@ -94,6 +96,7 @@ print(env1.river_basin.history.to_string())
 #     path_constants="../data/constants/constants_2dams.json",
 #     path_historical_data="../data/history/historical_data.pickle",
 # )
+# check_env(env2)
 
 # ENVIRONMENT 2 | Initial observation
 # print("---- ENVIRONMENT 2 | initial observation ----")
@@ -127,7 +130,3 @@ print(env1.river_basin.history.to_string())
 # print(env1.instance.check())
 # print(env1.instance.data)
 # print(env1.get_observation())
-
-# CHECK ENVS WITH SB3
-check_env(env1)
-# check_env(env2)

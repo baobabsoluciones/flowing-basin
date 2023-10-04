@@ -217,7 +217,7 @@ class PowerGroup:
 
         return power
 
-    def get_num_active_power_groups(self, turbined_flow: np.ndarray) -> np.ndarray:
+    def get_num_active_power_groups(self, turbined_flow: np.ndarray, epsilon: float = 1e-3) -> np.ndarray:
 
         """
         Get the number of active power groups.
@@ -232,6 +232,8 @@ class PowerGroup:
         # - Turn the FLOW 1D array into a 2D array, repeating the 1D array in as many ROWS as there are STARTUP FLOWS
         # - Turn the STARTUP FLOWS 1D array into a 2D array, repeating the 1D array in as many COLS as there are FLOWS
         # - Comparing both 2D arrays, determine, for each flow, the startup flows are exceeded, and sum them
+        # We add epsilon in the comparison so, if the turbined flow happens to equal the startup flow,
+        # the turbined flow is NOT considered to trigger a startup, but it is in a limit zone
         flow_broadcast_to_startup_flows = np.tile(
             turbined_flow, (len(self.startup_flows), 1)
         )
@@ -239,11 +241,13 @@ class PowerGroup:
             np.tile(self.startup_flows, (len(turbined_flow), 1))
         )
         exceeded_startup_flows = np.sum(
-            flow_broadcast_to_startup_flows > startup_flows_broadcast_to_flows, axis=0
+            flow_broadcast_to_startup_flows > startup_flows_broadcast_to_flows + epsilon, axis=0
         )
 
         # Obtain the number of exceeded shutdown flows for every scenario
         # This will only be different for flows in between a startup and shutdown flow
+        # We add epsilon in the comparison so, if the turbined flow happens to equal the shutdown flow,
+        # the turbined flow is NOT considered to be in a limit zone, but in the lower number of active power groups
         flow_broadcast_to_shutdown_flows = np.tile(
             turbined_flow, (len(self.shutdown_flows), 1)
         )
@@ -251,7 +255,7 @@ class PowerGroup:
             np.tile(self.shutdown_flows, (len(turbined_flow), 1))
         )
         exceeded_shutdown_flows = np.sum(
-            flow_broadcast_to_shutdown_flows > shutdown_flows_broadcast_to_flows, axis=0
+            flow_broadcast_to_shutdown_flows > shutdown_flows_broadcast_to_flows + epsilon, axis=0
         )
 
         # Get the average of the number of exceeded startup flows and the number of exceeded shutdown flows

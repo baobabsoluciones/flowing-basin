@@ -23,7 +23,6 @@ config = LPConfiguration(
         "dam7_dam2copy": 31010.43613642857,
         "dam8_dam1copy": 59627.42324,
     },
-    step_min=4,
     MIPGap=0.01,
     time_limit_seconds=TIME_LIMIT_MINUTES*60,
     flow_smoothing=2

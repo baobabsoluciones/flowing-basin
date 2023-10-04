@@ -17,18 +17,18 @@ class LPConfiguration:
     startups_penalty: float
     limit_zones_penalty: float
 
-    # Number of periods during which the flow through the channel may not undergo more than one variation
-    step_min: int
-
     # Gap for the solution
     MIPGap: float
 
     # Solver timeout
-    time_limit_seconds: int
+    time_limit_seconds: float
 
-    # Number of periods during which the flow through the channel may not vary in order to change the sense
-    #of the flow's change
+    # Number of periods during which the flow through the channel may not vary
+    # in order to change the sense of the flow's change
     flow_smoothing: int
+
+    # Number of periods during which the flow through the channel may not undergo more than one variation
+    # step_min: int = None
 
 
 class LPModel(Experiment):
@@ -192,7 +192,7 @@ class LPModel(Experiment):
         """
         Parámetro franjas sin cambio en el caudal de salida: TMin
         """
-        TMin = self.config.step_min
+        # TMin = self.config.step_min
         """
         Parámetro franjas sin cambio en el caudal de salida: K
         """
@@ -317,7 +317,7 @@ class LPModel(Experiment):
         print(f"{V0=}")
         print(f"{VMax=}")
         print(f"{VMin=}")
-        print(f"{TMin=}")
+        # print(f"{TMin=}")
         print(f"{K=}")
         print(f"{Price=}")
         print(f"{IniLags=}")
@@ -1121,8 +1121,8 @@ class LPModel(Experiment):
                                         w_pq[(i, t - 1, franja)] for franja in FranjasGrupos[i][pg]
                                     )
                                     + lp.lpSum(
-                                w_pq[(i, t, franja_sup)] for franja_sup in franjassuperiores
-                            )
+                                        w_pq[(i, t, franja_sup)] for franja_sup in franjassuperiores
+                                    )
                                     - 1
                                     <= pwch[(i, t, lista_keys[lista_keys.index(pg) + 1])]
                             )
@@ -1131,8 +1131,8 @@ class LPModel(Experiment):
                                         w_pq[(i, t - 1, franja)] for franja in FranjasGrupos[i][pg]
                                     )
                                     + lp.lpSum(
-                                w_pq[(i, t, franja_sup)] for franja_sup in franjassuperiores
-                            )
+                                        w_pq[(i, t, franja_sup)] for franja_sup in franjassuperiores
+                                    )
                                     >= 2 * pwch[(i, t, lista_keys[lista_keys.index(pg) + 1])]
                             )
                         if t == 0:

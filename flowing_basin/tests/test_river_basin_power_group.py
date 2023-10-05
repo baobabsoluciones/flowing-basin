@@ -33,7 +33,7 @@ power_group = PowerGroup(
     instance=instance,
     paths_power_models=paths_power_models,
     num_scenarios=num_scenarios,
-    mode="nonlinear"
+    mode="linear"
 )
 print(f"{power_group.power=}")
 print(f"{power_group.turbined_flow=}")
@@ -41,6 +41,8 @@ print(f"{power_group.previous_num_active_groups=}")
 print(f"{power_group.num_active_groups=}")
 print(f"{power_group.acc_num_startups=}")
 print(f"{power_group.acc_num_times_in_limit=}")
+print(power_group.turbined_bins)
+print(power_group.turbined_bin_groups)
 print()
 
 for flow in flows:
@@ -53,10 +55,10 @@ for flow in flows:
     print(power_group.time + 1, price)
 
     power_group.update(price=price, past_flows=past_flows)
-    print(f"{power_group.power=}")
-    print(f"{power_group.turbined_flow=}")
-    print(f"{power_group.previous_num_active_groups=}")
-    print(f"{power_group.num_active_groups=}")
-    print(f"{power_group.acc_num_startups=}")
-    print(f"{power_group.acc_num_times_in_limit=}")
+    print(f"\t{power_group.power=}")
+    print(f"\t{power_group.turbined_flow=}")
+    print(f"\t{power_group.previous_num_active_groups=}")
+    print(f"\t{power_group.num_active_groups=}")
+    print(f"\t{power_group.acc_num_startups=}")
+    print(f"\t{power_group.acc_num_times_in_limit=}")
     print()

@@ -232,8 +232,8 @@ class PowerGroup:
         # - Turn the FLOW 1D array into a 2D array, repeating the 1D array in as many ROWS as there are STARTUP FLOWS
         # - Turn the STARTUP FLOWS 1D array into a 2D array, repeating the 1D array in as many COLS as there are FLOWS
         # - Comparing both 2D arrays, determine, for each flow, the startup flows are exceeded, and sum them
-        # We add epsilon in the comparison so, if the turbined flow happens to equal the startup flow,
-        # the turbined flow is NOT considered to trigger a startup, but it is in a limit zone
+        # We subtract epsilon in the comparison so, if the turbined flow happens to equal the startup flow,
+        # the turbined flow is NOT considered to be in a limit zone, but in the higher number of active power groups
         flow_broadcast_to_startup_flows = np.tile(
             turbined_flow, (len(self.startup_flows), 1)
         )
@@ -241,7 +241,7 @@ class PowerGroup:
             np.tile(self.startup_flows, (len(turbined_flow), 1))
         )
         exceeded_startup_flows = np.sum(
-            flow_broadcast_to_startup_flows > startup_flows_broadcast_to_flows + epsilon, axis=0
+            flow_broadcast_to_startup_flows > startup_flows_broadcast_to_flows - epsilon, axis=0
         )
 
         # Obtain the number of exceeded shutdown flows for every scenario

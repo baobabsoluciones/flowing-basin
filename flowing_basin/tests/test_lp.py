@@ -3,7 +3,7 @@ from flowing_basin.solvers import LPModel, LPConfiguration
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-EXAMPLE = 1
+EXAMPLE = '_intermediate0'
 NUM_DAMS = 2
 NUM_DAYS = 1
 TIME_LIMIT_MINUTES = 0.3
@@ -30,7 +30,7 @@ config = LPConfiguration(
 
 instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
 lp = LPModel(config=config, instance=instance)
-lp.LPModel_print()
+# lp.LPModel_print()
 
 lp.solve()
 path_sol = f"../solutions/instance{EXAMPLE}_LPmodel_{NUM_DAMS}dams_{NUM_DAYS}days" \

@@ -1,0 +1,492 @@
+C:\Users\rodri\PycharmProjects\CondaEnv\python.exe C:/Users/rodri/Documents/GitHub/flowing-basin/flowing_basin/tests/test_lp.py
+I=['dam1', 'dam2']
+T=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98]
+L={'dam1': [1], 'dam2': [3, 4, 5]}
+BreakPointsPQ={'dam1': [1, 2, 3, 4, 5, 6, 7, 8, 9], 'dam2': [1, 2, 3, 4, 5, 6, 7, 8]}
+BreakPointsVQ={'dam1': None, 'dam2': [1, 2, 3, 4, 5, 6, 7]}
+D=900
+Qnr={'dam1': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'dam2': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}
+QMax={'dam1': 14.15, 'dam2': 11.27}
+QtBP={'dam1': [0.0, 1.428571429, 2.82, 4.98, 5.952380952, 7.619047619, 9.4, 13.66, 15.24], 'dam2': [0.0, 2.423809524, 4.519047619, 5.114285714, 7.285714286, 8.038095238, 11.28, 11.43]}
+PotBP={'dam1': [0.0, 0.0, 0.4, 1.79, 2.14, 2.35, 3.38, 4.6, 4.6], 'dam2': [0.0, 0.0, 3.48, 3.48, 5.6, 5.6, 8.48, 8.48]}
+QmaxBP={'dam1': None, 'dam2': [0.424, 4.571, 8.062, 12.138, 16.186, 19.048, 19.048]}
+VolBP={'dam1': None, 'dam2': [0.0, 23810.0, 48371.0, 71429.0, 95238.0, 110476.0, 114286.0]}
+V0={'dam1': 57987.13817803624, 'dam2': 17463.167431903974}
+VMax={'dam1': 70882.0, 'dam2': 58343.0}
+VMin={'dam1': 34045.0, 'dam2': 17117.0}
+K=2
+Price=[38.98, 46.36, 46.36, 46.36, 46.36, 55.0, 55.0, 55.0, 55.0, 58.03, 58.03, 58.03, 58.03, 57.75, 57.75, 57.75, 57.75, 55.84, 55.84, 55.84, 55.84, 55.01, 55.01, 55.01, 55.01, 54.23, 54.23, 54.23, 54.23, 54.22, 54.22, 54.22, 54.22, 51.1, 51.1, 51.1, 51.1, 50.14, 50.14, 50.14, 50.14, 50.97, 50.97, 50.97, 50.97, 54.51, 54.51, 54.51, 54.51, 57.58, 57.58, 57.58, 57.58, 57.75, 57.75, 57.75, 57.75, 57.66, 57.66, 57.66, 57.66, 53.25, 53.25, 53.25, 53.25, 50.16, 50.16, 50.16, 50.16, 47.13, 47.13, 47.13, 47.13, 48.01, 48.01, 48.01, 48.01, 46.27, 46.27, 46.27, 46.27, 43.97, 43.97, 43.97, 43.97, 41.03, 41.03, 41.03, 41.03, 37.0, 37.0, 37.0, 37.0, 40.0, 40.0, 40.0, 40.0, 45.02, 45.02]
+IniLags={'dam1': [3.0878942579999995, 3.048793505015873], 'dam2': [2.864411954390476, 2.874044879346825, 2.8894575592769836, 2.8913841442682533, 2.906849833845079, 2.908783991643016]}
+VolFinal={'dam1': 59627.42324, 'dam2': 31010.43613642857}
+Q0=[1.7160633528253966, 1.7224839471111109, 1.7151817045714284, 1.7125103265079364, 1.7145479727301585, 1.71187444815873, 1.7181838817142856, 1.7031523094285712, 1.696536716222222, 1.6993666726984127, 1.7049035277142857, 1.7104525953968255, 1.725922711238095, 1.7160427873650794, 1.7092694773650792, 1.7061083176190475, 1.705774834349206, 1.6983337176507936, 1.6910150232063488, 1.6871900625396825, 1.7009618813015872, 1.6966349852698412, 1.7065434078095236, 1.7023091419999998, 1.6962401205714284, 1.7023078563174603, 1.7190461263174603, 1.7027724689523809, 1.6985464333015874, 1.6959751286984128, 1.712328205047619, 1.710317957079365, 1.7043616933968253, 1.6979136429523807, 1.7033629304444444, 1.6961281044444445, 1.6870473661587302, 1.695245618952381, 1.6898122515238092, 1.696387394095238, 1.6971631172380954, 1.7033891564444443, 1.691083276031746, 1.6839636810476188, 1.685941305333333, 1.6829611526666666, 1.7014379075555557, 1.689563281047619, 1.7033570683174604, 1.7249682980317458, 1.6951808673968254, 1.683628417238095, 1.695249425079365, 1.7000995638095238, 1.6709678209841268, 1.6635052296507935, 1.6756797783174602, 1.6977312223809522, 1.7070712589841268, 1.6897228153015873, 1.6988021268253968, 1.6843557897460315, 1.6974922939999997, 1.6972195534920633, 1.7005818052063493, 1.7006293347619046, 1.6982201074285712, 1.6988956257142855, 1.6982402668253969, 1.696857250920635, 1.6937524686666667, 1.7030157173333333, 1.7027822562222221, 1.6941142347301585, 1.7024781835555556, 1.710618214952381, 1.6994764587301585, 1.6914486279047618, 1.696457034063492, 1.6954841765079365, 1.70809784584127, 1.7153712236507934, 1.7112460391111113, 1.7008361844444444, 1.7052940025714285, 1.7039850487301584, 1.6970607128253965, 1.7044598935555555, 1.6983794674603172, 1.6991926044761905, 1.6917359053015872, 1.706342326285714, 1.7103748009206348, 1.704341647238095, 1.7097995897777776, 1.7132050036507935, 1.7132359535555557, 1.7099106813968252, 1.7079665575873015]
+BonusVol=0
+PenVol=3
+PenZL=1000
+PenSU=50
+shutdown_flows={'dam1': [1.428571429, 5.952380952], 'dam2': [2.423809524, 4.519047619, 7.285714286]}
+startup_flows={'dam1': [1.428571429, 7.619047619], 'dam2': [2.423809524, 5.114285714, 8.038095238]}
+ZonaLimitePQ={'dam1': [5], 'dam2': [3, 5]}
+FranjasGrupos={'dam1': {'Grupo_potencia0': [1], 'Grupo_potencia1': [2, 3, 4, 5], 'Grupo_potencia2': [6, 7, 8]}, 'dam2': {'Grupo_potencia0': [1], 'Grupo_potencia1': [2, 3], 'Grupo_potencia2': [4, 5], 'Grupo_potencia3': [6, 7]}}
+D_1=96
+99 99 99 1 3
+Set parameter Username
+Set parameter TimeLimit to value 18
+Set parameter MIPGap to value 0.01
+Set parameter LogFile to value "gurobi.log"
+Academic license - for non-commercial use only - expires 2024-05-09
+Using license file C:\gurobi_LICENCIA\gurobi.lic
+
+Gurobi Optimizer version 10.0.1 build v10.0.1rc0 (win64)
+Copyright (c) 2023, Gurobi Optimization, LLC
+
+Warning: Numeric variable name in LP file ('01Franja_PQ__('dam1',_4,_9)') - often the result
+         of a constant term in the left-hand side of a constraint.
+
+Read LP format model from file C:\Users\rodri\AppData\Local\Temp\416252a62914430aa74f0e2d69b12b62-pulp.lp
+Reading time = 0.03 seconds
+OBJ: 8007 rows, 7437 columns, 31382 nonzeros
+
+CPU model: Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz, instruction set [SSE2|AVX|AVX2]
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+
+Optimize a model with 8007 rows, 7437 columns and 31382 nonzeros
+Model fingerprint: 0x356cc54a
+Variable types: 3671 continuous, 3766 integer (3762 binary)
+Coefficient statistics:
+  Matrix range     [3e-01, 1e+05]
+  Objective range  [1e+00, 1e+03]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 7e+04]
+Presolve removed 2706 rows and 2722 columns
+Presolve time: 0.08s
+Presolved: 5301 rows, 4715 columns, 21196 nonzeros
+Variable types: 2314 continuous, 2401 integer (2401 binary)
+Found heuristic solution: objective -21558.79446
+
+Root relaxation: objective 2.447169e+03, 9095 iterations, 0.24 seconds (0.17 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 2447.16928    0  454 -21558.794 2447.16928   111%     -    0s
+H    0     0                      33.4091704 2447.16928  7225%     -    0s
+H    0     0                      33.4091737 2445.74556  7221%     -    0s
+     0     0 2416.91488    0  530   33.40917 2416.91488  7134%     -    0s
+     0     0 2412.60791    0  540   33.40917 2412.60791  7121%     -    0s
+     0     0 2412.60791    0  540   33.40917 2412.60791  7121%     -    0s
+     0     0 2409.63835    0  491   33.40917 2409.63835  7113%     -    0s
+H    0     0                      84.3462392 2409.62693  2757%     -    0s
+     0     0 2409.62693    0  491   84.34624 2409.62693  2757%     -    0s
+     0     0 2409.62672    0  493   84.34624 2409.62672  2757%     -    0s
+     0     0 2407.36888    0  512   84.34624 2407.36888  2754%     -    1s
+     0     0 2407.04718    0  511   84.34624 2407.04718  2754%     -    1s
+     0     0 2407.02369    0  507   84.34624 2407.02369  2754%     -    1s
+     0     0 2407.02034    0  512   84.34624 2407.02034  2754%     -    1s
+     0     0 2406.11899    0  507   84.34624 2406.11899  2753%     -    1s
+     0     0 2405.96202    0  517   84.34624 2405.96202  2752%     -    1s
+     0     0 2405.88433    0  515   84.34624 2405.88433  2752%     -    1s
+     0     0 2405.88432    0  516   84.34624 2405.88432  2752%     -    1s
+     0     0 2405.66087    0  529   84.34624 2405.66087  2752%     -    1s
+     0     0 2405.64688    0  538   84.34624 2405.64688  2752%     -    1s
+     0     0 2405.62478    0  540   84.34624 2405.62478  2752%     -    1s
+     0     0 2405.62339    0  538   84.34624 2405.62339  2752%     -    1s
+     0     0 2405.17731    0  530   84.34624 2405.17731  2752%     -    1s
+     0     0 2405.14675    0  542   84.34624 2405.14675  2752%     -    1s
+     0     0 2405.14153    0  543   84.34624 2405.14153  2752%     -    1s
+     0     0 2404.78832    0  529   84.34624 2404.78832  2751%     -    1s
+     0     0 2404.78711    0  540   84.34624 2404.78711  2751%     -    1s
+     0     0 2404.51729    0  537   84.34624 2404.51729  2751%     -    2s
+     0     0 2404.51723    0  537   84.34624 2404.51723  2751%     -    2s
+     0     0 2404.33988    0  532   84.34624 2404.33988  2751%     -    2s
+     0     0 2404.32411    0  545   84.34624 2404.32411  2751%     -    2s
+     0     0 2404.32385    0  546   84.34624 2404.32385  2751%     -    2s
+     0     0 2404.32385    0  546   84.34624 2404.32385  2751%     -    2s
+H    0     0                      94.1089303 2404.32385  2455%     -    2s
+     0     0 2404.32385    0  548   94.10893 2404.32385  2455%     -    2s
+     0     0 2404.32385    0  548   94.10893 2404.32385  2455%     -    2s
+     0     2 2404.32385    0  513   94.10893 2404.32385  2455%     -    2s
+H   56    62                      94.1089343 2384.31077  2434%   441    4s
+    76    81 2355.87085   12  459   94.10893 2384.31077  2434%   451    5s
+H   89    93                      96.0599523 2384.31077  2382%   447    5s
+H  122   127                     289.4791023 2384.31077   724%   423    6s
+H  159   164                     295.3385536 2384.31077   707%   370    6s
+H  160   164                     357.0286378 2384.31077   568%   370    6s
+H  191   204                     369.1981678 2384.31077   546%   345    7s
+H  203   217                     388.9915331 2384.31077   513%   333    7s
+H  217   227                     467.1362888 2384.31077   410%   323    7s
+H  225   227                     564.5033528 2384.31077   322%   318    7s
+   541   618 2016.06823  104  293  564.50335 2384.31077   322%   198   10s
+H  813   821                     594.3059516 2384.31077   301%   152   11s
+H  822   821                     714.3770030 2384.31077   234%   151   11s
+* 1322  1277             308    1118.9166989 2384.31077   113%   108   12s
+H 1332  1272                    1168.9168042 2384.31077   104%   109   13s
+* 1368  1149             336    1492.6779457 2383.41510  59.7%   107   13s
+H 1408  1099                    1622.9256526 2383.35649  46.9%   112   15s
+
+Cutting planes:
+  Learned: 1
+  Gomory: 8
+  Implied bound: 31
+  Projected implied bound: 30
+  Clique: 2
+  MIR: 70
+  StrongCG: 1
+  Flow cover: 190
+  Zero half: 18
+  RLT: 24
+  Relax-and-lift: 31
+
+Explored 1419 nodes (183780 simplex iterations) in 18.02 seconds (13.98 work units)
+Thread count was 8 (of 8 available processors)
+
+Solution count 10: 1622.93 1492.68 1168.92 ... 369.198
+
+Time limit reached
+Best objective 1.622925652583e+03, best bound 2.383356486662e+03, gap 46.8556%
+
+Wrote result file 'C:\Users\rodri\AppData\Local\Temp\416252a62914430aa74f0e2d69b12b62-pulp.sol'
+
+--------Función objetivo--------
+Estado de la solución:  Optimal
+Valor de la función objetivo (€):  1622.9256525834048
+--------Potencia generada en cada embalse--------
+Potencia_total_del__dam1 (€): 544.7327384566908
+Potencia_total_del__dam2 (€): 1228.1929141267142
+--------Desviación en volumen--------
+Desviación_positiva_del__dam1 (m3): 7563.574886705006
+Desviación_positiva_del__dam2 (m3): 0.0
+Desviación_negativa_del__dam1 (m3): 0.0
+Desviación_negativa_del__dam2 (m3): 0.0
+Beneficio_por_desviación_volumen_del__dam1 (€): 0.0
+Beneficio_por_desviación_volumen_del__dam2 (€): 0.0
+--------Zonas límite--------
+Zonas_límites_totales_del__dam1: 0.0
+Zonas_límites_totales_del__dam2: 0.0
+--------Arranques grupos de potencia--------
+Arranque_totales_del__dam1: 2.0
+Arranque_totales_del__dam2: 1.0
+01Arranque_PG__('dam1',_45,_'Grupo_potencia1'): 1.0
+01Arranque_PG__('dam1',_97,_'Grupo_potencia1'): 1.0
+01Arranque_PG__('dam2',_38,_'Grupo_potencia1'): 1.0
+01Franja_PQ__('dam1',_0,_3): 1.0
+01Franja_PQ__('dam1',_1,_4): 1.0
+01Franja_PQ__('dam1',_2,_4): 1.0
+01Franja_PQ__('dam1',_3,_4): 1.0
+01Franja_PQ__('dam1',_4,_4): 1.0
+01Franja_PQ__('dam1',_5,_4): 1.0
+01Franja_PQ__('dam1',_6,_4): 1.0
+01Franja_PQ__('dam1',_7,_1): 1.0
+01Franja_PQ__('dam1',_8,_1): 1.0
+01Franja_PQ__('dam1',_9,_1): 1.0
+01Franja_PQ__('dam1',_10,_1): 1.0
+01Franja_PQ__('dam1',_11,_1): 1.0
+01Franja_PQ__('dam1',_12,_1): 1.0
+01Franja_PQ__('dam1',_13,_1): 1.0
+01Franja_PQ__('dam1',_14,_1): 1.0
+01Franja_PQ__('dam1',_15,_1): 1.0
+01Franja_PQ__('dam1',_16,_1): 1.0
+01Franja_PQ__('dam1',_17,_1): 1.0
+01Franja_PQ__('dam1',_18,_1): 1.0
+01Franja_PQ__('dam1',_19,_1): 1.0
+01Franja_PQ__('dam1',_20,_1): 1.0
+01Franja_PQ__('dam1',_21,_1): 1.0
+01Franja_PQ__('dam1',_22,_1): 1.0
+01Franja_PQ__('dam1',_23,_1): 1.0
+01Franja_PQ__('dam1',_24,_1): 1.0
+01Franja_PQ__('dam1',_25,_1): 1.0
+01Franja_PQ__('dam1',_26,_1): 1.0
+01Franja_PQ__('dam1',_27,_1): 1.0
+01Franja_PQ__('dam1',_28,_1): 1.0
+01Franja_PQ__('dam1',_29,_1): 1.0
+01Franja_PQ__('dam1',_30,_1): 1.0
+01Franja_PQ__('dam1',_31,_1): 1.0
+01Franja_PQ__('dam1',_32,_1): 1.0
+01Franja_PQ__('dam1',_33,_1): 1.0
+01Franja_PQ__('dam1',_34,_1): 1.0
+01Franja_PQ__('dam1',_35,_1): 1.0
+01Franja_PQ__('dam1',_36,_1): 1.0
+01Franja_PQ__('dam1',_37,_1): 1.0
+01Franja_PQ__('dam1',_38,_1): 1.0
+01Franja_PQ__('dam1',_39,_1): 1.0
+01Franja_PQ__('dam1',_40,_1): 1.0
+01Franja_PQ__('dam1',_41,_1): 1.0
+01Franja_PQ__('dam1',_42,_1): 1.0
+01Franja_PQ__('dam1',_43,_1): 1.0
+01Franja_PQ__('dam1',_44,_1): 1.0
+01Franja_PQ__('dam1',_45,_3): 1.0
+01Franja_PQ__('dam1',_46,_3): 1.0
+01Franja_PQ__('dam1',_47,_3): 1.0
+01Franja_PQ__('dam1',_48,_4): 1.0
+01Franja_PQ__('dam1',_49,_3): 1.0
+01Franja_PQ__('dam1',_50,_4): 1.0
+01Franja_PQ__('dam1',_51,_4): 1.0
+01Franja_PQ__('dam1',_52,_4): 1.0
+01Franja_PQ__('dam1',_53,_4): 1.0
+01Franja_PQ__('dam1',_54,_4): 1.0
+01Franja_PQ__('dam1',_55,_1): 1.0
+01Franja_PQ__('dam1',_56,_1): 1.0
+01Franja_PQ__('dam1',_57,_1): 1.0
+01Franja_PQ__('dam1',_58,_1): 1.0
+01Franja_PQ__('dam1',_59,_1): 1.0
+01Franja_PQ__('dam1',_60,_1): 1.0
+01Franja_PQ__('dam1',_61,_1): 1.0
+01Franja_PQ__('dam1',_62,_1): 1.0
+01Franja_PQ__('dam1',_63,_1): 1.0
+01Franja_PQ__('dam1',_64,_1): 1.0
+01Franja_PQ__('dam1',_65,_1): 1.0
+01Franja_PQ__('dam1',_66,_1): 1.0
+01Franja_PQ__('dam1',_67,_1): 1.0
+01Franja_PQ__('dam1',_68,_1): 1.0
+01Franja_PQ__('dam1',_69,_1): 1.0
+01Franja_PQ__('dam1',_70,_1): 1.0
+01Franja_PQ__('dam1',_71,_1): 1.0
+01Franja_PQ__('dam1',_72,_1): 1.0
+01Franja_PQ__('dam1',_73,_1): 1.0
+01Franja_PQ__('dam1',_74,_1): 1.0
+01Franja_PQ__('dam1',_75,_1): 1.0
+01Franja_PQ__('dam1',_76,_1): 1.0
+01Franja_PQ__('dam1',_77,_1): 1.0
+01Franja_PQ__('dam1',_78,_1): 1.0
+01Franja_PQ__('dam1',_79,_1): 1.0
+01Franja_PQ__('dam1',_80,_1): 1.0
+01Franja_PQ__('dam1',_81,_1): 1.0
+01Franja_PQ__('dam1',_82,_1): 1.0
+01Franja_PQ__('dam1',_83,_1): 1.0
+01Franja_PQ__('dam1',_84,_1): 1.0
+01Franja_PQ__('dam1',_85,_1): 1.0
+01Franja_PQ__('dam1',_86,_1): 1.0
+01Franja_PQ__('dam1',_87,_1): 1.0
+01Franja_PQ__('dam1',_88,_1): 1.0
+01Franja_PQ__('dam1',_89,_1): 1.0
+01Franja_PQ__('dam1',_90,_1): 1.0
+01Franja_PQ__('dam1',_91,_1): 1.0
+01Franja_PQ__('dam1',_92,_1): 1.0
+01Franja_PQ__('dam1',_93,_1): 1.0
+01Franja_PQ__('dam1',_94,_1): 1.0
+01Franja_PQ__('dam1',_95,_1): 1.0
+01Franja_PQ__('dam1',_96,_1): 1.0
+01Franja_PQ__('dam1',_97,_7): 1.0
+01Franja_PQ__('dam1',_98,_7): 1.0
+01Franja_PQ__('dam2',_0,_2): 1.0
+01Franja_PQ__('dam2',_1,_2): 1.0
+01Franja_PQ__('dam2',_2,_2): 1.0
+01Franja_PQ__('dam2',_3,_2): 1.0
+01Franja_PQ__('dam2',_4,_1): 1.0
+01Franja_PQ__('dam2',_5,_1): 1.0
+01Franja_PQ__('dam2',_6,_1): 1.0
+01Franja_PQ__('dam2',_7,_1): 1.0
+01Franja_PQ__('dam2',_8,_1): 1.0
+01Franja_PQ__('dam2',_9,_1): 1.0
+01Franja_PQ__('dam2',_10,_1): 1.0
+01Franja_PQ__('dam2',_11,_1): 1.0
+01Franja_PQ__('dam2',_12,_1): 1.0
+01Franja_PQ__('dam2',_13,_1): 1.0
+01Franja_PQ__('dam2',_14,_1): 1.0
+01Franja_PQ__('dam2',_15,_1): 1.0
+01Franja_PQ__('dam2',_16,_1): 1.0
+01Franja_PQ__('dam2',_17,_1): 1.0
+01Franja_PQ__('dam2',_18,_1): 1.0
+01Franja_PQ__('dam2',_19,_1): 1.0
+01Franja_PQ__('dam2',_20,_1): 1.0
+01Franja_PQ__('dam2',_21,_1): 1.0
+01Franja_PQ__('dam2',_22,_1): 1.0
+01Franja_PQ__('dam2',_23,_1): 1.0
+01Franja_PQ__('dam2',_24,_1): 1.0
+01Franja_PQ__('dam2',_25,_1): 1.0
+01Franja_PQ__('dam2',_26,_1): 1.0
+01Franja_PQ__('dam2',_27,_1): 1.0
+01Franja_PQ__('dam2',_28,_1): 1.0
+01Franja_PQ__('dam2',_29,_1): 1.0
+01Franja_PQ__('dam2',_30,_1): 1.0
+01Franja_PQ__('dam2',_31,_1): 1.0
+01Franja_PQ__('dam2',_32,_1): 1.0
+01Franja_PQ__('dam2',_33,_1): 1.0
+01Franja_PQ__('dam2',_34,_1): 1.0
+01Franja_PQ__('dam2',_35,_1): 1.0
+01Franja_PQ__('dam2',_36,_1): 1.0
+01Franja_PQ__('dam2',_37,_1): 1.0
+01Franja_PQ__('dam2',_38,_2): 1.0
+01Franja_PQ__('dam2',_39,_2): 1.0
+01Franja_PQ__('dam2',_40,_2): 1.0
+01Franja_PQ__('dam2',_41,_2): 1.0
+01Franja_PQ__('dam2',_42,_2): 1.0
+01Franja_PQ__('dam2',_43,_2): 1.0
+01Franja_PQ__('dam2',_44,_2): 1.0
+01Franja_PQ__('dam2',_45,_2): 1.0
+01Franja_PQ__('dam2',_46,_2): 1.0
+01Franja_PQ__('dam2',_47,_2): 1.0
+01Franja_PQ__('dam2',_48,_2): 1.0
+01Franja_PQ__('dam2',_49,_2): 1.0
+01Franja_PQ__('dam2',_50,_2): 1.0
+01Franja_PQ__('dam2',_51,_2): 1.0
+01Franja_PQ__('dam2',_52,_2): 1.0
+01Franja_PQ__('dam2',_53,_2): 1.0
+01Franja_PQ__('dam2',_54,_2): 1.0
+01Franja_PQ__('dam2',_55,_2): 1.0
+01Franja_PQ__('dam2',_56,_2): 1.0
+01Franja_PQ__('dam2',_57,_2): 1.0
+01Franja_PQ__('dam2',_58,_2): 1.0
+01Franja_PQ__('dam2',_59,_2): 1.0
+01Franja_PQ__('dam2',_60,_2): 1.0
+01Franja_PQ__('dam2',_61,_2): 1.0
+01Franja_PQ__('dam2',_62,_2): 1.0
+01Franja_PQ__('dam2',_63,_2): 1.0
+01Franja_PQ__('dam2',_64,_2): 1.0
+01Franja_PQ__('dam2',_65,_1): 1.0
+01Franja_PQ__('dam2',_66,_1): 1.0
+01Franja_PQ__('dam2',_67,_1): 1.0
+01Franja_PQ__('dam2',_68,_1): 1.0
+01Franja_PQ__('dam2',_69,_1): 1.0
+01Franja_PQ__('dam2',_70,_1): 1.0
+01Franja_PQ__('dam2',_71,_1): 1.0
+01Franja_PQ__('dam2',_72,_1): 1.0
+01Franja_PQ__('dam2',_73,_1): 1.0
+01Franja_PQ__('dam2',_74,_1): 1.0
+01Franja_PQ__('dam2',_75,_1): 1.0
+01Franja_PQ__('dam2',_76,_1): 1.0
+01Franja_PQ__('dam2',_77,_1): 1.0
+01Franja_PQ__('dam2',_78,_1): 1.0
+01Franja_PQ__('dam2',_79,_1): 1.0
+01Franja_PQ__('dam2',_80,_1): 1.0
+01Franja_PQ__('dam2',_81,_1): 1.0
+01Franja_PQ__('dam2',_82,_1): 1.0
+01Franja_PQ__('dam2',_83,_1): 1.0
+01Franja_PQ__('dam2',_84,_1): 1.0
+01Franja_PQ__('dam2',_85,_1): 1.0
+01Franja_PQ__('dam2',_86,_1): 1.0
+01Franja_PQ__('dam2',_87,_1): 1.0
+01Franja_PQ__('dam2',_88,_1): 1.0
+01Franja_PQ__('dam2',_89,_1): 1.0
+01Franja_PQ__('dam2',_90,_1): 1.0
+01Franja_PQ__('dam2',_91,_1): 1.0
+01Franja_PQ__('dam2',_92,_1): 1.0
+01Franja_PQ__('dam2',_93,_1): 1.0
+01Franja_PQ__('dam2',_94,_1): 1.0
+01Franja_PQ__('dam2',_95,_1): 1.0
+01Franja_PQ__('dam2',_96,_1): 1.0
+01Franja_PQ__('dam2',_97,_1): 1.0
+01Franja_PQ__('dam2',_98,_1): 1.0
+Caudal_turbinado__('dam1',_0): 3.087894258
+Caudal_turbinado__('dam1',_1): 5.952380952
+Caudal_turbinado__('dam1',_2): 5.952380952
+Caudal_turbinado__('dam1',_3): 5.952380952000051
+Caudal_turbinado__('dam1',_4): 5.952380952000051
+Caudal_turbinado__('dam1',_5): 5.952380952
+Caudal_turbinado__('dam1',_6): 5.952380952
+Caudal_turbinado__('dam1',_25): 1.428571429
+Caudal_turbinado__('dam1',_26): 1.428571429
+Caudal_turbinado__('dam1',_27): 1.428571429
+Caudal_turbinado__('dam1',_28): 1.428571429
+Caudal_turbinado__('dam1',_29): 1.428571429
+Caudal_turbinado__('dam1',_30): 1.428571429
+Caudal_turbinado__('dam1',_31): 1.428571429
+Caudal_turbinado__('dam1',_32): 1.428571429000005
+Caudal_turbinado__('dam1',_33): 1.428571429000005
+Caudal_turbinado__('dam1',_34): 1.428571429000005
+Caudal_turbinado__('dam1',_35): 1.4285714290000038
+Caudal_turbinado__('dam1',_36): 1.4285714290000038
+Caudal_turbinado__('dam1',_37): 1.4285714290000038
+Caudal_turbinado__('dam1',_38): 0.9200793646754063
+Caudal_turbinado__('dam1',_39): 0.9200793646754063
+Caudal_turbinado__('dam1',_40): 0.9200793646754063
+Caudal_turbinado__('dam1',_41): 0.9200793646754063
+Caudal_turbinado__('dam1',_42): 0.9200793646754063
+Caudal_turbinado__('dam1',_43): 0.9200793646754063
+Caudal_turbinado__('dam1',_44): 1.4285714290000038
+Caudal_turbinado__('dam1',_45): 4.98
+Caudal_turbinado__('dam1',_46): 4.98
+Caudal_turbinado__('dam1',_47): 4.98
+Caudal_turbinado__('dam1',_48): 4.98
+Caudal_turbinado__('dam1',_49): 4.98
+Caudal_turbinado__('dam1',_50): 5.952380952
+Caudal_turbinado__('dam1',_51): 5.952380952
+Caudal_turbinado__('dam1',_52): 5.952380952
+Caudal_turbinado__('dam1',_53): 5.952380952
+Caudal_turbinado__('dam1',_54): 5.952380952
+Caudal_turbinado__('dam1',_55): 1.428571429000005
+Caudal_turbinado__('dam1',_56): 1.428571429000005
+Caudal_turbinado__('dam1',_57): 1.428571429000005
+Caudal_turbinado__('dam1',_58): 1.428571429000005
+Caudal_turbinado__('dam1',_59): 1.428571429000005
+Caudal_turbinado__('dam1',_60): 1.428571429000005
+Caudal_turbinado__('dam1',_61): 1.428571429000005
+Caudal_turbinado__('dam1',_62): 1.4285714290000158
+Caudal_turbinado__('dam1',_63): 1.4285714290000158
+Caudal_turbinado__('dam1',_64): 1.4285714290000353
+Caudal_turbinado__('dam1',_65): 1.4285714290000353
+Caudal_turbinado__('dam1',_66): 1.428571429
+Caudal_turbinado__('dam1',_67): 1.428571429
+Caudal_turbinado__('dam1',_68): 1.428571429
+Caudal_turbinado__('dam1',_69): 1.0503174598889045
+Caudal_turbinado__('dam1',_70): 1.0503174598889045
+Caudal_turbinado__('dam1',_71): 1.0503174598889047
+Caudal_turbinado__('dam1',_72): 1.0503174598889047
+Caudal_turbinado__('dam1',_73): 1.4285714290000033
+Caudal_turbinado__('dam1',_74): 1.4285714290000033
+Caudal_turbinado__('dam1',_75): 1.4285714290000033
+Caudal_turbinado__('dam1',_76): 0.5992453468288829
+Caudal_turbinado__('dam1',_77): 0.5992453468288829
+Caudal_turbinado__('dam1',_78): 0.5992453468288829
+Caudal_turbinado__('dam1',_79): 0.5992453468288829
+Caudal_turbinado__('dam1',_80): 0.5992453468288829
+Caudal_turbinado__('dam1',_81): 0.5992453468288829
+Caudal_turbinado__('dam1',_82): 0.5992453468288829
+Caudal_turbinado__('dam1',_83): 0.5992453468288829
+Caudal_turbinado__('dam1',_84): 0.5992453468288829
+Caudal_turbinado__('dam1',_92): 0.6518191186350123
+Caudal_turbinado__('dam1',_93): 0.6518191186350123
+Caudal_turbinado__('dam1',_94): 0.6518191186350123
+Caudal_turbinado__('dam1',_95): 0.6518191186350123
+Caudal_turbinado__('dam1',_96): 0.6518191186350123
+Caudal_turbinado__('dam1',_97): 13.659999999999998
+Caudal_turbinado__('dam1',_98): 13.659999999999998
+Caudal_turbinado__('dam2',_0): 2.89589717913
+Caudal_turbinado__('dam2',_1): 2.8849621943
+Caudal_turbinado__('dam2',_2): 2.87597146434
+Caudal_turbinado__('dam2',_3): 2.867622929375712
+Caudal_turbinado__('dam2',_4): 2.0869115061294594
+Caudal_turbinado__('dam2',_5): 1.3094110578692066
+Caudal_turbinado__('dam2',_6): 0.5319106096102422
+Caudal_turbinado__('dam2',_7): 0.3546070730734948
+Caudal_turbinado__('dam2',_8): 0.1773035365367474
+Caudal_turbinado__('dam2',_36): 0.9174603176666671
+Caudal_turbinado__('dam2',_37): 2.423809524
+Caudal_turbinado__('dam2',_38): 3.930158730333334
+Caudal_turbinado__('dam2',_39): 4.519047619
+Caudal_turbinado__('dam2',_40): 4.519047619
+Caudal_turbinado__('dam2',_41): 4.519047619
+Caudal_turbinado__('dam2',_42): 4.519047619
+Caudal_turbinado__('dam2',_43): 4.519047619
+Caudal_turbinado__('dam2',_44): 4.519047619
+Caudal_turbinado__('dam2',_45): 4.519047619
+Caudal_turbinado__('dam2',_46): 4.519047619
+Caudal_turbinado__('dam2',_47): 4.519047619
+Caudal_turbinado__('dam2',_48): 4.519047619
+Caudal_turbinado__('dam2',_49): 4.519047619
+Caudal_turbinado__('dam2',_50): 4.519047619
+Caudal_turbinado__('dam2',_51): 4.519047619
+Caudal_turbinado__('dam2',_52): 4.519047619
+Caudal_turbinado__('dam2',_53): 4.519047619
+Caudal_turbinado__('dam2',_54): 4.519047619
+Caudal_turbinado__('dam2',_55): 4.519047619
+Caudal_turbinado__('dam2',_56): 4.519047619
+Caudal_turbinado__('dam2',_57): 4.519047619
+Caudal_turbinado__('dam2',_58): 4.519047619
+Caudal_turbinado__('dam2',_59): 4.519047619
+Caudal_turbinado__('dam2',_60): 4.519047619
+Caudal_turbinado__('dam2',_61): 4.474559427435086
+Caudal_turbinado__('dam2',_62): 4.2755639636902885
+Caudal_turbinado__('dam2',_63): 3.33466169030555
+Caudal_turbinado__('dam2',_64): 2.438247608485726
+Caudal_turbinado__('dam2',_65): 1.6963407988457861
+Caudal_turbinado__('dam2',_66): 1.6070843422300531
+Caudal_turbinado__('dam2',_67): 1.5178278856143204
+Caudal_turbinado__('dam2',_68): 1.3655291008134722
+Caudal_turbinado__('dam2',_69): 1.3024867726283567
+Caudal_turbinado__('dam2',_70): 1.2394444444432413
+Caudal_turbinado__('dam2',_71): 1.2394444444432413
+Caudal_turbinado__('dam2',_72): 1.2394444444432413
+Caudal_turbinado__('dam2',_73): 0.8262962962954942
+Caudal_turbinado__('dam2',_74): 0.4131481481477471
+
+Process finished with exit code 0

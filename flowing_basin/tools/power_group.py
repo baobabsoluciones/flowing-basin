@@ -14,6 +14,7 @@ class PowerGroup:
         paths_power_models: dict[str, str],
         num_scenarios: int,
         mode: str,
+        consider_simultaneous_startups: bool = False
     ):
 
         valid_modes = {"linear", "nonlinear"}
@@ -27,6 +28,7 @@ class PowerGroup:
 
         self.num_scenarios = num_scenarios
         self.mode = mode
+        self.consider_simultaneous_startups = consider_simultaneous_startups
 
         self.idx = idx
         if paths_power_models is not None:
@@ -39,11 +41,6 @@ class PowerGroup:
         startup_flows = instance.get_startup_flows_of_power_group(self.idx)
         shutdown_flows = instance.get_shutdown_flows_of_power_group(self.idx)
         self.turbined_bins, self.turbined_bin_groups = self.get_turbined_bins_and_groups(startup_flows, shutdown_flows)
-
-        # Save the decision horizon and this power group's impact horizon
-        self.decision_horizon = instance.get_decision_horizon()
-        self.impact_horizon = self.decision_horizon + instance.get_relevant_lags_of_dam(self.idx)[0]
-        # TODO: again, shouldn't it be get_relevant_lags_of_dam(self.idx)[-1]?
 
         # Time-dependent attributes
         self.time = None
@@ -127,7 +124,7 @@ class PowerGroup:
 
     @staticmethod
     def get_turbined_bins_and_groups(
-            startup_flows: list[float], shutdown_flows: list[float], epsilon: float = 1e-4
+            startup_flows: list[float], shutdown_flows: list[float], epsilon: float = 0.01
     ) -> tuple[np.ndarray, np.ndarray]:
 
         """
@@ -146,13 +143,13 @@ class PowerGroup:
                 turbined_bins.append(shutdown_flow + epsilon)
                 turbined_bin_groups.append(num_active_groups + .5)
 
-                # Next number of power groups: turbined_flow in close interval [starup_flow, next_shutdown_flow]
+                # Next number of power groups: turbined_flow in close interval [startup_flow, next_shutdown_flow]
                 turbined_bins.append(startup_flow - epsilon)
                 turbined_bin_groups.append(num_active_groups + 1)
 
             else:
                 # We consider there is no limit zone
-                turbined_bins.append(startup_flow - epsilon)
+                turbined_bins.append(startup_flow + epsilon)
                 turbined_bin_groups.append(num_active_groups + 1)
 
             num_active_groups += 1
@@ -294,20 +291,25 @@ class PowerGroup:
         self.num_active_groups = self.get_num_active_power_groups(self.turbined_flow)
 
         self.income = self.power * self.time_step_hours * price  # MW * h * EUR/MWh
+
+        # Calculate number of startups in this time step
         self.num_startups = np.maximum(
             0,
             np.floor(self.num_active_groups)
             - np.floor(self.previous_num_active_groups),
         )
+
+        # Consider only one startup, even if multiple happened, when consider_simultaneous_startups = False
+        if not self.consider_simultaneous_startups:
+            self.num_startups = np.clip(self.num_startups, None, 1)
+
         self.num_times_in_limit = np.invert(
             np.equal(self.num_active_groups, np.round(self.num_active_groups))
         )
 
-        if self.time < self.impact_horizon:
-            self.acc_income += self.income
-        if self.time < self.decision_horizon:
-            self.acc_num_startups += self.num_startups
-            self.acc_num_times_in_limit += self.num_times_in_limit
+        self.acc_income += self.income
+        self.acc_num_startups += self.num_startups
+        self.acc_num_times_in_limit += self.num_times_in_limit
 
         # Bring turbined flow upstream, since it is used to update the volume of the next dam
         return self.turbined_flow

@@ -1181,9 +1181,13 @@ class LPModel(Experiment):
         for var in w_pq.values():
             if var.value() != 0:
                 print(f"{var.name}: {var.value()}")
+        print("--------Caudales turbinados--------")
         for var in qtb.values():
             if var.value() != 0:
                 print(f"{var.name}: {var.value()}")
+        print("--------Volúmenes--------")
+        for var in vol.values():
+            print(f"{var.name}: {var.value()}")
         # solution.json
         qsalida = {dam_id: [] for dam_id in I}
         for var in qs.values():
@@ -1211,7 +1215,12 @@ class LPModel(Experiment):
                 for dam_id in I
             ],
             "price": Price,
+            "objective_function": lp.value(lpproblem.objective)
         }
         self.solution = Solution.from_dict(sol_dict)
 
         return dict()
+
+    def get_objective(self) -> float:
+
+        return self.solution.get_objective_function()

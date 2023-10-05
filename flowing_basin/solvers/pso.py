@@ -443,7 +443,7 @@ class PSO(Experiment):
         self.river_basin.deep_update(solution.get_exiting_flows_array(), is_relvars=False)
         obj = self.objective_function_env()
 
-        return obj.item()
+        return - obj.item()
 
     def write_details_sol(self, details: typing.TextIO):
 

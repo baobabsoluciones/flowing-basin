@@ -256,7 +256,7 @@ class RiverBasin:
 
         """
         Get the accumulated number of startups of all dams
-        throughout all time steps so far (up to the decision horizon).
+        throughout all time steps so far.
 
         :return:
              Array of size num_scenarios with
@@ -281,7 +281,7 @@ class RiverBasin:
 
         """
         Get the accumulated number of time steps with a turbined flow in a limit zone
-        throughout all time steps so far (up to the decision horizon).
+        throughout all time steps so far.
 
         :return:
              Array of size num_scenarios with

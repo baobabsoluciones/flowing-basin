@@ -43,12 +43,15 @@ class Solution(SolutionCore):
 
         return inconsistencies
 
-    def complies_with_flow_smoothing(self, flow_smoothing: int, epsilon: float = 1e-6) -> bool:
+    def complies_with_flow_smoothing(
+            self, flow_smoothing: int, initial_flows: dict[str, float], epsilon: float = 1e-6
+    ) -> bool:
 
         """
         Indicates whether the solution complies with the given flow smoothing parameter or not
 
         :param flow_smoothing:
+        :param initial_flows: First lag of each dam
         :param epsilon: Small tolerance for rounding errors
         :return:
         """
@@ -57,7 +60,7 @@ class Solution(SolutionCore):
         for el in self.data["dams"]:
             flows = el["flows"]
             variations = []
-            previous_flow = 0  # We do not have access to the instance, so we assume it is 0
+            previous_flow = initial_flows[el["id"]]
             for flow in flows:
                 current_variation = flow - previous_flow
                 if any([current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]):

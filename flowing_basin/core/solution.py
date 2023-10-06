@@ -294,6 +294,17 @@ class Solution(SolutionCore):
 
         return self.data.get("objective_function")
 
+    def get_objective_details(self, idx: str) -> dict[str, float] | None:
+
+        """
+        Get the details behind the objective function value
+        (income from energy, startups, limit zones and volume exceedance)
+
+        :return:
+        """
+
+        return self.data["dams"][idx].get("objective_function_details")
+
     def get_history_time_stamps(self) -> list[float] | None:
 
         """

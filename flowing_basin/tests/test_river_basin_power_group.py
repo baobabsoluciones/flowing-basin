@@ -2,7 +2,9 @@ from flowing_basin.core import Instance
 from flowing_basin.tools import PowerGroup
 import numpy as np
 
-instance = Instance.from_json("../instances/instances_base/instance1.json")
+INSTANCE = 'Percentile20'
+
+instance = Instance.from_json(f"../instances/instances_base/instance{INSTANCE}.json")
 paths_power_models = {
     "dam1": "../ml_models/model_E1.sav",
     "dam2": "../ml_models/model_E2.sav",
@@ -10,18 +12,18 @@ paths_power_models = {
 
 flows = np.array(
     [
-        [1.25, 1.25, 11.27, 11.27],
-        [6.26, 6.26, 11.27, 11.27],
-        [6.26, 6.26, 11.27, 10.02],
-        [5.,   6.26, 8.77,  8.77],
-        [3.,   4.,   5.,    8.],
-        [3.,   4.,   5.,    8.],
-        [3.,   4.,   5.,    8.],
+        [1.25, 1.25, 11.27, 11.27, 1.43],
+        [6.26, 6.26, 11.27, 11.27, 1.43],
+        [6.26, 6.26, 11.27, 10.02, 1.43],
+        [5.,   6.26, 8.77,  8.77, 1.43],
+        [3.,   4.,   5.,    8., 1.43],
+        [3.,   4.,   5.,    8., 1.43],
+        [3.,   4.,   5.,    8., 1.43],
     ]
 )
 
 num_scenarios = flows.shape[-1]
-dam = instance.get_ids_of_dams()[1]
+dam = instance.get_ids_of_dams()[0]
 print(dam)
 initial_lags = instance.get_initial_lags_of_channel(dam)
 past_flows = np.repeat([initial_lags], repeats=num_scenarios, axis=0)
@@ -41,8 +43,8 @@ print(f"{power_group.previous_num_active_groups=}")
 print(f"{power_group.num_active_groups=}")
 print(f"{power_group.acc_num_startups=}")
 print(f"{power_group.acc_num_times_in_limit=}")
-print(power_group.turbined_bins)
-print(power_group.turbined_bin_groups)
+print(f"{power_group.turbined_bins=}")
+print(f"{power_group.turbined_bin_groups=}")
 print()
 
 for flow in flows:

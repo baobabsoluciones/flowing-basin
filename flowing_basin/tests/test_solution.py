@@ -8,6 +8,7 @@ SOLVER = "Heuristic"
 SOL_DATETIME = "2023-09-25_14-07"
 PLOT_SOL = True
 
+instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
 solution = Solution.from_json(f"../solutions/instance{INSTANCE}_{SOLVER}_{NUM_DAMS}dams_1days_time{SOL_DATETIME}.json")
 
 # Make sure data follows schema and has no inconsistencies
@@ -52,7 +53,6 @@ if PLOT_SOL:
         plt.show()
 
 # Check with river basin simulator
-instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
 river_basin = RiverBasin(instance=instance, mode="linear")
 flows = solution.get_flows_array()
 river_basin.deep_update_flows(flows)

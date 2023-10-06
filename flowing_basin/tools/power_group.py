@@ -130,7 +130,7 @@ class PowerGroup:
 
     @staticmethod
     def get_turbined_bins_and_groups(
-            startup_flows: list[float], shutdown_flows: list[float], epsilon: float = 0.01
+            startup_flows: list[float], shutdown_flows: list[float], epsilon: float = 0.001
     ) -> tuple[np.ndarray, np.ndarray]:
 
         """
@@ -145,6 +145,7 @@ class PowerGroup:
         for shutdown_flow, startup_flow in zip(shutdown_flows, startup_flows):
 
             if shutdown_flow != startup_flow:
+
                 # Limit zone: turbined_flow in open interval (shutdown flow, startup_flow)
                 turbined_bins.append(shutdown_flow + epsilon)
                 turbined_bin_groups.append(num_active_groups + .5)
@@ -154,6 +155,7 @@ class PowerGroup:
                 turbined_bin_groups.append(num_active_groups + 1)
 
             else:
+
                 # We consider there is no limit zone
                 turbined_bins.append(startup_flow + epsilon)
                 turbined_bin_groups.append(num_active_groups + 1)
@@ -257,7 +259,7 @@ class PowerGroup:
 
         return power
 
-    def get_num_active_power_groups(self, turbined_flow: np.ndarray, epsilon: float = 1e-3) -> np.ndarray:
+    def get_num_active_power_groups(self, turbined_flow: np.ndarray) -> np.ndarray:
 
         """
         Get the number of active power groups.

@@ -1,7 +1,6 @@
 from flowing_basin.core import Instance, Solution, Experiment
 from .rl_env import RLConfiguration, RLEnvironment
 from stable_baselines3 import SAC
-import numpy as np
 
 
 class RLRun(Experiment):

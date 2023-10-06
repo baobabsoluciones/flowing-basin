@@ -1,20 +1,25 @@
 from flowing_basin.core import Instance
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from datetime import datetime
+import matplotlib.pyplot as plt
 
-EXAMPLE = '3'
-NUM_DAMS = 8
+EXAMPLE = '1'
+NUM_DAMS = 2
 NUM_DAYS = 1
 K_PARAMETER = 2
-PLOT_SOL = False
+PLOT_SOL = True
 RANDOM_BIASED_FLOWS = False
 PROB_BELOW_HALF = 0.15
 RANDOM_BIASED_SORTING = False
 COMMON_RATIO = 0.6
 MAXIMIZE_FINAL_VOL = False
 
+path_instance = f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json"
+path_sol = f"../solutions/instance{EXAMPLE}_Heuristic_{NUM_DAMS}dams_{NUM_DAYS}days" \
+           f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
+
 # Instance we want to solve
-instance = Instance.from_json(f"../instances/instances_big/instance{EXAMPLE}_{NUM_DAMS}dams_{NUM_DAYS}days.json")
+instance = Instance.from_json(path_instance)
 
 # Configuration
 config = HeuristicConfiguration(
@@ -23,14 +28,7 @@ config = HeuristicConfiguration(
     startups_penalty=50,
     limit_zones_penalty=0,
     volume_objectives={
-        "dam1": 59627.42324,
-        "dam2": 31010.43613642857,
-        "dam3_dam2copy": 31010.43613642857,
-        "dam4_dam2copy": 31010.43613642857,
-        "dam5_dam1copy": 59627.42324,
-        "dam6_dam1copy": 59627.42324,
-        "dam7_dam2copy": 31010.43613642857,
-        "dam8_dam1copy": 59627.42324,
+        dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
     },
     flow_smoothing=K_PARAMETER,
     mode="linear",
@@ -45,24 +43,18 @@ config = HeuristicConfiguration(
 heuristic = Heuristic(config=config, instance=instance)
 heuristic.solve()
 print("Total income:", heuristic.solution.get_objective_function())
-path_sol = f"../solutions/instance{EXAMPLE}_Heuristic_{NUM_DAMS}dams_{NUM_DAYS}days" \
-           f"_time{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
-# heuristic.solution.to_json(path_sol)
+heuristic.solution.to_json(path_sol)
+
+# Check solution
+sol_inconsistencies = heuristic.solution.check()
+if sol_inconsistencies:
+    raise Exception(f"There are inconsistencies in the given solution: {sol_inconsistencies}")
+print("Optimal solution:", heuristic.solution.data)
+
 
 # Plot simple solution graph for each dam
 if PLOT_SOL:
-    import matplotlib.pyplot as plt
     for dam_id in instance.get_ids_of_dams():
-        assigned_flows = heuristic.solution.get_exiting_flows_of_dam(dam_id)
-        predicted_volumes = heuristic.solution.get_volumes_of_dam(dam_id)
-        fig, ax = plt.subplots(1, 1)
-        twinax = ax.twinx()
-        ax.plot(predicted_volumes, color='b', label="Predicted volume")
-        ax.set_xlabel("Time (15min)")
-        ax.set_ylabel("Volume (m3)")
-        ax.legend()
-        twinax.plot(instance.get_all_prices(), color='r', label="Price")
-        twinax.plot(assigned_flows, color='g', label="Flow")
-        twinax.set_ylabel("Flow (m3/s), Price (€)")
-        twinax.legend()
+        fig, ax = plt.subplots()
+        heuristic.solution.plot_solution_for_dam(dam_id, ax)
         plt.show()

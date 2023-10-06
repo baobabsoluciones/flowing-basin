@@ -21,37 +21,12 @@ PROB_BELOW_HALF = 0.15
 RANDOM_BIASED_SORTING = True
 COMMON_RATIO = 0.6
 MAXIMIZE_FINAL_VOL = False
-SAVE_REPORT = True
+SAVE_REPORT = False
 REPORT_NAME = "random_biased_complete"
 DECIMAL_PLACES = 2
 
 report_filepath = f"reports/{REPORT_NAME}.csv"
 config_filepath = f"reports/{REPORT_NAME}_config.json"
-
-# Configuration
-config = HeuristicConfiguration(
-    volume_shortage_penalty=3,
-    volume_exceedance_bonus=0,
-    startups_penalty=50,
-    limit_zones_penalty=0,
-    volume_objectives={
-        "dam1": 59627.42324,
-        "dam2": 31010.43613642857,
-        "dam3_dam2copy": 31010.43613642857,
-        "dam4_dam2copy": 31010.43613642857,
-        "dam5_dam1copy": 59627.42324,
-        "dam6_dam1copy": 59627.42324,
-        "dam7_dam2copy": 31010.43613642857,
-        "dam8_dam1copy": 59627.42324,
-    },
-    flow_smoothing=K_PARAMETER,
-    mode="linear",
-    maximize_final_vol=MAXIMIZE_FINAL_VOL,
-    random_biased_flows=RANDOM_BIASED_FLOWS,
-    prob_below_half=PROB_BELOW_HALF,
-    random_biased_sorting=RANDOM_BIASED_SORTING,
-    common_ratio=COMMON_RATIO,
-)
 
 report = [
     ["instance", "no_dams", "num_trials", "exec_time_s", "min_val_eur", "max_val_eur", "avg_val_eur", "std_eur"]
@@ -67,8 +42,24 @@ for example, num_dams in product(EXAMPLES, NUMS_DAMS):
         instance = Instance.from_json(
             f"../instances/instances_big/instance{example}_{num_dams}dams_{NUM_DAYS}days.json"
         )
+        config = HeuristicConfiguration(
+            volume_shortage_penalty=3,
+            volume_exceedance_bonus=0,
+            startups_penalty=50,
+            limit_zones_penalty=0,
+            volume_objectives={
+                dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
+            },
+            flow_smoothing=K_PARAMETER,
+            mode="linear",
+            maximize_final_vol=MAXIMIZE_FINAL_VOL,
+            random_biased_flows=RANDOM_BIASED_FLOWS,
+            prob_below_half=PROB_BELOW_HALF,
+            random_biased_sorting=RANDOM_BIASED_SORTING,
+            common_ratio=COMMON_RATIO,
+        )
 
-        heuristic = Heuristic(config=config, instance=instance, do_tests=False)
+        heuristic = Heuristic(config=config, instance=instance, do_tests=True)
         heuristic.solve()
         obj_function_values.append(heuristic.solution.get_objective_function())
         # print(heuristic.solution.data)

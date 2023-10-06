@@ -1,5 +1,7 @@
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime
+
+SAVE_DATAFRAME = False
 
 path_historical_data = "history/historical_data.pickle"
 df = pd.read_pickle(path_historical_data)
@@ -58,9 +60,15 @@ assert (
 #     df_grouped_by_date.loc[example_date, 'dam2_unreg_flow_avg']
 # )
 # This last assertion fails because of rounding errors:
-print(filtered_df['dam2_unreg_flow'])
-print(filtered_df['dam2_unreg_flow'].mean())
-print(df_grouped_by_date.loc[example_date, 'dam2_unreg_flow_avg'])
+print("Incoming flows:", filtered_df['incoming_flow'].values.tolist())
+print("Incoming flow calculated mean:", filtered_df['incoming_flow'].mean())
+print("Incoming flow stored mean:", df_grouped_by_date.loc[example_date, 'incoming_flow_avg'])
+for dam in ['dam1', 'dam2']:
+    print(dam, "unregulated flows:", filtered_df[dam + '_unreg_flow'].values.tolist())
+    print(dam, "unregulated flow calculated mean:", filtered_df[dam + '_unreg_flow'].mean())
+    print(dam, "unregulated flow stored mean:", df_grouped_by_date.loc[example_date, dam + '_unreg_flow_avg'])
+print("Total avg inflow:", df_grouped_by_date.loc[example_date, 'total_avg_inflow'])
 
 # Save dataframe
-df_grouped_by_date.to_pickle("history/historical_data_daily_avg_inflow.pickle")
+if SAVE_DATAFRAME:
+    df_grouped_by_date.to_pickle("history/historical_data_daily_avg_inflow.pickle")

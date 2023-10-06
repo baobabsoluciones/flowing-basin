@@ -1,6 +1,8 @@
 from flowing_basin.core import Instance, Solution, Experiment
 import pulp as lp
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+import tempfile
+import os
 
 
 @dataclass
@@ -335,7 +337,44 @@ class LPModel(Experiment):
 
         print(len(Price), len(T), len(Q0), len(L["dam1"]), len(L["dam2"]))
 
+    @staticmethod
+    def parse_gurobi_output(output: str) -> tuple[list[float], list[float], list[float]]:
+
+        """
+        Parse the output of the Gurobi solver
+        to get the objective function values, gap values, and time stamps
+        during the execution.
+        """
+
+        # Position of relevant info in table (from the right)
+        LOWER_BOUND_POS = 5
+        GAP_POS = 3
+        TIME_POS = 1
+
+        max_pos = max(LOWER_BOUND_POS, GAP_POS, TIME_POS)
+
+        incumbent_values = []
+        gap_values = []
+        time_values = []
+
+        for line in output.split('\n'):
+
+            values = line.split()
+
+            # Continue to next iteration if line does not have the desired info (GAP% and TIMEs)
+            if len(values) < max_pos:
+                continue
+            if values[-GAP_POS].find("%") == -1 or values[-TIME_POS].find("s") == -1:
+                continue
+
+            incumbent_values.append(float(values[-LOWER_BOUND_POS]))
+            gap_values.append(float(values[-GAP_POS].replace("%", "")))
+            time_values.append(float(values[-TIME_POS].replace("s", "")))
+
+        return incumbent_values, gap_values, time_values
+
     def solve(self, options: dict = None) -> dict:
+
         # LP Problem
         lpproblem = lp.LpProblem("Problema_General_24h_PL", lp.LpMaximize)
 
@@ -1144,80 +1183,107 @@ class LPModel(Experiment):
             lpproblem += pwch_tot[i] == lp.lpSum(
                 pwch[(i, t, pg)] for t in T for pg in FranjasGrupos[i]
             )
+            
         # Objective Function
         lpproblem += lp.lpSum(
             pot_embalse[i] + ben_desv[i] - zl_tot[i] * PenZL - pwch_tot[i] * PenSU for i in I
         )
 
-        # Solve
-        # solver = lp.GUROBI(path=None, keepFiles=0, MIPGap=self.config.MIPGap)
-        solver = lp.GUROBI_CMD(gapRel=self.config.MIPGap, timeLimit=self.config.time_limit_seconds)
-        # solver = lp.PULP_CBC_CMD(gapRel=self.config.MIPGap)  # <-- caca
+        # Solver
+        solver_output = tempfile.NamedTemporaryFile(delete=False)
+        solver = lp.GUROBI_CMD(
+            gapRel=self.config.MIPGap,
+            timeLimit=self.config.time_limit_seconds,
+            logPath=solver_output.name
+        )  # Other arguments: https://coin-or.github.io/pulp/technical/solvers.html#pulp.apis.GUROBI_CMD
         lpproblem.solve(solver)
+        solver_output.close()
 
-        # Caracterización de la solución
-        print("--------Función objetivo--------")
-        print("Estado de la solución: ", lp.LpStatus[lpproblem.status])
-        print("Valor de la función objetivo (€): ", lp.value(lpproblem.objective))
-        print("--------Potencia generada en cada embalse--------")
-        for var in pot_embalse.values():
-            print(f"{var.name} (€): {var.value()}")
-        print("--------Desviación en volumen--------")
-        for var in pos_desv.values():
-            print(f"{var.name} (m3): {var.value()}")
-        for var in neg_desv.values():
-            print(f"{var.name} (m3): {var.value()}")
-        for var in ben_desv.values():
-            print(f"{var.name} (€): {var.value()}")
-        print("--------Zonas límite--------")
-        for var in zl_tot.values():
-            print(f"{var.name}: {var.value()}")
-        print("--------Arranques grupos de potencia--------")
-        for var in pwch_tot.values():
-            print(f"{var.name}: {var.value()}")
-        for var in pwch.values():
-            if var.value() != 0:
-                print(f"{var.name}: {var.value()}")
-        for var in w_pq.values():
-            if var.value() != 0:
-                print(f"{var.name}: {var.value()}")
-        print("--------Caudales turbinados--------")
-        for var in qtb.values():
-            if var.value() != 0:
-                print(f"{var.name}: {var.value()}")
-        print("--------Volúmenes--------")
-        for var in vol.values():
-            print(f"{var.name}: {var.value()}")
-        # solution.json
-        qsalida = {dam_id: [] for dam_id in I}
-        for var in qs.values():
-            for dam_id in I:
-                if dam_id in var.name:
-                    qsalida[dam_id].append(var.value())
-        potencia = {dam_id: [] for dam_id in I}
-        for var in pot.values():
-            for dam_id in I:
-                if dam_id in var.name:
-                    potencia[dam_id].append(var.value())
-        volumenes = {dam_id: [] for dam_id in I}
-        for var in vol.values():
-            for dam_id in I:
-                if dam_id in var.name:
-                    volumenes[dam_id].append(var.value())
-        sol_dict = {
-            "dams": [
-                {
-                    "flows": qsalida[dam_id],
-                    "id": dam_id,
-                    "power": potencia[dam_id],
-                    "volume": volumenes[dam_id],
-                }
-                for dam_id in I
-            ],
-            "price": Price,
-            "objective_function": lp.value(lpproblem.objective)
+        # Parse solver output to get history data
+        with open(solver_output.name, 'r') as file:
+            output = file.read()
+        obj_fun_values, gap_values, time_stamps = self.parse_gurobi_output(output)
+        os.remove(solver_output.name)
+
+        def get_dam_id(name: str) -> str:
+            if name.find("copy") == -1:
+                return name[name.index("dam"): name.index("dam") + 4]
+            else:
+                return name[name.index("dam"): name.index("copy") + 4]
+
+        # Values stored in solution
+        exiting_flows = {dam_id: [var.value() for var in qs.values() if get_dam_id(var.name) == dam_id] for dam_id in I}
+        powers = {dam_id: [var.value() for var in pot.values() if get_dam_id(var.name) == dam_id] for dam_id in I}
+        volumes = {dam_id: [var.value() for var in vol.values() if get_dam_id(var.name) == dam_id] for dam_id in I}
+
+        # Objective function details
+        print([(get_dam_id(var.name), var.value()) for var in pot_embalse.values()])
+        income_from_energy = {
+            dam_id: [var.value() for var in pot_embalse.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
         }
-        self.solution = Solution.from_dict(sol_dict)
+        limit_zones = {
+            dam_id: [var.value() for var in zl_tot.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        startups = {
+            dam_id: [var.value() for var in pwch_tot.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        vol_exceedance = {
+            dam_id: [var.value() for var in pos_desv.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        vol_shortage = {
+            dam_id: [var.value() for var in neg_desv.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        values_from_vol = {
+            dam_id: [var.value() for var in ben_desv.values() if get_dam_id(var.name) == dam_id][0] for dam_id in I
+        }
+        total_dam_incomes = {
+            dam_id:
+                income_from_energy[dam_id]
+                - startups[dam_id] * self.config.startups_penalty
+                - limit_zones[dam_id] * self.config.limit_zones_penalty
+                + values_from_vol[dam_id]
+            for dam_id in I
+        }
+
+        # Get datetimes of instance and solution
+        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
+
+        # Save solution object
+        self.solution = Solution.from_dict(
+            dict(
+                instance_datetimes=dict(
+                    start=start_datetime,
+                    end_decisions=end_datetime
+                ),
+                solution_datetime=solution_datetime,
+                solver="MILP",
+                configuration=asdict(self.config),
+                objective_function=lp.value(lpproblem.objective),
+                objective_history=dict(
+                    objective_values_eur=obj_fun_values,
+                    gap_values_pct=gap_values,
+                    time_stamps_s=time_stamps,
+                ),
+                dams=[
+                    dict(
+                        id=dam_id,
+                        flows=exiting_flows[dam_id],
+                        power=powers[dam_id],
+                        volume=volumes[dam_id],
+                        objective_function_details=dict(
+                            total_income_eur=total_dam_incomes[dam_id],
+                            income_from_energy_eur=income_from_energy[dam_id],
+                            startups=startups[dam_id],
+                            limit_zones=limit_zones[dam_id],
+                            volume_shortage_m3=vol_shortage[dam_id],
+                            volume_exceedance_m3=vol_exceedance[dam_id]
+                        )
+                    )
+                    for dam_id in self.instance.get_ids_of_dams()
+                ],
+                price=self.instance.get_all_prices(),
+            )
+        )
 
         return dict()
 

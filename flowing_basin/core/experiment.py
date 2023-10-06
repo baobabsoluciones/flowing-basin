@@ -4,6 +4,7 @@ from pytups import SuperDict
 from .instance import Instance
 from .solution import Solution
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass(kw_only=True)
@@ -50,3 +51,19 @@ class Experiment(ExperimentCore):
 
     def check_solution(self, *args, **kwargs) -> Dict[str, Dict]:
         return dict()
+
+    def get_instance_solution_datetimes(self, format_datetime: str = "%Y-%m-%d %H:%M") -> tuple[str, str, str]:
+
+        """
+        Get the start and end datetimes of the solved instance,
+        as well as the datetime of when it was solved
+        """
+
+        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
+        start_datetime = start_datetime.strftime(format_datetime)
+        end_datetime = end_datetime.strftime(format_datetime)
+        solution_datetime = datetime.now().strftime(format_datetime)
+
+        return start_datetime, end_datetime, solution_datetime
+
+

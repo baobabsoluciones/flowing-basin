@@ -266,6 +266,20 @@ class Instance(InstanceCore):
 
         return self.data["dams"][idx]["order"]
 
+    def get_dam_id_from_order(self, order: int) -> str:
+
+        """
+
+        :param order: Order of the dam in the river basin, from 1 to num_dams
+        :return: ID of the dam in the river basin
+        """
+
+        for dam_id in self.get_ids_of_dams():
+            if self.get_order_of_dam(dam_id) == order:
+                return dam_id
+
+        raise ValueError(f"The given dam order, {order}, has no corresponding dam ID.")
+
     def get_initial_vol_of_dam(self, idx: str) -> float:
 
         """
@@ -279,6 +293,18 @@ class Instance(InstanceCore):
         initial_vol = self.data["dams"][idx]["initial_vol"]
 
         return max(min_vol, min(initial_vol, max_vol))
+
+    def get_historical_final_vol_of_dam(self, idx: str) -> float | None:
+
+        """
+        Get the historical final volume of the given dam.
+        This method may return None as this is an optional field of the instance.
+
+        :param idx: ID of the dam in the river basin
+        :return: The previously observed volume of the dam in the decision horizon (m3)
+        """
+
+        return self.data["dams"][idx].get("final_vol")
 
     def get_min_vol_of_dam(self, idx: str) -> float:
 
@@ -555,9 +581,14 @@ class Instance(InstanceCore):
         """
 
         incoming_flows = self.get_all_incoming_flows()[:self.get_decision_horizon()]
+        # print("Incoming flows:", incoming_flows)
+        # print("Incoming flow mean:", sum(incoming_flows)/len(incoming_flows))
         total_avg_inflow = sum(incoming_flows) / len(incoming_flows)
         for dam_id in self.get_ids_of_dams():
             unreg_flows = self.get_all_unregulated_flows_of_dam(dam_id)[:self.get_decision_horizon()]
+            # print(dam_id, "unregulated flows:", unreg_flows)
+            # print(dam_id, "unregulated flow mean:", sum(unreg_flows) / len(unreg_flows))
             total_avg_inflow += sum(unreg_flows) / len(unreg_flows)
+        # print("Total avg inflow:", total_avg_inflow)
 
         return total_avg_inflow

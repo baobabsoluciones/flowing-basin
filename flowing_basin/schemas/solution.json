@@ -2,8 +2,83 @@
     "$schema": "http://json-schema.org/schema#",
     "type": "object",
     "properties": {
+        "instance_datetimes": {
+            "type": "object",
+            "properties": {
+                "start": {
+                    "type": "string"
+                },
+                "end_decisions": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "start",
+                "end_decisions"
+            ]
+        },
+        "solution_datetime": {
+            "type": "string"
+        },
+        "solver": {
+            "type": "string"
+        },
+        "configuration": {
+            "type": "object",
+            "properties": {
+                "startups_penalty": {
+                    "type": "number"
+                },
+                "limit_zones_penalty": {
+                    "type": "number"
+                },
+                "volume_objectives": {
+                    "type": "object"
+                },
+                "volume_shortage_penalty": {
+                    "type": "number"
+                },
+                "volume_exceedance_bonus": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "startups_penalty",
+                "limit_zones_penalty",
+                "volume_objectives",
+                "volume_shortage_penalty",
+                "volume_exceedance_bonus"
+            ]
+        },
         "objective_function": {
             "type": "number"
+        },
+        "objective_history": {
+            "type": "object",
+            "properties": {
+                "objective_values_eur": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "gap_values_pct": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "time_stamps_s": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                }
+            },
+            "required": [
+                "objective_values_eur",
+                "time_stamps_s"
+            ]
         },
         "dams": {
             "type": "array",
@@ -30,6 +105,37 @@
                         "items": {
                             "type": "number"
                         }
+                    },
+                    "objective_function_details": {
+                        "type": "object",
+                        "properties": {
+                            "total_income_eur": {
+                                "type": "number"
+                            },
+                            "income_from_energy_eur": {
+                                "type": "number"
+                            },
+                            "startups": {
+                                "type": "number"
+                            },
+                            "limit_zones": {
+                                "type": "number"
+                            },
+                            "volume_shortage_m3": {
+                                "type": "number"
+                            },
+                            "volume_exceedance_m3": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "total_income_eur",
+                            "income_from_energy_eur",
+                            "startups",
+                            "limit_zones",
+                            "volume_shortage_m3",
+                            "volume_exceedance_m3"
+                        ]
                     }
                 },
                 "required": [

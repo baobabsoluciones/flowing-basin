@@ -130,6 +130,9 @@
                     "initial_vol": {
                         "type": "number"
                     },
+                    "final_vol": {
+                        "type": "number"
+                    },
                     "initial_lags": {
                         "type": "array",
                         "items": {

@@ -2,29 +2,20 @@ from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import RiverBasin
 from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
-import scipy
-from matplotlib import pyplot as plt
 from dataclasses import dataclass, asdict
 import warnings
-import json
 import time
-from datetime import datetime
-import os
-import typing
-import my_pyswarms as ps
-from my_pyswarms.utils.plotters import plot_cost_history
-from my_pyswarms.utils.search import RandomSearch
-# Download my_pyswarms with pip install git+https://github.com/RodrigoCastroF/my-pyswarms
+import pyswarms.backend as P
+from pyswarms.backend.handlers import BoundaryHandler
+from pyswarms.backend.topology import Star, Ring, VonNeumann, Pyramid, Random
 
 
 @dataclass(kw_only=True)
 class PSOConfiguration(Configuration):  # noqa
 
     num_particles: int
-    max_iterations: int
-    max_time: int
 
-    # PySwarms optimizer options
+    # Continuous PySwarms optimizer options
     cognitive_coefficient: float
     social_coefficient: float
     inertia_weight: float
@@ -33,14 +24,36 @@ class PSOConfiguration(Configuration):  # noqa
     use_relvars: bool
     max_relvar: float = 0.5  # Used only when use_relvars=True
 
+    # Discrete PySwarms optimizer options
+    bounds_handling: str = "periodic"
+    topology: str = "star"
+
+    # Max iterations OR max time
+    max_iterations: int = None
+    max_time: float = None
+
     # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"
 
     def __post_init__(self):
-        valid_modes = {"linear", "nonlinear"}
-        if self.mode not in valid_modes:
-            raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
+
+        # Assert given string values are valid
+        valid_attr_values = dict(
+            mode={"linear", "nonlinear"},
+            bounds_handling={"periodic", "nearest", "intermediate", "shrink", "reflective", "random"},
+            topology={"star", "ring", "von_neumann", "pyramid", "random"}
+        )
+        for attr_name, valid_values in valid_attr_values.items():
+            if getattr(self, attr_name) not in valid_values:
+                raise ValueError(
+                    f"Invalid value for '{attr_name}': {getattr(self, attr_name)}. "
+                    f"Allowed values are {valid_values}"
+                )
+
+        # Assert a max iterations or max time is given
+        if self.max_iterations is None and self.max_time is None:
+            raise ValueError("You need to specify a maximum number of iterations or a time limit (or both).")
 
 
 class PSO(Experiment):
@@ -50,20 +63,18 @@ class PSO(Experiment):
         config: PSOConfiguration,
         paths_power_models: dict[str, str] = None,
         solution: Solution = None,
+        verbose: bool = True
     ):
 
         super().__init__(instance=instance, solution=solution)
         if solution is None:
             self.solution = None
 
-        # Information of how the solution was found
-        self.solver_info = dict()
-
+        self.verbose = verbose
         self.config = config
         self.num_dimensions = (
             self.instance.get_num_dams() * self.instance.get_largest_impact_horizon()
         )
-        self.objective_function_history = None
 
         if self.config.mode == "nonlinear" and paths_power_models is None:
             raise TypeError(
@@ -117,7 +128,10 @@ class PSO(Experiment):
             self.instance.get_largest_impact_horizon(),
             self.instance.get_num_dams(),
             num_scenarios,
-        ), f"{flows_or_relvars.shape=} should actually be {(self.instance.get_largest_impact_horizon(), self.instance.get_num_dams(), num_scenarios)=}"
+        ), (
+            f"{flows_or_relvars.shape=} should actually be "
+            f"{(self.instance.get_largest_impact_horizon(), self.instance.get_num_dams(), num_scenarios)=}"
+        )
 
         # Reshape the array into num_dimensions x num_particles
         swarm_t = flows_or_relvars.reshape((self.num_dimensions, num_scenarios))
@@ -174,10 +188,11 @@ class PSO(Experiment):
                 f"{self.river_basin.time=}, when it should be {self.instance.get_largest_impact_horizon() - 1=}"
             )
 
-    def objective_function_values_env(self) -> dict:
+    def env_objective_function_details(self, dam_id: str) -> dict[str, np.ndarray]:
 
         """
-        Objective function values of the environment (river basin) in its current state (presumably updated).
+        Objective function details for the given dam
+        from the environment (river basin) in its current state (presumably updated).
 
         :return:
             Dictionary formed by arrays of size num_particles with
@@ -186,37 +201,38 @@ class PSO(Experiment):
 
         self.check_env_updated()
 
-        obj_values = dict()
+        dam_index = self.instance.get_order_of_dam(dam_id) - 1
+        dam = self.river_basin.dams[dam_index]
 
-        obj_values.update(
-            {
-                "income": self.river_basin.get_acc_income(),
-                "startups": self.river_basin.get_acc_num_startups(),
-                "times_in_limit": self.river_basin.get_acc_num_times_in_limit()
-            }
+        income = dam.channel.power_group.acc_income
+        startups = dam.channel.power_group.acc_num_startups
+        limit_zones = dam.channel.power_group.acc_num_times_in_limit
+        vol_shortage = np.maximum(0, self.config.volume_objectives[dam_id] - dam.final_volume)
+        vol_exceedance = np.maximum(0, dam.final_volume - self.config.volume_objectives[dam_id])
+        total_income = (
+            income
+            - startups * self.config.startups_penalty
+            - limit_zones * self.config.limit_zones_penalty
+            - vol_shortage * self.config.volume_shortage_penalty
+            + vol_exceedance * self.config.volume_exceedance_bonus
         )
 
-        final_volumes = self.river_basin.get_final_volume_of_dams()
-        for dam_id in self.instance.get_ids_of_dams():
-            obj_values.update(
-                {
-                    # Calculate volume shortage and exceedance at the end of the decision horizon
-                    f"{dam_id}_shortage": np.maximum(
-                        0, self.config.volume_objectives[dam_id] - final_volumes[dam_id]
-                    ),
-                    f"{dam_id}_exceedance": np.maximum(
-                        0, final_volumes[dam_id] - self.config.volume_objectives[dam_id]
-                    ),
-                }
-            )
+        obj_values = dict(
+            total_income_eur=total_income,
+            income_from_energy_eur=income,
+            startups=startups,
+            limit_zones=limit_zones,
+            volume_shortage_m3=vol_shortage,
+            volume_exceedance_m3=vol_exceedance
+        )
 
         return obj_values
 
-    def objective_function_env(self) -> np.ndarray:
+    def env_objective_function(self) -> np.ndarray:
 
         """
         Objective function of the environment (river basin) in its current state (presumably updated).
-        This is the objective function to minimize, as PySwarm's default behaviour is minimization.
+        This is the objective function to maximize.
 
         :return:
             Array of size num_particles with
@@ -253,179 +269,167 @@ class PSO(Experiment):
         )
         bonus = self.config.volume_exceedance_bonus * volume_exceedances
 
-        return -income - bonus + penalty
+        return income + bonus - penalty
 
-    def calculate_objective_function(
+    def calculate_cost(
         self, swarm: np.ndarray, is_relvars: bool
     ) -> np.ndarray:
 
         """
-        Function that gives the objective function of the given swarm, as required by PySwarms.
+        Function that gives the cost of the given swarm, as required by PySwarms.
+        This is the objective function with a NEGATIVE sign, as PySwarm's default behaviour is minimization.
         """
 
         self.river_basin.deep_update(
             self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars, fast_mode=True
         )
-        return self.objective_function_env()
+        return - self.env_objective_function()
 
-    def optimize(
-        self, options: dict[str, float], num_particles: int, max_iters: int, max_time: int = None
-    ) -> tuple[float, np.ndarray]:
-
-        """
-        :param options: Dictionary with options given to the PySwarms optimizer
-         - "c1": cognitive coefficient.
-         - "c2": social coefficient
-         - "w": inertia weight
-        :param num_particles: Number of particles of the swarm
-        :param max_iters: Max number of iterations with which to run the PSO
-        :param max_time: Max number of seconds with which to run the PSO
-        :return: Best objective function value found
-        """
-
-        optimizer = ps.single.GlobalBestPSO(
-            n_particles=num_particles,
-            dimensions=self.num_dimensions,
-            options=options,
-            bounds=self.bounds,
-        )
-
-        kwargs = {
-            "is_relvars": self.config.use_relvars
-        }  # Argument of `self.calculate_objective_function`
-        cost, position = optimizer.optimize(
-            self.calculate_objective_function, iters=max_iters, **kwargs, max_time=max_time
-        )
-
-        self.objective_function_history = optimizer.cost_history
-
-        return cost, position
-
-    def solve(self, options: dict = None) -> dict:
+    def solve(
+        self, initial_solutions: np.ndarray = None, time_offset: float = 0., solver: str = "PSO", options: dict = None
+    ) -> dict:
 
         """
         Fill the 'solution' attribute of the object, with the optimal solution found by the PSO algorithm.
 
+        :param initial_solutions: Array of shape num_time_steps x num_dams x num_particles with
+            the initial solutions (flows or relvars)
+        :param time_offset: Starting time of the algorithm in seconds
+            (used if there is any preprocessing before PSO, e.g. RBO), defaults to 0
+        :param solver: Solver to indicate in the stored solution (e.g. PSO or PSO-RBO), defaults to PSO
         :param options: Unused argument, inherited from Experiment
         :return: A dictionary with status codes
         """
 
-        start_time = time.perf_counter()
-        ps_options = {
+        # Choose a topology
+        topology = {
+            "star": Star(), "ring": Ring(), "von_neumann": VonNeumann(), "pyramid": Pyramid(), "random": Random()
+        }[self.config.topology]
+
+        # Create a swarm
+        swarm_options = {
             "c1": self.config.cognitive_coefficient,
             "c2": self.config.social_coefficient,
             "w": self.config.inertia_weight
         }
-        cost, optimal_particle = self.optimize(
-            options=ps_options, num_particles=self.config.num_particles,
-            max_iters=self.config.max_iterations, max_time=self.config.max_time
+        if initial_solutions is not None:
+            initial_solutions = self.reshape_as_swarm(initial_solutions)
+        swarm = P.create_swarm(
+            n_particles=self.config.num_particles,
+            dimensions=self.num_dimensions,
+            options=swarm_options,
+            bounds=self.bounds,
+            init_pos=initial_solutions
         )
-        end_time = time.perf_counter()
-        execution_time = end_time - start_time
 
+        # Choose a handler for out-of-bounds particles
+        boundary_handler = BoundaryHandler(strategy=self.config.bounds_handling)
+        boundary_handler.memory = swarm.position
+
+        start_time = time.perf_counter()
+        current_time = time_offset
+        num_iters = 0
+        obj_fun_history = []
+        if self.verbose:
+            print(f"{'Iteration':<15}{'Time (s)':<15}{'Objective (€)':<15}")
+
+        # Set maximum number of iterations or time limit
+        max_iters = self.config.max_iterations
+        if max_iters is None:
+            max_iters = float('inf')
+        max_time = self.config.max_time
+        if max_time is None:
+            max_time = float('inf')
+
+        # Optimization loop
+        while current_time < max_time and num_iters < max_iters:
+
+            # Update personal best
+            swarm.current_cost = self.calculate_cost(swarm.position, is_relvars=self.config.use_relvars)
+            if num_iters == 0:
+                swarm.pbest_cost = self.calculate_cost(swarm.pbest_pos, is_relvars=self.config.use_relvars)
+            swarm.pbest_pos, swarm.pbest_cost = P.compute_pbest(swarm)
+
+            # Update global best
+            if np.min(swarm.pbest_cost) < swarm.best_cost:
+                swarm.best_pos, swarm.best_cost = topology.compute_gbest(swarm)
+            obj_fun_history.append((current_time, - swarm.best_cost))
+            if self.verbose:
+                print(f"{num_iters:<15}{current_time:<15.2f}{-swarm.best_cost:<15.2f}")
+
+            # Update position and velocity matrices
+            swarm.velocity = topology.compute_velocity(swarm, bounds=self.bounds)
+            swarm.position = topology.compute_position(swarm, bounds=self.bounds, bh=boundary_handler)
+
+            # Next iteration
+            current_time = time.perf_counter() - start_time + time_offset
+            num_iters += 1
+
+        if self.verbose:
+            print(f"Optimization finished.\nBest position is {swarm.best_pos}\nBest cost is {swarm.best_cost}")
+
+        # Assert optimal party is between bounds
+        assert (swarm.best_pos >= self.bounds[0]).all() and (swarm.best_pos <= self.bounds[1]).all()
+
+        # Get clipped optimal flows, and the corresponding volumes and powers of each dam
         self.river_basin.deep_update(
-            self.reshape_as_flows_or_relvars(swarm=optimal_particle.reshape(1, -1)),
+            self.reshape_as_flows_or_relvars(swarm=swarm.best_pos.reshape(1, -1)),
             is_relvars=self.config.use_relvars,
         )
-        # print("DEBUG - optimal particle's original unclipped flows' history")
-        # print(self.river_basin.history.to_string())
-        optimal_flows = self.river_basin.all_past_clipped_flows
-        self.solution = Solution.from_flows_array(
-            optimal_flows, dam_ids=self.instance.get_ids_of_dams()
-        )
+        optimal_flows = self.river_basin.all_past_clipped_flows  # Array of shape num_time_steps x num_dams x 1
+        optimal_flows = np.transpose(optimal_flows)[0]  # Array of shape num_dams x num_time_steps
+        volumes = dict()
+        powers = dict()
+        for dam_id in self.instance.get_ids_of_dams():
+            volumes[dam_id] = self.river_basin.all_past_volumes[dam_id]  # Array of shape num_time_steps x 1
+            volumes[dam_id] = np.transpose(volumes[dam_id])[0]  # Array of shape num_time_steps
+            powers[dam_id] = self.river_basin.all_past_powers[dam_id]  # Array of shape num_time_steps x 1
+            powers[dam_id] = np.transpose(powers[dam_id])[0]  # Array of shape num_time_steps
 
-        self.solver_info = dict(
-            execution_time=execution_time,
-            objective=-cost,
+        # Get objective function history
+        time_stamps, obj_fun_values = zip(*obj_fun_history)
+        time_stamps = list(time_stamps)
+        obj_fun_values = list(obj_fun_values)
+
+        # Get datetimes
+        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
+
+        # Store solution in attribute
+        self.solution = Solution.from_dict(
+            dict(
+                instance_datetimes=dict(
+                    start=start_datetime,
+                    end_decisions=end_datetime
+                ),
+                solution_datetime=solution_datetime,
+                solver=solver,
+                configuration=asdict(self.config),
+                objective_function=self.env_objective_function().item(),
+                objective_history=dict(
+                    objective_values_eur=obj_fun_values,
+                    time_stamps_s=time_stamps,
+                ),
+                dams=[
+                    dict(
+                        id=dam_id,
+                        flows=optimal_flows[self.instance.get_order_of_dam(dam_id) - 1].tolist(),
+                        power=powers[dam_id].tolist(),
+                        volume=volumes[dam_id].tolist(),
+                        objective_function_details={
+                            detail_key: detail_value.item()
+                            for detail_key, detail_value in self.env_objective_function_details(dam_id).items()
+                        }
+                    )
+                    for dam_id in self.instance.get_ids_of_dams()
+                ],
+                price=self.instance.get_all_prices(),
+            )
         )
 
         return dict(
             status_sol=SOLUTION_STATUS_FEASIBLE,
             status=STATUS_UNDEFINED,
         )
-
-    def study_configuration(
-        self,
-        num_replications: int = 20,
-        confidence: float = 0.95,
-    ):
-
-        """
-        Get the mean and confidence interval of
-        the income, objective function and final volume exceedances
-        that the current PSO configuration gives.
-        """
-
-        # Dictionaries that will store the data and the results
-        data = results = {
-            "execution_times": [],
-            "objectives": [],
-            "incomes": [],
-            **{
-                "volume_exceedances_" + dam_id: []
-                for dam_id in self.instance.get_ids_of_dams()
-            },
-        }
-
-        # Execute `solve` multiple times to fill data
-        for i in range(num_replications):
-
-            self.solve()
-            data["execution_times"].append(self.solver_info["execution_time"])
-            data["objectives"].append(self.solver_info["objective"])
-
-            self.river_basin.deep_update(self.solution.get_exiting_flows_array(), is_relvars=False)
-            obj_values = self.objective_function_values_env()
-            data["incomes"].append(obj_values["income"])
-            for dam_id in self.instance.get_ids_of_dams():
-                data[f"volume_exceedances_{dam_id}"].append(
-                    obj_values[f"{dam_id}_exceedance"]
-                    - obj_values[f"{dam_id}_shortage"]
-                )
-        print(data)
-
-        # Get mean and confidence interval of each variable (assuming it follows a normal distribution)
-        alfa = 1 - confidence
-        for variable, values in data.items():
-            a = np.array(values)
-            n = a.size
-            mean, std_error = np.mean(a), scipy.stats.sem(a)
-            h = std_error * scipy.stats.t.ppf(1 - alfa / 2.0, n - 1)
-            results[variable] = [mean, mean - h, mean + h]
-
-        return results
-
-    def search_best_options(
-        self,
-        options: dict[str, list[float]],
-        num_particles: int = 200,
-        num_iters_selection: int = 100,
-        num_iters_each_test: int = 10,
-    ) -> tuple[float, dict]:
-
-        """
-        Use PySwarm's RandomSearch method to find the best options.
-
-        :param options: Dictionary with the combinations of options to try
-        :param num_particles: Number of particles of the swarm in every execution
-        :param num_iters_selection: Number of different combinations tried
-        :param num_iters_each_test: Number of iterations with which every combination is tried
-        :return: Best cost and the parameter configuration with which it was achieved.
-        """
-
-        g = RandomSearch(
-            ps.single.GlobalBestPSO,
-            n_particles=num_particles,
-            dimensions=self.num_dimensions,
-            bounds=self.bounds,
-            objective_func=self.calculate_objective_function,
-            options=options,
-            iters=num_iters_each_test,
-            n_selection_iters=num_iters_selection,
-        )
-        best_score, best_options = g.search()
-
-        return best_score, best_options
 
     def get_objective(self, solution: Solution = None) -> float:
 
@@ -435,116 +439,13 @@ class PSO(Experiment):
         """
 
         if solution is None:
-            assert (
-                self.solution is not None
-            ), "Cannot get objective if no solution has been given and `solve` has not been called yet."
+            if self.solution is None:
+                raise ValueError(
+                    "Cannot get objective if no solution has been given and `solve` has not been called yet."
+                )
             solution = self.solution
 
-        self.river_basin.deep_update(solution.get_exiting_flows_array(), is_relvars=False)
-        obj = self.objective_function_env()
+        self.river_basin.deep_update(solution.get_flows_array(), is_relvars=False)
+        obj = self.env_objective_function()
 
-        return - obj.item()
-
-    def write_details_sol(self, details: typing.TextIO):
-
-        """
-        Write details about the current solution in the given TextIO object.
-        """
-
-        # Information about the instance
-        format_datetime = "%Y-%m-%d %H:%M"
-        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
-        start = start_datetime.strftime(format_datetime)
-        end = end_datetime.strftime(format_datetime)
-        solved = datetime.now().strftime(format_datetime)
-        details.write(
-            f"==== Solution details ====\n\n"
-            f"Solved river basin instance between {start} and {end}.\n"
-            f"The instance was solved at {solved} with the PSO algorithm.\n\n"
-        )
-
-        # Information about the solver
-        details.write("---- Solver configuration ----\n\n")
-        details.write("Configuration:\n")
-        details.write(json.dumps(asdict(self.config), indent=2))
-        details.write("\n\n")
-        details.write("Solver information:\n")
-        details.write(json.dumps(self.solver_info, indent=2))
-        details.write("\n\n")
-
-    def write_details_env(self, details: typing.TextIO):
-
-        """
-        Write details in the given TextIO object
-        about the environment (river basin) in its current state (presumably updated).
-
-        """
-
-        self.check_env_updated()
-
-        details.write("---- Objective function ----\n\n")
-        details.write("Objective function values:\n")
-        obj_values = self.objective_function_values_env()
-        obj_values = {k: v.item() for k, v in obj_values.items()}
-        details.write(json.dumps(obj_values, indent=2))
-        details.write("\n\n")
-        details.write("Objective function (to maximize):\n")
-        obj = - self.objective_function_env()
-        details.write(str(obj.item()))
-        details.write("\n\n")
-
-        details.write("---- River basin history ----\n\n")
-        details.write(self.river_basin.history.to_string())
-        details.write("\n\n")
-
-    def plot_cost(self) -> plt.Axes:
-
-        """
-        Plot the value of the best solution throughout every iteration of the PSO.
-
-        :return: Axes object with the cost plot
-        """
-
-        if self.objective_function_history is None:
-            warnings.warn(
-                "Cannot plot objective function history if `solve` has not been called yet."
-            )
-            return  # noqa
-
-        ax = plot_cost_history(cost_history=self.objective_function_history)
-        return ax
-
-    def save_solution_info(self, path_parent: str, dir_name: str):
-
-        """
-        Save current solution, cost plot, details, and history plot
-        """
-
-        path_dir = os.path.join(path_parent, dir_name)
-        os.mkdir(path_dir)
-        print(f"Directory {path_dir} created")
-
-        # Save current solution
-        path_sol = os.path.join(path_dir, "solution.json")
-        self.solution.to_json(path_sol)
-        print(f"JSON file {path_sol} created")
-
-        # Save cost plot
-        path_cost_plot = os.path.join(path_dir, "cost_plot.png")
-        self.plot_cost()
-        plt.savefig(path_cost_plot)
-        print(f"Figure {path_cost_plot} created")
-
-        # Save details and history of river basin updated with the current solution
-        self.river_basin.deep_update(self.solution.get_exiting_flows_array(), is_relvars=False)
-
-        path_details = os.path.join(path_dir, "details.txt")
-        with open(path_details, "w") as file:
-            self.write_details_sol(file)
-            self.write_details_env(file)
-        print(f"Text file {path_details} created")
-
-        path_history_plot = os.path.join(path_dir, "history_plot.png")
-        self.river_basin.plot_history()
-        plt.savefig(path_history_plot)
-        print(f"Figure {path_history_plot} created")
+        return obj.item()

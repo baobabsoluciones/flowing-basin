@@ -1,6 +1,6 @@
 from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import Dam
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from random import random, choices
 from math import log
 import numpy as np
@@ -42,6 +42,7 @@ class HeuristicSingleDam:
             bias_weight: float,
             flow_contribution: list[float],
             paths_power_models: dict[str, str] = None,
+            greedy: bool = False,
             do_tests: bool = True
     ):
 
@@ -50,6 +51,7 @@ class HeuristicSingleDam:
         self.config = config
         self.bias_weight = bias_weight
         self.flow_contribution = flow_contribution
+        self.greedy = greedy
         self.do_tests = do_tests
 
         # Important constants
@@ -146,7 +148,7 @@ class HeuristicSingleDam:
         if len(sorted_groups) == 0:
             return None
 
-        if not self.config.random_biased_sorting:
+        if not self.config.random_biased_sorting or self.greedy:
             chosen_group = sorted_groups[0]
         else:
             chosen_group = choices(
@@ -387,7 +389,7 @@ class HeuristicSingleDam:
         (i.e., the groups after the last max or min vol time step).
         """
 
-        running_time_step = self.instance.get_decision_horizon()
+        running_time_step = self.instance.get_decision_horizon() - 1
         while self.available_volumes[running_time_step] < self.max_available_vol and running_time_step > 0:
             running_time_step -= 1
 
@@ -395,11 +397,14 @@ class HeuristicSingleDam:
         # in the same time step (since we are storing the final volume of each time step)
         relevant_groups = [
             group for group in sorted_groups
-            if group[-1] > running_time_step and group[0] <= self.instance.get_decision_horizon() - 1
+            if (
+                group[-1] > running_time_step and
+                group[0] <= self.instance.get_decision_horizon() - 1
+            )
         ]
         return relevant_groups
 
-    def adapt_flows_to_obj_vol(self, sorted_groups: list[list[int]]):
+    def adapt_flows_to_obj_vol(self, sorted_groups: list[list[int]], epsilon: float = 1e-6):
 
         """
         Assign zero flow to the least important relevant groups (i.e., lowest average lagged price)
@@ -423,10 +428,7 @@ class HeuristicSingleDam:
             #     f"\tvol in {decision_horizon - 1} = "
             #     f"{self.available_volumes[decision_horizon - 1]} < {objective_available_volume}"
             # )
-            # print(
-            #     f"\t{least_important_group=}",
-            #     f"{self.available_volumes=}"
-            # )
+            # print(f"\t{least_important_group=}")
             # print(
             #     "\tFlows in group:", [self.assigned_flows[time_step] for time_step in least_important_group],
             #     "Volumes in group:", [self.available_volumes[time_step] for time_step in least_important_group]
@@ -439,12 +441,16 @@ class HeuristicSingleDam:
             ) if least_important_group[-1] < decision_horizon else 0.
             removable_volume_in_next_groups = self.max_available_vol - highest_vol_in_next_groups
             volume_to_remove = min(removable_volume_in_next_groups, volume_gap)
+            # print(f"\t{volume_to_remove=}")
 
             # Calculate the volume to remove in every time step of the group
             # A priori, every time step of the group can contribute the same amount, volume_to_remove/len(group) ...
-            relevant_time_steps = [time_step for time_step in least_important_group if time_step <= decision_horizon - 1]
+            relevant_time_steps = [
+                time_step for time_step in least_important_group if time_step <= decision_horizon - 1
+            ]
             num_relevant_time_steps = len(relevant_time_steps)
             volume_to_remove_per_time_step = volume_to_remove / num_relevant_time_steps
+            # print(f"\t{volume_to_remove_per_time_step=}")
 
             # ...however, this is not true when one of the time steps is close to (or in) the max vol and does not have
             # enough removable volume (it is "capped"), forcing extra volume to be removed in the remaining time steps
@@ -459,12 +465,14 @@ class HeuristicSingleDam:
                         volume_to_remove_per_time_step += (
                                 extra_volume_to_remove / (num_relevant_time_steps - num_capped_time_steps)
                         )
+                        # print(f"\t{volume_to_remove_per_time_step=}")
                     except ZeroDivisionError:
                         # This only happens if ALL relevant time steps of the group are capped
                         # In this case, we simply take as much volume from all time steps as possible
                         volume_to_remove_per_time_step = self.max_available_vol - min(
                             self.available_volumes[time_step] for time_step in relevant_time_steps
                         )
+                        # print(f"\t{volume_to_remove_per_time_step=} (<- all capped)")
 
             # Reduce the calculated volume in every time step
             flow_to_remove = volume_to_remove_per_time_step / self.instance.get_time_step_seconds()
@@ -487,11 +495,20 @@ class HeuristicSingleDam:
             #     f"\tvol in {decision_horizon - 1} = "
             #     f"{self.available_volumes[decision_horizon - 1]} < {objective_available_volume}"
             # )
+            #
+            # print(f"{self.available_volumes=}")
+            # print(f"{sorted_relevant_groups=}")
 
-        assert self.available_volumes[decision_horizon - 1] > objective_available_volume - 1e-6, (
-            f"Objective volumes were not satisfied in {self.dam_id} with {self.assigned_flows=}."
-        )
-        # Very high volume objectives are even impossible to reach in some instances; better to leave this assert out...
+        # Check the objective final volumes are now satisfied
+        if self.do_tests:
+            assert self.available_volumes[decision_horizon - 1] > objective_available_volume - epsilon, (
+                f"Objective volumes were not satisfied in {self.dam_id}; "
+                f"final volume is {self.available_volumes[decision_horizon - 1]}, "
+                f"but objective is {objective_available_volume}. "
+                f"Assigned flows: {self.assigned_flows=}."
+            )
+            # Very high volume objectives are even impossible to reach in some instances;
+            # better to leave this assert out...
 
     def solve(self) -> tuple[list[float], list[float]]:
 
@@ -510,7 +527,7 @@ class HeuristicSingleDam:
             # Calculate the flow that should be assigned to the group
             available_volume = self.calculate_actual_available_volume(group) / len(group)
             flow_to_assign = self.max_flow_from_available_volume(available_volume)
-            if self.config.random_biased_flows:
+            if self.config.random_biased_flows and not self.greedy:
                 flow_to_assign = self.generate_random_biased_number() * flow_to_assign
 
             # Assign the flow and recalculate volumes
@@ -530,12 +547,12 @@ class HeuristicSingleDam:
 
         return self.assigned_flows, predicted_volumes
 
-    def simulate(self) -> tuple[list[float], list[float], list[float], list[float], float, float]:
+    def simulate(self) -> tuple[list[float], list[float], list[float], list[float], dict[str, float | int]]:
 
         """
         Use the river basin simulator to get the
         turbined flows (m3/s), powers (MW), actual volumes (m3), actual exiting flows (m3/s),
-        income from energy (€) and total income (€) with the current assigned flows
+        and dictionary with objective function details
         """
 
         turbined_flows = []
@@ -574,7 +591,16 @@ class HeuristicSingleDam:
         bonus = self.config.volume_exceedance_bonus * volume_exceedance
         dam_net_income = dam_income + bonus - penalty
 
-        return turbined_flows, powers, actual_volumes, actual_exiting_flows, dam_income, dam_net_income
+        obj_fun_details = dict(
+            total_income_eur=dam_net_income,
+            income_from_energy_eur=dam_income,
+            startups=num_startups,
+            limit_zones=num_limit_zones,
+            volume_shortage_m3=volume_shortage,
+            volume_exceedance_m3=volume_exceedance
+        )
+
+        return turbined_flows, powers, actual_volumes, actual_exiting_flows, obj_fun_details
 
 
 class Heuristic(Experiment):
@@ -591,6 +617,7 @@ class Heuristic(Experiment):
         instance: Instance,
         config: HeuristicConfiguration,
         paths_power_models: dict[str, str] = None,
+        greedy: bool = False,
         do_tests: bool = True,
         solution: Solution = None,
     ):
@@ -601,6 +628,7 @@ class Heuristic(Experiment):
 
         self.config = config
         self.paths_power_models = paths_power_models
+        self.greedy = greedy
         self.do_tests = do_tests
 
         # Calculate the bias weight in the random biased number generator
@@ -661,7 +689,7 @@ class Heuristic(Experiment):
         flows = dict()
         volumes = dict()
         powers = dict()
-        incomes = dict()
+        obj_fun_details = dict()
 
         dams_ids_in_order = sorted(
             self.instance.get_ids_of_dams(),
@@ -678,6 +706,7 @@ class Heuristic(Experiment):
                 flow_contribution=flow_contribution,
                 config=self.config,
                 bias_weight=self.bias_weight,
+                greedy=self.greedy,
                 do_tests=self.do_tests,
             )
             assigned_flows, predicted_vols = single_dam_solver.solve()
@@ -685,9 +714,9 @@ class Heuristic(Experiment):
             volumes[dam_id] = predicted_vols
 
             # Simulate to get turbined flows, powers and income
-            turbined_flows, powers[dam_id], actual_vols, actual_flows, _, incomes[dam_id] = single_dam_solver.simulate()
-            # print(dam_id, "INCOME FROM ENERGY:", _)
-            # print(dam_id, "TOTAL INCOME:", incomes[dam_id])
+            (
+                turbined_flows, powers[dam_id], actual_vols, actual_flows, obj_fun_details[dam_id]
+            ) = single_dam_solver.simulate()
 
             # Check flows and volumes from heuristic are the same as those from the simulator
             if self.do_tests:
@@ -699,19 +728,35 @@ class Heuristic(Experiment):
             # Flow contribution to the next dam
             flow_contribution = turbined_flows
 
-        total_income = sum(incomes[dam_id] for dam_id in self.instance.get_ids_of_dams())
-        # print("TOTAL INCOME", total_income)
+        # Add dam incomes to get total income
+        total_income = sum(
+            obj_fun_details[dam_id]["total_income_eur"] for dam_id in self.instance.get_ids_of_dams()
+        )
 
-        sol_dict = {
-            "objective_function": total_income,
-            "dams": [
-                {
-                    "flows": flows[dam_id], "id": dam_id, "power": powers[dam_id], "volume": volumes[dam_id]
-                }
+        # Get datetimes
+        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
+
+        sol_dict = dict(
+            instance_datetimes=dict(
+                start=start_datetime,
+                end_decisions=end_datetime
+            ),
+            solution_datetime=solution_datetime,
+            solver="Heuristic",
+            configuration=asdict(self.config),
+            objective_function=total_income,
+            dams=[
+                dict(
+                    id=dam_id,
+                    flows=flows[dam_id],
+                    power=powers[dam_id],
+                    volume=volumes[dam_id],
+                    objective_function_details=obj_fun_details[dam_id]
+                )
                 for dam_id in self.instance.get_ids_of_dams()
             ],
-            "price": self.instance.get_all_prices()
-        }
+            price=self.instance.get_all_prices(),
+        )
         self.solution = Solution.from_dict(sol_dict)
 
         # Check flow smoothing parameter compliance
@@ -727,4 +772,3 @@ class Heuristic(Experiment):
             )
 
         return dict()
-

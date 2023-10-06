@@ -4,9 +4,11 @@ import pandas as pd
 from cornflow_client.core.tools import load_json
 from itertools import product
 
-EXAMPLES = ['1', '3']
+# EXAMPLES = ['1', '3']
 # EXAMPLES = [f'_intermediate{i}' for i in range(11)]
-NUMS_DAMS = [i for i in range(1, 9)]
+EXAMPLES = ['Percentile25', 'Percentile75']
+# NUMS_DAMS = [i for i in range(1, 9)]
+NUMS_DAMS = [2, 6]
 NUMS_DAYS = [1]
 
 path_historical_data = "../data/history/historical_data.pickle"

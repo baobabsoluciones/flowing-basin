@@ -19,13 +19,13 @@ config = LPConfiguration(
     volume_shortage_penalty=3,
     volume_exceedance_bonus=0,
     startups_penalty=50,
-    limit_zones_penalty=0,
+    limit_zones_penalty=1000,
     volume_objectives={
         dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
     },
-    step_min=4,
     MIPGap=0.01,
-    time_limit_seconds=TIME_LIMIT_MINUTES * 60
+    time_limit_seconds=TIME_LIMIT_MINUTES * 60,
+    flow_smoothing=2,
 )
 
 lp = LPModel(config=config, instance=instance)

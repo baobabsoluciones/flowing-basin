@@ -761,7 +761,13 @@ class Heuristic(Experiment):
 
         # Check flow smoothing parameter compliance
         if self.do_tests:
-            assert self.solution.complies_with_flow_smoothing(self.config.flow_smoothing), (
+            assert self.solution.complies_with_flow_smoothing(
+                flow_smoothing=self.config.flow_smoothing,
+                initial_flows={
+                    dam_id: self.instance.get_initial_lags_of_channel(dam_id)[0]
+                    for dam_id in self.instance.get_ids_of_dams()
+                }
+            ), (
                 "The solution from the heuristic does not comply with the flow smoothing parameter."
             )
 

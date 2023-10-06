@@ -288,7 +288,11 @@ class Instance(InstanceCore):
         :return: The volume of the dam in the beginning (m3)
         """
 
-        return self.data["dams"][idx]["initial_vol"]
+        min_vol = self.get_min_vol_of_dam(idx)
+        max_vol = self.get_max_vol_of_dam(idx)
+        initial_vol = self.data["dams"][idx]["initial_vol"]
+
+        return max(min_vol, min(initial_vol, max_vol))
 
     def get_historical_final_vol_of_dam(self, idx: str) -> float | None:
 

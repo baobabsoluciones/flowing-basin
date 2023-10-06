@@ -14,7 +14,14 @@ solution = Solution.from_json(f"../solutions/instance{INSTANCE}_{SOLVER}_{NUM_DA
 inconsistencies = solution.check()
 if inconsistencies:
     raise Exception(f"There are inconsistencies in the data: {inconsistencies}")
-
+assert solution.complies_with_flow_smoothing(
+    flow_smoothing=2,
+    initial_flows={
+        dam_id: instance.get_initial_lags_of_channel(dam_id)[0]
+        for dam_id in instance.get_ids_of_dams()
+    }
+)
+    
 # Print general info
 instance_datetimes = solution.get_instance_start_end_datetimes()
 if instance_datetimes is not None:
@@ -49,6 +56,8 @@ instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{N
 river_basin = RiverBasin(instance=instance, mode="linear")
 flows = solution.get_flows_array()
 river_basin.deep_update_flows(flows)
+
+# Compare flows and actual flows
 actual_flows = river_basin.all_past_clipped_flows
 print("Flows array:", flows.tolist())
 print("Actual flows:", actual_flows.tolist())
@@ -61,3 +70,10 @@ for dam_index, dam_id in enumerate(instance.get_ids_of_dams()):
                 f"WARNING - For dam {dam_id} and time {time_step}, "
                 f"the flow is {flow} but the actual flow is {actual_flow}"
             )
+            
+# Print simulation historic values with solution
+print(river_basin.history.to_string())
+for dam_id in instance.get_ids_of_dams():
+    print(f"{dam_id}'s income from energy: {river_basin.history[f'{dam_id}_income'].sum()}")
+    print(f"{dam_id}'s number of startups: {river_basin.history[f'{dam_id}_startups'].sum()}")
+    print(f"{dam_id}'s number of limit zones: {river_basin.history[f'{dam_id}_limits'].sum()}")

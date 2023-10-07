@@ -215,8 +215,10 @@ class Instance(InstanceCore):
 
         decision_horizon = self.get_decision_horizon()
         max_lag = max([self.get_relevant_lags_of_dam(dam_id)[0] for dam_id in self.get_ids_of_dams()])
-        # TODO: Shouldn't we take self.get_relevant_lags_of_dam(dam_id)[-1],
-        #  to get the max delay of each channel, and not the min?
+        # We take self.get_relevant_lags_of_dam(dam_id)[0] (min lag of each channel) instead of
+        # self.get_relevant_lags_of_dam(dam_id)[-1] (max lag of each channel)
+        # because we only want to include the time steps in which the generated power
+        # depends only on the flows before the decision horizon
 
         return decision_horizon + max_lag
 

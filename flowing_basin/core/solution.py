@@ -207,7 +207,7 @@ class Solution(SolutionCore):
         for dam_id in self.get_ids_of_dams():
             flows = self.get_exiting_flows_of_dam(dam_id)
             variations = []
-            previous_flow = initial_flows[el["id"]]
+            previous_flow = initial_flows[dam_id]
             for flow in flows:
                 current_variation = flow - previous_flow
                 if any([current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]):

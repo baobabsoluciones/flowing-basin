@@ -4,6 +4,7 @@ import pickle
 from datetime import datetime
 import os
 import warnings
+from copy import copy
 
 
 class Instance(InstanceCore):
@@ -41,10 +42,29 @@ class Instance(InstanceCore):
 
         inconsistencies = dict()
 
+        # Starting flows ---- #
+
+        # The starting exiting flows must be provided when the start of information if before the start of the decisions
+        info_offset = self.get_start_information_offset()
+        if info_offset > 0:
+            dam_ids_no_startig_flows = [
+                dam_id for dam_id in self.get_ids_of_dams()
+                if self.get_starting_flows(dam_id) is None
+            ]
+            if dam_ids_no_startig_flows:
+                inconsistencies.update(
+                    {
+                        "Information starts before decisions, but some dams do not have starting flows defined":
+                            f"Information offset is {info_offset}, and "
+                            f"dams {dam_ids_no_startig_flows} do not have starting flows"
+                    }
+                )
+
+
         # Number of time steps ---- #
 
-        # Get number of time steps for which we need data (information horizon)
-        num_time_steps = self.get_information_horizon()
+        # Get number of time steps for which we need data (information horizon and offset)
+        num_time_steps = self.get_information_horizon() + self.get_start_information_offset()
 
         # The largest impact horizon must be lower than the information horizon
         largest_impact_horizon = self.get_largest_impact_horizon()
@@ -169,6 +189,38 @@ class Instance(InstanceCore):
         end_decisions = datetime.strptime(self.data["datetime"]["end_decisions"], "%Y-%m-%d %H:%M")
 
         return start, end_decisions
+
+    def get_start_information_datetime(self) -> datetime:
+
+        """
+        Get the datetime where the information of the instance starts.
+        This is the same as the starting point of the decisions,
+        except when information about the past is necessary before we begin making decisions
+        (like in RL).
+        """
+
+        start_info = self.data["datetime"].get("start_information")
+        if start_info is not None:
+            start_info = datetime.strptime(start_info, "%Y-%m-%d %H:%M")
+        else:
+            start_info, _ = self.get_start_end_datetimes()
+        return start_info
+
+    def get_start_information_offset(self) -> int:
+
+        """
+        Get the number of time steps between the start of the information and the start of the decisions.
+        This will be 0,
+        except when information about the past is necessary before we begin making decisions
+        (like in RL).
+        """
+
+        start_decisions, _ = self.get_start_end_datetimes()
+        start_info = self.get_start_information_datetime()
+        difference = start_decisions - start_info
+        num_time_steps_offset = difference.total_seconds() // self.get_time_step_seconds()
+
+        return int(num_time_steps_offset)
 
     def get_time_step_seconds(self) -> float:
 
@@ -333,6 +385,14 @@ class Instance(InstanceCore):
         """
 
         return self.data["dams"][idx]["initial_lags"]
+
+    def get_starting_flows(self, idx: str) -> list[float] | None:
+
+        starting_flows = self.data["dams"][idx].get("starting_flows")
+        if starting_flows is not None:
+            starting_flows = copy(starting_flows)
+
+        return starting_flows
 
     def get_relevant_lags_of_dam(self, idx: str) -> list[int]:
 

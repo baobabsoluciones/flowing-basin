@@ -8,6 +8,9 @@
         "datetime": {
             "type": "object",
             "properties": {
+                "start_information": {
+                    "type": "string"
+                },
                 "start": {
                     "type": "string"
                 },
@@ -134,6 +137,12 @@
                         "type": "number"
                     },
                     "initial_lags": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "starting_flows": {
                         "type": "array",
                         "items": {
                             "type": "number"

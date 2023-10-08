@@ -47,7 +47,7 @@ if CREATE_INSTANCES:
             length_episodes=24 * 4 + 3,  # One day (+ impact buffer)
             constants=load_json(path_constants),
             historical_data=pd.read_pickle(path_historical_data),
-            initial_row=datetime.combine(date, time(0, 0)),
+            initial_row_decisions=datetime.combine(date, time(0, 0)),
         )
         inconsistencies = instance.check()
         if inconsistencies:

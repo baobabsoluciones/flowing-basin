@@ -58,7 +58,7 @@ class RiverBasin:
         """
 
         # Identifier of the time step (increases with each update)
-        self.time = -1
+        self.time = -1 - self.instance.get_start_information_offset()
 
         # Record of flows exiting the dams,
         # initialized as an empty array of the correct shape (num_time_steps x num_dams x num_scenarios)

@@ -140,7 +140,7 @@ class RLEnvironment(gym.Env):
                 constants=self.constants,
                 historical_data=self.historical_data,
                 config=self.config,
-                initial_row=initial_row,
+                initial_row_decisions=initial_row,
             )
 
         else:
@@ -301,7 +301,7 @@ class RLEnvironment(gym.Env):
             constants: dict,
             historical_data: pd.DataFrame,
             config: RLConfiguration = None,
-            initial_row: int | datetime = None,
+            initial_row_decisions: int | datetime = None,
     ) -> Instance:
 
         """
@@ -312,7 +312,7 @@ class RLEnvironment(gym.Env):
         :param historical_data: Data frame with the time-dependent values (e.g. volume of the dams at a particular time)
         :param config: If given, calculates a greater information horizon
             according to the number of time steps the RL agent looks ahead
-        :param initial_row: If given, starts the episode in this row or datetime
+        :param initial_row_decisions: If given, starts the episode in this row or datetime
         """
 
         # Incomplete instance (we create a deepcopy of constants to avoid modifying it)
@@ -333,35 +333,42 @@ class RLEnvironment(gym.Env):
                 for dam_id in instance_constants.get_ids_of_dams()
             ]
         )
-        info_buffer = 0
+        info_buffer_end = 0
         if config is not None:
-            info_buffer = max(config.num_prices, config.num_incoming_flows, config.num_unreg_flows)
+            info_buffer_end = max(config.num_prices, config.num_incoming_flows, config.num_unreg_flows)
+        info_buffer_start = info_buffer_end
 
         # Required rows from data frame
         total_rows = len(historical_data.index)
-        min_row = max(channel_last_lags.values())
-        max_row = total_rows - length_episodes - info_buffer
+        min_row = info_buffer_start + max(channel_last_lags.values())
+        max_row = total_rows - length_episodes - info_buffer_end
 
-        # Initial row
-        if isinstance(initial_row, datetime):
-            initial_row = historical_data.index[
-                historical_data["datetime"] == initial_row
-                ].tolist()[0]
-        if initial_row is None:
-            initial_row = randint(min_row, max_row)
-        assert initial_row in range(
+        # Initial row decisions
+        if isinstance(initial_row_decisions, datetime):
+            initial_row_decisions = historical_data.index[
+                historical_data["datetime"] == initial_row_decisions
+            ].tolist()[0]
+        if initial_row_decisions is None:
+            initial_row_decisions = randint(min_row, max_row)
+        assert initial_row_decisions in range(
             min_row, max_row + 1
-        ), f"{initial_row=} should be between {min_row=} and {max_row=}"
+        ), f"{initial_row_decisions=} should be between {min_row=} and {max_row=}"
+
+        # Initial row info
+        initial_row_info = initial_row_decisions - info_buffer_start
 
         # Last rows
-        last_row_impact = initial_row + length_episodes - 1
+        last_row_impact = initial_row_decisions + length_episodes - 1
         last_row_decisions = last_row_impact - impact_buffer
-        last_row_info = last_row_impact + info_buffer
+        last_row_info = last_row_impact + info_buffer_end
 
         # Add time-dependent values to the data
 
+        data["datetime"]["start_information"] = historical_data.loc[
+            initial_row_info, "datetime"
+        ].strftime("%Y-%m-%d %H:%M")
         data["datetime"]["start"] = historical_data.loc[
-            initial_row, "datetime"
+            initial_row_decisions, "datetime"
         ].strftime("%Y-%m-%d %H:%M")
         data["datetime"]["end_decisions"] = historical_data.loc[
             last_row_decisions, "datetime"
@@ -371,10 +378,10 @@ class RLEnvironment(gym.Env):
         ].strftime("%Y-%m-%d %H:%M")
 
         data["incoming_flows"] = historical_data.loc[
-            initial_row: last_row_info, "incoming_flow"
+            initial_row_info: last_row_info, "incoming_flow"
         ].values.tolist()
         data["energy_prices"] = historical_data.loc[
-            initial_row: last_row_info, "price"
+            initial_row_info: last_row_info, "price"
         ].values.tolist()
 
         for order, dam_id in enumerate(dam_ids):
@@ -388,25 +395,31 @@ class RLEnvironment(gym.Env):
             # Initial volume
             # Not to be confused with the volume at the end of the first time step
             data["dams"][order]["initial_vol"] = historical_data.loc[
-                initial_row, dam_id + "_vol"
+                initial_row_info, dam_id + "_vol"
             ]
 
             initial_lags = historical_data.loc[
-               initial_row - channel_last_lags[dam_id]: initial_row - 1,
-               dam_id + "_flow",
+                initial_row_info - channel_last_lags[dam_id]: initial_row_info - 1, dam_id + "_flow"
             ].values.tolist()
             initial_lags.reverse()
             data["dams"][order]["initial_lags"] = initial_lags
+
+            if initial_row_info != initial_row_decisions:
+                starting_flows = historical_data.loc[
+                    initial_row_info: initial_row_decisions - 1, dam_id + "_flow"
+                ].values.tolist()
+                starting_flows.reverse()
+                data["dams"][order]["starting_flows"] = starting_flows
 
             # Unregulated flow
             # We will only consider the unregulated flow of the original dams,
             # and not of the artificially created extra dams
             if original_dam_id in ["dam1", "dam2"]:
                 data["dams"][order]["unregulated_flows"] = historical_data.loc[
-                    initial_row: last_row_info, dam_id + "_unreg_flow"
+                    initial_row_info: last_row_info, dam_id + "_unreg_flow"
                 ].values.tolist()
             else:
-                data["dams"][order]["unregulated_flows"] = [0 for _ in range(initial_row, last_row_info + 1)]
+                data["dams"][order]["unregulated_flows"] = [0 for _ in range(initial_row_info, last_row_info + 1)]
 
             # Final volume: volume at the decision horizon in the historical record
             # Optional field that may be used to set the objective final volumes for the solvers

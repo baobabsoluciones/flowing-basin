@@ -1,8 +1,9 @@
+from flowing_basin.core import Instance
 from cornflow_client.core.tools import load_json
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 import pandas as pd
-from datetime import datetime
 
+EXAMPLES = ['1', '3']
 NUM_STEPS_LOOKAHEAD = 16
 
 path_constants = "../data/constants/constants_2dams.json"
@@ -22,11 +23,24 @@ config = RLConfiguration(
     length_episodes=24 * 4 + 3,
 )
 
-instance = RLEnvironment.create_instance(
-    length_episodes=24 * 4 + 3,
-    constants=constants,
-    historical_data=historical_data,
-    config=config,
-    initial_row=datetime.strptime("2021-04-03 00:00", "%Y-%m-%d %H:%M"),
-)
-instance.to_json(f"instances_rl/instance1_expanded{NUM_STEPS_LOOKAHEAD}steps.json")
+for example in EXAMPLES:
+
+    base_instance = Instance.from_json(f"instances_base/instance{example}.json")
+    start_date, _ = base_instance.get_start_end_datetimes()
+
+    # Create instance
+    instance = RLEnvironment.create_instance(
+        length_episodes=24 * 4 + 3,
+        constants=constants,
+        historical_data=historical_data,
+        config=config,
+        initial_row_decisions=start_date,
+    )
+
+    # Check instance
+    inconsistencies = instance.check()
+    if inconsistencies:
+        raise Exception(f"There are inconsistencies in the data: {inconsistencies}")
+
+    # Save instance
+    instance.to_json(f"instances_rl/instance{example}_expanded{NUM_STEPS_LOOKAHEAD}steps_backforth.json")

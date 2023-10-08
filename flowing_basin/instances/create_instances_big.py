@@ -32,7 +32,7 @@ for example, num_dams, num_days in product(EXAMPLES, NUMS_DAMS, NUMS_DAYS):
         length_episodes=length_episode,
         constants=load_json(path_constants),
         historical_data=historical_data,
-        initial_row=start_date,
+        initial_row_decisions=start_date,
     )
 
     inconsistencies = instance.check()

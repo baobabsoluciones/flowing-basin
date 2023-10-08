@@ -52,7 +52,7 @@ instance = RLEnvironment.create_instance(
     length_episodes=LENGTH_EPISODE,
     constants=load_json(path_constants),
     historical_data=df,
-    initial_row=START,
+    initial_row_decisions=START,
 )
 print(instance.data)
 

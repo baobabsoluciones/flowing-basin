@@ -60,6 +60,24 @@ class Instance(InstanceCore):
                     }
                 )
 
+        # The number of starting flows must equal the information start offset
+        if info_offset > 0:
+            dam_ids_diff_num_starting_flows = [
+                (dam_id, len(self.get_starting_flows(dam_id))) for dam_id in self.get_ids_of_dams()
+                if self.get_starting_flows(dam_id) is not None and len(self.get_starting_flows(dam_id)) != info_offset
+            ]
+            if dam_ids_diff_num_starting_flows:
+                inconsistencies.update(
+                    {
+                        "The number of time steps between the start of information and the start of decisions "
+                        "is not the same as the number of starting flows in some dams":
+                            f"Information offset is {info_offset}, but: " +
+                            ','.join([
+                                f"{dam_id} has {num_starting_flows} starting flows"
+                                for dam_id, num_starting_flows in dam_ids_diff_num_starting_flows
+                            ])
+                    }
+                )
 
         # Number of time steps ---- #
 
@@ -387,6 +405,14 @@ class Instance(InstanceCore):
         return self.data["dams"][idx]["initial_lags"]
 
     def get_starting_flows(self, idx: str) -> list[float] | None:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return:
+            Flow that went through the channel in the time steps prior to the start of decisions,
+            in decreasing order (i.e., flow in time steps -1, ..., -info_offset) (m3/s)
+        """
 
         starting_flows = self.data["dams"][idx].get("starting_flows")
         if starting_flows is not None:

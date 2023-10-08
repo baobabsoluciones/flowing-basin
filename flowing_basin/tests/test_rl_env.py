@@ -27,7 +27,7 @@ env1 = RLEnvironment(
 check_env(env1)
 
 # Instance inside environment
-# env1.instance.to_json("../instances/instances_rl/instance1_expanded10steps.json")
+# env1.instance.to_json("../instances/instances_rl/instance1_expanded16steps_backforth.json")
 print("instance:", env1.instance.to_dict())
 print("decision horizon:", env1.instance.get_decision_horizon())
 print("impact horizon:", env1.instance.get_largest_impact_horizon())

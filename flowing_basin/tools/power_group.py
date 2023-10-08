@@ -50,7 +50,6 @@ class PowerGroup:
         # TODO: again, shouldn't it be get_relevant_lags_of_dam(self.idx)[-1]?
 
         # Time-dependent attributes
-        self.time = None
         self.power = None
         self.turbined_flow = None
         self.previous_num_active_groups = None
@@ -72,10 +71,6 @@ class PowerGroup:
         power, turbined flow, number of active groups, total number of startups, and number of times in limit zones.
         Power models, turbined flow observations, and startup flows are not reset as they are constant.
         """
-
-        # Identifier of the time step
-        # It should be equal to the RiverBasin's time identifier at all times
-        self.time = -1
 
         # Power generated (MW), turbined flow (m3/s) and number of active groups
         if self.mode == "nonlinear":
@@ -279,7 +274,6 @@ class PowerGroup:
             the turbined flow of every scenario (m3/s)
         """
 
-        self.time += 1
         self.previous_num_active_groups = self.num_active_groups.copy()
 
         if self.mode == "nonlinear":
@@ -298,11 +292,9 @@ class PowerGroup:
             np.equal(self.num_active_groups, np.round(self.num_active_groups))
         )
 
-        if self.time < self.impact_horizon:
-            self.acc_income += self.income
-        if self.time < self.decision_horizon:
-            self.acc_num_startups += self.num_startups
-            self.acc_num_times_in_limit += self.num_times_in_limit
+        self.acc_income += self.income
+        self.acc_num_startups += self.num_startups
+        self.acc_num_times_in_limit += self.num_times_in_limit
 
         # Bring turbined flow upstream, since it is used to update the volume of the next dam
         return self.turbined_flow

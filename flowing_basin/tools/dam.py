@@ -28,7 +28,6 @@ class Dam:
         self.max_volume = instance.get_max_vol_of_dam(self.idx)
 
         # Time-dependent attributes
-        self.time = None
         self.volume = None
         self.final_volume = None
         self.previous_flow_out = None
@@ -58,10 +57,6 @@ class Dam:
         Reset all time-varying attributes of the dam: volume and previous flows.
         Min and max volumes are not reset as they are constant.
         """
-
-        # Identifier of the time step
-        # It should be equal to the RiverBasin's time identifier at all times
-        self.time = -1
 
         # Initial volume of dam (m3) - the STARTING volume in this time step, or the FINAL volume of the previous one
         self.volume = np.repeat(
@@ -111,6 +106,7 @@ class Dam:
         flow_out: np.ndarray,
         price: float,
         unregulated_flow: float,
+        time: int,
         flow_contribution: np.ndarray,
     ) -> np.ndarray:
 
@@ -125,12 +121,11 @@ class Dam:
         :param flow_contribution:
             Array of shape num_scenarios with
             the flow entering this dam (from the river or the previous dam) in every scenario (m3/s)
+        :param time: Identifier of the time step (used to save the volume at the decision horizon)
         :return:
             Array of shape num_scenarios with
             the turbined flow in the power group in every scenario (m3/s)
         """
-
-        self.time += 1
 
         # Flow IN ---- #
 
@@ -163,7 +158,7 @@ class Dam:
             sign_changes_any_period, self.previous_flow_out, self.flow_out_assigned
         )
 
-        # print(self.time, self.flow_out_assigned, self.flow_out_smoothed, current_assigned_variation, previous_variations, sign_changes_each_period)
+        # print(time, self.flow_out_assigned, self.flow_out_smoothed, current_assigned_variation, previous_variations, sign_changes_each_period)
 
         # Flow clipped according to the flow limit of the channel
         self.flow_out_clipped1 = np.clip(
@@ -192,11 +187,11 @@ class Dam:
         # Volume clipped to max value
         self.volume = np.clip(self.volume, None, self.max_volume)
 
-        # print("dams", self.time, volume_increase.item(), volume_decrease.item(), self.flow_out_clipped2.item(), self.volume.item())
+        # print("dams", time, volume_increase.item(), volume_decrease.item(), self.flow_out_clipped2.item(), self.volume.item())
 
         # Volume at the end of the decision horizon ---- #
 
-        if self.time == self.decision_horizon - 1:
+        if time == self.decision_horizon - 1:
             self.final_volume = self.volume
 
         # Values to smooth flow in next time step ---- #

@@ -42,6 +42,7 @@ class RiverBasin:
         ]
 
         # Time-dependent attributes
+        self.info_offset = None
         self.time = None
         self.all_past_clipped_flows = None
         self.all_past_volumes = None
@@ -58,7 +59,8 @@ class RiverBasin:
         """
 
         # Identifier of the time step (increases with each update)
-        self.time = -1 - self.instance.get_start_information_offset()
+        self.info_offset = self.instance.get_start_information_offset()
+        self.time = -1 - self.info_offset
 
         # Record of flows exiting the dams,
         # initialized as an empty array of the correct shape (num_time_steps x num_dams x num_scenarios)
@@ -83,6 +85,17 @@ class RiverBasin:
 
         # Data frame that will contain all states of the river basin throughout time
         self.history = self.create_history()
+
+        # Update river basin until the start of decisions
+        if self.info_offset > 0:
+            starting_flows = [
+                [self.instance.get_starting_flows(dam_id) for dam_id in self.instance.get_ids_of_dams()]
+                for _ in range(self.num_scenarios)
+            ]
+            starting_flows = np.array(starting_flows)  # Array of shape num_scenarios x num_dams x num_steps
+            starting_flows = np.transpose(starting_flows)  # Array of shape num_steps x num_dams x num_scenarios
+            self.deep_update_flows(starting_flows, fast_mode=True)
+            assert self.time == -1
 
         return
 
@@ -159,8 +172,8 @@ class RiverBasin:
                 {
                     "scenario": i,
                     "time": self.time,
-                    "price": self.instance.get_price(self.time),
-                    "incoming": self.instance.get_incoming_flow(self.time),
+                    "price": self.instance.get_price(self.time + self.info_offset),
+                    "incoming": self.instance.get_incoming_flow(self.time + self.info_offset),
                 }
             )
             for dam in self.dams:
@@ -366,17 +379,18 @@ class RiverBasin:
 
             # Update dam with the flow we take from it, and the incoming and/or unregulated flow it receives
             flow_contribution = (
-                np.repeat(self.instance.get_incoming_flow(self.time), self.num_scenarios)
+                np.repeat(self.instance.get_incoming_flow(self.time + self.info_offset), self.num_scenarios)
                 if dam.order == 1
                 else turbined_flow_of_preceding_dam
             )
             turbined_flow = dam.update(
-                price=self.instance.get_price(self.time),
+                price=self.instance.get_price(self.time + self.info_offset),
                 flow_out=flows[dam_index],
                 unregulated_flow=self.instance.get_unregulated_flow_of_dam(
-                    self.time, dam.idx
+                    self.time + self.info_offset, dam.idx
                 ),
-                flow_contribution=flow_contribution
+                flow_contribution=flow_contribution,
+                time=self.time
             )
             turbined_flow_of_preceding_dam = turbined_flow
 
@@ -491,15 +505,15 @@ class RiverBasin:
         """
 
         state = {
-            "next_incoming_flow": self.instance.get_incoming_flow(self.time + 1),
-            "next_price": self.instance.get_price(self.time + 1),
+            "next_incoming_flow": self.instance.get_incoming_flow(self.time + self.info_offset + 1),
+            "next_price": self.instance.get_price(self.time + self.info_offset + 1),
         }
         for dam in self.dams:
             state[dam.idx] = {
                 "vol": dam.volume,
                 "flow_limit": dam.channel.flow_limit,
                 "next_unregulated_flow": self.instance.get_unregulated_flow_of_dam(
-                    self.time + 1, dam.idx
+                    self.time + self.info_offset + 1, dam.idx
                 ),
                 "lags": dam.channel.past_flows,
                 "power": dam.channel.power_group.power,

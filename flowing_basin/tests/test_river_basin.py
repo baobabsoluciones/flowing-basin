@@ -131,14 +131,15 @@ def test_river_basin(
 
 if __name__ == "__main__":
 
-    instance = Instance.from_json("../instances/instances_base/instance1.json")
+    # instance = Instance.from_json("../instances/instances_base/instance1.json")
+    instance = Instance.from_json("../instances/instances_rl/instance1_expanded16steps_backforth.json")
     river_basin = RiverBasin(instance=instance, mode="linear")
 
     # print("---- SCENARIO A ----")
-    # decisionsA = np.array([[[6.79], [6.58]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]]])
-    # test_river_basin(river_basin, decisions=decisionsA)
-    # print("--- history")
-    # print(river_basin.history.to_string())
+    decisionsA = np.array([[[6.79], [6.58]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]], [[7.49], [6.73]]])
+    test_river_basin(river_basin, decisions=decisionsA)
+    print("--- history")
+    print(river_basin.history.to_string())
 
     # print("---- SCENARIO A, WITH DEEP UPDATE ----")
     # river_basin.reset(num_scenarios=1)
@@ -215,18 +216,18 @@ if __name__ == "__main__":
     # print(f"state after deep update: {river_basin.get_state()}")
     # print(f"accumulated income: {river_basin.get_acc_income()}")
     #
-    print("---- SCENARIO VA, DEEP UPDATE WITH VARIATIONS ----")
-    river_basin.reset(flow_smoothing=0, num_scenarios=1)
-    decisionsVA = np.array([
-        [[0.5], [0.5]],
-        [[-0.25], [-0.25]],
-        [[-0.25], [-0.25]],
-    ])
-    river_basin.deep_update_relvars(decisionsVA)
-    print(f"accumulated income: {river_basin.get_acc_income()}")
-    equivalent_flows = river_basin.all_past_clipped_flows
-    print(f"equivalent flows: {equivalent_flows}")
-    print(river_basin.history.to_string())
+    # print("---- SCENARIO VA, DEEP UPDATE WITH VARIATIONS ----")
+    # river_basin.reset(flow_smoothing=0, num_scenarios=1)
+    # decisionsVA = np.array([
+    #     [[0.5], [0.5]],
+    #     [[-0.25], [-0.25]],
+    #     [[-0.25], [-0.25]],
+    # ])
+    # river_basin.deep_update_relvars(decisionsVA)
+    # print(f"accumulated income: {river_basin.get_acc_income()}")
+    # equivalent_flows = river_basin.all_past_clipped_flows
+    # print(f"equivalent flows: {equivalent_flows}")
+    # print(river_basin.history.to_string())
     #
     # print("---- SCENARIO VA, EQUIVALENT NORMAL DEEP UPDATE ----")
     # river_basin.reset(num_scenarios=1)
@@ -247,28 +248,28 @@ if __name__ == "__main__":
     # print(f"equivalent flows: {river_basin.all_past_clipped_flows}")
     # print(river_basin.history.to_string())
     #
-    print("---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS ----")
-    river_basin.reset(num_scenarios=3)
-    decisionsVABC = np.array(
-        [
-            [
-                [0.5, -0.25, 0.25],
-                [0.5, -0.25, 0.5],
-            ],
-            [
-                [-0.25, 0.5, 0.5],
-                [-0.25, 0.5, 0.3],
-            ],
-            [
-                [-0.25, 0.5, 0.5],
-                [-0.25, 0.5, 0.3],
-            ],
-        ]
-    )
-    river_basin.deep_update_relvars(decisionsVABC)
-    print(f"accumulated income: {river_basin.get_acc_income()}")
-    equivalent_flows = river_basin.all_past_clipped_flows
-    print(f"equivalent flows: {equivalent_flows}")
+    # print("---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS ----")
+    # river_basin.reset(num_scenarios=3)
+    # decisionsVABC = np.array(
+    #     [
+    #         [
+    #             [0.5, -0.25, 0.25],
+    #             [0.5, -0.25, 0.5],
+    #         ],
+    #         [
+    #             [-0.25, 0.5, 0.5],
+    #             [-0.25, 0.5, 0.3],
+    #         ],
+    #         [
+    #             [-0.25, 0.5, 0.5],
+    #             [-0.25, 0.5, 0.3],
+    #         ],
+    #     ]
+    # )
+    # river_basin.deep_update_relvars(decisionsVABC)
+    # print(f"accumulated income: {river_basin.get_acc_income()}")
+    # equivalent_flows = river_basin.all_past_clipped_flows
+    # print(f"equivalent flows: {equivalent_flows}")
     #
     # print("---- SCENARIOS VA, VB and VC, EQUIVALENT NORMAL DEEP UPDATE ----")
     # river_basin.reset(num_scenarios=3)
@@ -276,24 +277,24 @@ if __name__ == "__main__":
     # river_basin.deep_update_flows(decisionsNVABC)
     # print(f"accumulated income: {river_basin.get_acc_income()}")
     #
-    print(
-        "---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS THROUGH ALL PERIODS ----"
-    )
-    river_basin.reset(num_scenarios=3)
-    padding = np.array(
-        [
-            [[0, 0, 0], [0, 0, 0]]
-            for _ in range(instance.get_largest_impact_horizon() - decisionsVABC.shape[0])
-        ]
-    )
-    decisionsVABC_all_periods = np.concatenate([decisionsVABC, padding])
-    print(decisionsVABC_all_periods)
-    river_basin.deep_update_relvars(decisionsVABC_all_periods)
-    print(f"state after deep update: {river_basin.get_state()}")
-    print(f"accumulated income: {river_basin.get_acc_income()}")
-    equivalent_flows = river_basin.all_past_clipped_flows
-    print(f"equivalent flows: {equivalent_flows}")
-    print(river_basin.history[river_basin.history["scenario"] == 0].to_string())
+    # print(
+    #     "---- SCENARIOS VA, VB and VC, DEEP UPDATE WITH VARIATIONS THROUGH ALL PERIODS ----"
+    # )
+    # river_basin.reset(num_scenarios=3)
+    # padding = np.array(
+    #     [
+    #         [[0, 0, 0], [0, 0, 0]]
+    #         for _ in range(instance.get_largest_impact_horizon() - decisionsVABC.shape[0])
+    #     ]
+    # )
+    # decisionsVABC_all_periods = np.concatenate([decisionsVABC, padding])
+    # print(decisionsVABC_all_periods)
+    # river_basin.deep_update_relvars(decisionsVABC_all_periods)
+    # print(f"state after deep update: {river_basin.get_state()}")
+    # print(f"accumulated income: {river_basin.get_acc_income()}")
+    # equivalent_flows = river_basin.all_past_clipped_flows
+    # print(f"equivalent flows: {equivalent_flows}")
+    # print(river_basin.history[river_basin.history["scenario"] == 0].to_string())
     #
     # print(
     #     "---- SCENARIOS VA, VB and VC, EQUIVALENT NORMAL DEEP UPDATE THROUGH ALL PERIODS ----"

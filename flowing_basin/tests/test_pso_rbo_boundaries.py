@@ -6,8 +6,8 @@ from itertools import product
 # Values of discrete parameters to consider
 USE_RELVARS = [True, False]
 BOUNDARIES = ['periodic', 'nearest', 'intermediate', 'shrink', 'reflective']
-FRACTION_RBO_INIT = 0.025
-TIME_LIMIT_MINS = 0.2
+FRACTION_RBO_INIT = 0.5
+TIME_LIMIT_MINS = 15
 
 # Instances to solve
 INSTANCES = ['Percentile25', 'Percentile75']

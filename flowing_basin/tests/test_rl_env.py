@@ -12,9 +12,12 @@ config = RLConfiguration(
     limit_zones_penalty=0,
     mode="linear",
     flow_smoothing=2,
-    num_prices=16,
-    num_unreg_flows=16,
-    num_incoming_flows=16,
+    action_type="exiting_relvars",
+    features=[
+        "past_vols", "past_flows", "past_prices", "future_prices", "past_inflows", "future_inflows",
+        "past_groups", "past_powers", "past_clipped", "past_periods"
+    ],
+    num_steps_sight=16,
     length_episodes=24 * 4 + 3,
     fast_mode=False,
 )
@@ -34,13 +37,12 @@ print("impact horizon:", env1.instance.get_largest_impact_horizon())
 print("information horizon:", env1.instance.get_information_horizon())
 
 # ENVIRONMENT 1 OBSERVATION LIMITS
-print("low:", env1.get_obs_lower_limits())
-print("high:", env1.get_obs_upper_limits())
+print("low:", env1.get_features_min_values())
+print("high:", env1.get_features_max_values())
 
 # ENVIRONMENT 1 INITIAL OBSERVATION
 print("---- initial observation ----")
-print("initial observation (not normalized):", env1.get_observation(normalize=False))
-print("initial observation:", env1.get_observation())
+print("initial observation (not normalized):", env1.get_observation())
 print("initial observation's shape:", env1.get_observation().shape)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS I
@@ -55,7 +57,7 @@ for i, action in enumerate(actions):
     next_obs, reward, done, _, _ = env1.step(action)
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
-    print("observation (not normalized):", env1.get_observation(normalize=False))
+    print("observation (not normalized):", env1.get_observation())
     print("observation:", next_obs)
     print("done:", done)
 print(">>>> history:")
@@ -80,7 +82,7 @@ padding = np.array(
 decisionsVA = np.concatenate([decisionsVA, padding])
 for i, decision in enumerate(decisionsVA):
     print(f">>>> decision {i}")
-    next_obs, reward, done, _, _ = env1.step(decision, normalize_obs=False)
+    next_obs, reward, done, _, _ = env1.step(decision)
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
     print("observation (not normalized):", next_obs)

@@ -489,6 +489,16 @@ class Instance(InstanceCore):
 
         return points
 
+    def get_max_power_of_power_group(self, idx: str) -> float:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: Maximum power the power station of the given dam can produce (MW)
+        """
+
+        return self.data["dams"][idx]["turbined_flow"]["observed_powers"][-1]
+
     def get_startup_flows_of_power_group(self, idx: str) -> list[float]:
 
         """
@@ -499,6 +509,16 @@ class Instance(InstanceCore):
         """
 
         return self.data["dams"][idx]["startup_flows"]
+
+    def get_max_num_power_groups(self, idx: str) -> int:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: The maximum number of power groups that can be active at once in the power station of the given dam
+        """
+
+        return len(self.get_startup_flows_of_power_group(idx))
 
     def get_shutdown_flows_of_power_group(self, idx: str) -> list[float]:
 

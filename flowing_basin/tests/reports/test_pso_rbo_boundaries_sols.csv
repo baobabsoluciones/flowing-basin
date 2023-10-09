@@ -1,0 +1,6 @@
+instance,obj_v=True_b=periodic,obj_v=True_b=nearest,obj_v=True_b=intermediate,obj_v=True_b=shrink,obj_v=True_b=reflective,obj_v=False_b=periodic,obj_v=False_b=nearest,obj_v=False_b=intermediate,obj_v=False_b=shrink,obj_v=False_b=reflective
+instancePercentile25_2dams,3281.33,3000.59,2990.24,3236.91,3186.12,1431.07,2800.1,2775.45,2745.3,2627.1
+instancePercentile25_6dams,4125.43,4014.74,3854.78,3741.5,3820.43,4028.74,4228.29,5091.02,3608.82,3733.99
+instancePercentile75_2dams,10489.45,10705.89,11182.77,10734.21,10587.35,9930.26,9972.94,10149.49,9970.73,10102.82
+instancePercentile75_6dams,19848.67,26373.52,19788.41,21716.23,24175.06,23036.27,24306.54,26778.29,25768.43,25669.03
+avg_normalized,217.27,231.94,216.67,221.66,226.84,190.92,218.06,230.62,217.84,217.42

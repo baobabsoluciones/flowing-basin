@@ -420,6 +420,16 @@ class Instance(InstanceCore):
 
         return points
 
+    def get_max_power_of_power_group(self, idx: str) -> float:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return: Maximum power the power station of the given dam can produce (MW)
+        """
+
+        return self.data["dams"][idx]["turbined_flow"]["observed_powers"][-1]
+
     def get_startup_flows_of_power_group(self, idx: str) -> list[float]:
 
         """

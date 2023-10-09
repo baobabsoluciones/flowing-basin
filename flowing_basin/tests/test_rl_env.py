@@ -19,7 +19,7 @@ config = RLConfiguration(
     ],
     num_steps_sight=16,
     length_episodes=24 * 4 + 3,
-    fast_mode=False,
+    do_history_updates=True,
 )
 env1 = RLEnvironment(
     config=config,
@@ -27,7 +27,6 @@ env1 = RLEnvironment(
     path_historical_data="../data/history/historical_data_clean.pickle",
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
-check_env(env1)
 
 # Instance inside environment
 # env1.instance.to_json("../instances/instances_rl/instance1_expanded16steps_backforth.json")
@@ -42,8 +41,9 @@ print("high:", env1.get_features_max_values())
 
 # ENVIRONMENT 1 INITIAL OBSERVATION
 print("---- initial observation ----")
-print("initial observation (not normalized):", env1.get_observation())
-print("initial observation's shape:", env1.get_observation().shape)
+for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
+    env1.print_observation(dam_id)
+    env1.print_observation(dam_id, normalize=True)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS I
 print("---- hardcoded actions I ----")
@@ -57,8 +57,10 @@ for i, action in enumerate(actions):
     next_obs, reward, done, _, _ = env1.step(action)
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
-    print("observation (not normalized):", env1.get_observation())
-    print("observation:", next_obs)
+    for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
+        env1.print_observation(dam_id)
+        env1.print_observation(dam_id, normalize=True)
+        print(next_obs[dam_index, :, :])
     print("done:", done)
 print(">>>> history:")
 print(env1.river_basin.history.to_string())
@@ -85,10 +87,17 @@ for i, decision in enumerate(decisionsVA):
     next_obs, reward, done, _, _ = env1.step(decision)
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
-    print("observation (not normalized):", next_obs)
+    for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
+        env1.print_observation(dam_id)
+        env1.print_observation(dam_id, normalize=True)
+        print(next_obs[dam_index, :, :])
     print("done:", done)
 print(">>>> history:")
 print(env1.river_basin.history.to_string())
+
+# CHECK ENV1
+# This must be done after the hardcoded actions because random actions are performed during the check
+check_env(env1)
 
 # ENVIRONMENT 2 (WITH INSTANCE 2)
 # instance2 = Instance.from_json("../instances/instances_base/instance3.json")

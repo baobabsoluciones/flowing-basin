@@ -106,6 +106,7 @@ class PSO(Experiment):
             paths_power_models=paths_power_models,
             flow_smoothing=self.config.flow_smoothing,
             mode=self.config.mode,
+            do_history_updates=False
         )
 
     def reshape_as_swarm(self, flows_or_relvars: np.ndarray) -> np.ndarray:
@@ -281,7 +282,7 @@ class PSO(Experiment):
         """
 
         self.river_basin.deep_update(
-            self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars, fast_mode=True
+            self.reshape_as_flows_or_relvars(swarm), is_relvars=is_relvars
         )
         return - self.env_objective_function()
 

@@ -30,7 +30,7 @@ class RLConfiguration(Configuration):  # noqa
     # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"
-    fast_mode: bool = True
+    do_history_updates: bool = True
 
     def __post_init__(self):
 
@@ -88,7 +88,8 @@ class RLEnvironment(gym.Env):
             instance=self.instance,
             mode=self.config.mode,
             flow_smoothing=self.config.flow_smoothing,
-            paths_power_models=paths_power_models
+            paths_power_models=paths_power_models,
+            do_history_updates=self.config.do_history_updates
         )
 
         # Observation is an array of shape num_dams x num_features x num_steps
@@ -387,6 +388,31 @@ class RLEnvironment(gym.Env):
 
         return obs_normalized
 
+    def print_observation(self, dam_id: str, normalize: bool = False, decimals: int = 2, spacing: int = 15):
+
+        """
+        Prints the observation of the agent for the current state of the river basin
+        """
+
+        # Get observation, array of shape num_dams x num_features x num_steps
+        if not normalize:
+            obs = self.get_observation()
+        else:
+            obs = self.get_observation_normalized()
+
+        # Header
+        print(f"Observation for {dam_id}")
+        print(''.join([f"{feature:^{spacing}}" for feature in self.config.features]))
+
+        # Rows
+        dam_index = self.instance.get_order_of_dam(dam_id) - 1
+        for time_step in range(self.config.num_steps_sight):
+            print(''.join([
+                f"{obs[dam_index, feature_index, time_step]:^{spacing}.{decimals}f}"
+                for feature_index, feature in enumerate(self.config.features)
+            ]))
+        print()
+
     def get_reward(self) -> float:
 
         """
@@ -419,7 +445,7 @@ class RLEnvironment(gym.Env):
         else:
             new_flows = action * self.max_flows
 
-        self.river_basin.update(new_flows.reshape(-1, 1), fast_mode=self.config.fast_mode)
+        self.river_basin.update(new_flows.reshape(-1, 1))
 
         if self.config.action_type == "exiting_relvars":
             self.old_flows = self.river_basin.get_clipped_flows().reshape(-1)

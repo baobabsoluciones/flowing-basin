@@ -8,7 +8,9 @@ import random
 
 def test_relvars_from_flows():
 
-    river_basin = RiverBasin(instance=instance, mode="linear", num_scenarios=config.num_particles)
+    river_basin = RiverBasin(
+        instance=instance, mode="linear", num_scenarios=config.num_particles, do_history_updates=False
+    )
     flows = np.array(
         [
             [
@@ -21,12 +23,12 @@ def test_relvars_from_flows():
             for _ in range(instance.get_largest_impact_horizon())
         ]
     )  # Array of shape num_time_steps x num_dams x num_scenarios
-    river_basin.deep_update_flows(flows, fast_mode=True)
+    river_basin.deep_update_flows(flows)
     clipped_flows1 = river_basin.all_past_clipped_flows
     # print(clipped_flows1)
     relvars = pso_rbo.relvars_from_flows(clipped_flows1)
     river_basin.reset()
-    river_basin.deep_update_relvars(relvars, fast_mode=True)
+    river_basin.deep_update_relvars(relvars)
     clipped_flows2 = river_basin.all_past_clipped_flows
     # print(clipped_flows2)
     assert (clipped_flows1 == clipped_flows2).all()  # noqa

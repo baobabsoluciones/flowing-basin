@@ -130,7 +130,7 @@ class PowerGroup:
 
     @staticmethod
     def get_turbined_bins_and_groups(
-            startup_flows: list[float], shutdown_flows: list[float], epsilon: float = 0.001
+            startup_flows: list[float], shutdown_flows: list[float], epsilon: float = 0.005
     ) -> tuple[np.ndarray, np.ndarray]:
 
         """

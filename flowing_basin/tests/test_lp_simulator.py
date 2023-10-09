@@ -8,6 +8,8 @@ def get_lp_sol_and_obj_fun(config: LPConfiguration, instance: Instance) -> tuple
     lp.solve()
 
     sol = lp.solution
+    print("LP solution:", sol.data)
+
     obj_fun = lp.get_objective()
     for dam_id in instance.get_ids_of_dams():
         print(f"LP details for {dam_id}:", sol.get_objective_details(dam_id))
@@ -68,8 +70,9 @@ if __name__ == '__main__':
     )
 
     # Instances
-    nums_dams = [i for i in range(1, 4)]  # [i for i in range(1, 9)]
-    examples = [f'Percentile{i*10:02d}' for i in range(11)]  # ['1', '3'] + [f'Percentile{i*10:02d}' for i in range(11)]
+    nums_dams = [2, 6]  # [i for i in range(1, 9)]
+    # examples = [f'Percentile{i*10:02d}' for i in range(11)]  # ['1', '3'] + [f'Percentile{i*10:02d}' for i in range(11)]
+    examples = ['Percentile25', 'Percentile75']
     for num_dams in nums_dams:
         for example in examples:
 
@@ -79,7 +82,7 @@ if __name__ == '__main__':
             lp_config.volume_objectives = pso_config.volume_objectives = {
                 dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
             }
-            lp_config.time_limit_seconds = num_dams * 10
+            lp_config.time_limit_seconds = num_dams * 30
 
             lp_sol, lp_obj = get_lp_sol_and_obj_fun(lp_config, instance)
             pso_obj = get_pso_obj_fun(pso_config, instance, lp_sol)
@@ -92,8 +95,15 @@ if __name__ == '__main__':
     # 2dams instance1 instancePercentile00 NO
     # 3dams ...
     # ...
+
+    # ISSUE Nº 1
     # The issue is that, when startup_flow = shutdown_flow (1.428571429 m3/s in dam1 and 2.423809524 m3/s in dam2),
     # and the turbined_flow happens to equal this flow, the LP model considers the number of dams that is
     # most convenient to it (sometimes it is 0, and sometimes it is 1; it is not consistent)
     # I do not think this is a big problem, since the PSO-RBO can find a similar solution w/ almost the same value
     # by taking 1.41 m3/s when 0 power groups are convenient or 1.43 m3/s when 1 power group is convenient
+
+    # ISSUE Nº 2
+    # In instances with many dams, the LP model does not give correct estimations in the beginning
+    # This is ssignaled by the gap going up and down, instead of decreasing steadily
+    # This is fixed by giving more computational time to the LP model in these instances

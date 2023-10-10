@@ -14,6 +14,10 @@ from typing import Callable
 @dataclass(kw_only=True)
 class RLConfiguration(Configuration):  # noqa
 
+    # Penalty for not fulfilling the flow smoothing parameter
+    flow_smoothing_penalty: int  # Penalty for not fulfilling the flow smoothing parameter
+    flow_smoothing_clip: bool  # Whether to clip the actions that do not comply with flow smoothing or not
+
     # RL environment's observation options
     features: list[str]
     num_steps_sight: int
@@ -87,7 +91,7 @@ class RLEnvironment(gym.Env):
         self.river_basin = RiverBasin(
             instance=self.instance,
             mode=self.config.mode,
-            flow_smoothing=self.config.flow_smoothing,
+            flow_smoothing=self.config.flow_smoothing if self.config.flow_smoothing_clip else 0,
             paths_power_models=paths_power_models,
             do_history_updates=self.config.do_history_updates
         )
@@ -101,18 +105,15 @@ class RLEnvironment(gym.Env):
         )
 
         # Action is an array of shape num_dams
-        if self.config.action_type == "exiting_relvars":
-            action_low = -1
-            action_high = 1
-        else:
-            action_low = 0
-            action_high = 1
         self.action_space = gym.spaces.Box(
-            low=action_low,
-            high=action_high,
+            low=-1,
+            high=1,
             shape=(self.instance.get_num_dams(), ),
             dtype=np.float32
         )
+        # The action space should be bounded between -1 and 1
+        # even if a lower bound of 0 would make more sense
+        # Source: https://github.com/hill-a/stable-baselines/issues/473
 
         # Functions to calculate features
         self.features_functions = self.get_features_functions()
@@ -121,8 +122,6 @@ class RLEnvironment(gym.Env):
         self.features_min_values = None
         self.features_max_values = None
         self.max_flows = None
-        if self.config.action_type == "exiting_relvars":
-            self.old_flows = None
 
         # Initialize these variables
         self._reset_variables()
@@ -201,12 +200,6 @@ class RLEnvironment(gym.Env):
         self.max_flows = np.array([
             self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
         ])
-        if self.config.action_type == "exiting_relvars":
-            self.old_flows = np.array([
-                self.instance.get_initial_lags_of_channel(dam_id)[0] for dam_id in self.instance.get_ids_of_dams()
-            ]) if self.instance.get_start_information_offset() == 0 else (
-                self.river_basin.all_past_clipped_flows[-1].squeeze()
-            )
 
     def get_features_min_values(self) -> dict[str, dict[str, float | int]]:
 
@@ -413,21 +406,45 @@ class RLEnvironment(gym.Env):
             ]))
         print()
 
+    def get_reward_details(self, epsilon: float = 1e-4) -> dict[str, float]:
+
+        """
+        Calculate the values that form the reward obtained
+        with the current state of the river basin
+        """
+
+        income = self.river_basin.get_income().item()
+        startups_penalty = self.river_basin.get_num_startups().item() * self.config.startups_penalty
+        limit_zones_penalty = self.river_basin.get_num_times_in_limit().item() * self.config.limit_zones_penalty
+
+        # Calculate flow smoothing penalty
+        flow_smoothing_uncompliance = np.any([
+            dam.all_previous_variations[-self.config.flow_smoothing-1: -1] * dam.all_previous_variations[-1] < - epsilon
+            for dam in self.river_basin.dams
+        ])
+        flow_smoothing_penalty = flow_smoothing_uncompliance * self.config.flow_smoothing_penalty
+
+        reward_details = dict(
+            income=income,
+            startups_penalty=-startups_penalty,
+            limit_zones_penalty=-limit_zones_penalty,
+            flow_smoothing_penalty=-flow_smoothing_penalty,
+        )
+
+        return reward_details
+
     def get_reward(self) -> float:
 
         """
-        Calculate the reward obtained with the current state of the river basin
+        Calculate the reward from its components
 
         We divide the income and penalties by the maximum price in the episode
         to avoid inconsistencies throughout episodes (in which energy prices are normalized differently)
         Note we do not take into account the final volumes here; this is something the agent should tackle on its own
         """
 
-        income = self.river_basin.get_income().item()
-        startups_penalty = self.river_basin.get_num_startups().item() * self.config.startups_penalty
-        limit_zones_penalty = self.river_basin.get_num_times_in_limit().item() * self.config.limit_zones_penalty
-        reward = (income - startups_penalty - limit_zones_penalty) / self.instance.get_largest_price()
-        # print(self.river_basin.get_income().item(), startups_penalty, limit_zones_penalty, reward)
+        reward = sum(reward_component for reward_component in self.get_reward_details().values())
+        reward = reward / self.instance.get_largest_price()
 
         return reward
 
@@ -440,15 +457,15 @@ class RLEnvironment(gym.Env):
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
 
+        # Transform action to flows
+        # Remember action is bounded between -1 and 1 in any case
         if self.config.action_type == "exiting_relvars":
-            new_flows = self.old_flows + action * self.max_flows  # noqa
+            old_flows = self.river_basin.get_clipped_flows().reshape(-1)
+            new_flows = old_flows + action * self.max_flows  # noqa
         else:
-            new_flows = action * self.max_flows
+            new_flows = (action + 1.) / 2. * self.max_flows
 
         self.river_basin.update(new_flows.reshape(-1, 1))
-
-        if self.config.action_type == "exiting_relvars":
-            self.old_flows = self.river_basin.get_clipped_flows().reshape(-1)
 
         next_obs = self.get_observation_normalized()
         reward = self.get_reward()

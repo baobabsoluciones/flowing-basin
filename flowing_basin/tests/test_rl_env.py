@@ -9,10 +9,12 @@ INITIAL_ROW = "2021-03-27 11:30"
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 config = RLConfiguration(
     startups_penalty=50,
-    limit_zones_penalty=0,
+    limit_zones_penalty=50,
     mode="linear",
     flow_smoothing=2,
-    action_type="exiting_relvars",
+    flow_smoothing_penalty=25,
+    flow_smoothing_clip=False,
+    action_type="exiting_flows",
     features=[
         "past_vols", "past_flows", "past_prices", "future_prices", "past_inflows", "future_inflows",
         "past_groups", "past_powers", "past_clipped", "past_periods"
@@ -51,49 +53,50 @@ actions = np.array([
     [0.5, 0.5],
     [-0.25, -0.25],
     [-0.25, -0.25],
+    [-1, -1],
 ])
 for i, action in enumerate(actions):
     print(f">>>> decision {i}")
     next_obs, reward, done, _, _ = env1.step(action)
+    print("reward details:", env1.get_reward_details())
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
     for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
         env1.print_observation(dam_id)
         env1.print_observation(dam_id, normalize=True)
-        print(next_obs[dam_index, :, :])
     print("done:", done)
 print(">>>> history:")
 print(env1.river_basin.history.to_string())
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS II (FULL SOLUTION)
-print("---- hardcoded actions II (full solution) ----")
-env1.reset(initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"))
-decisionsVA = np.array(
-    [
-        [0.5, 0.5],
-        [-0.25, -0.25],
-        [-0.25, -0.25],
-    ]
-)
-padding = np.array(
-    [
-        [0, 0]
-        for _ in range(env1.instance.get_largest_impact_horizon() - decisionsVA.shape[0])
-    ]
-)
-decisionsVA = np.concatenate([decisionsVA, padding])
-for i, decision in enumerate(decisionsVA):
-    print(f">>>> decision {i}")
-    next_obs, reward, done, _, _ = env1.step(decision)
-    print("reward (not normalized):", reward * env1.instance.get_largest_price())
-    print("reward:", reward)
-    for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
-        env1.print_observation(dam_id)
-        env1.print_observation(dam_id, normalize=True)
-        print(next_obs[dam_index, :, :])
-    print("done:", done)
-print(">>>> history:")
-print(env1.river_basin.history.to_string())
+# print("---- hardcoded actions II (full solution) ----")
+# env1.reset(initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"))
+# decisionsVA = np.array(
+#     [
+#         [0.5, 0.5],
+#         [-0.25, -0.25],
+#         [-0.25, -0.25],
+#     ]
+# )
+# padding = np.array(
+#     [
+#         [0, 0]
+#         for _ in range(env1.instance.get_largest_impact_horizon() - decisionsVA.shape[0])
+#     ]
+# )
+# decisionsVA = np.concatenate([decisionsVA, padding])
+# for i, decision in enumerate(decisionsVA):
+#     print(f">>>> decision {i}")
+#     next_obs, reward, done, _, _ = env1.step(decision)
+#     print("reward details:", env1.get_reward_details())
+#     print("reward (not normalized):", reward * env1.instance.get_largest_price())
+#     print("reward:", reward)
+#     for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
+#         env1.print_observation(dam_id)
+#         env1.print_observation(dam_id, normalize=True)
+#     print("done:", done)
+# print(">>>> history:")
+# print(env1.river_basin.history.to_string())
 
 # CHECK ENV1
 # This must be done after the hardcoded actions because random actions are performed during the check

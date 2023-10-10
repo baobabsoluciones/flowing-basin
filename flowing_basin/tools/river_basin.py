@@ -52,6 +52,7 @@ class RiverBasin:
         self.all_past_clipped_flows = None
         self.all_past_volumes = None
         self.all_past_powers = None
+        self.all_past_turbined = None
         self.all_past_groups = None
         self.history = None
 
@@ -81,7 +82,7 @@ class RiverBasin:
             (0, self.instance.get_num_dams(), self.num_scenarios)
         )
 
-        # Record of volumes, powers and power group numbers of each dam,
+        # Record of volumes, powers, turbined flows and power group numbers of each dam,
         # initialized as empty arrays of the correct shape (num_time_steps x num_scenarios)
         self.all_past_volumes = {
             dam_id: np.array([]).reshape(
@@ -90,6 +91,12 @@ class RiverBasin:
             for dam_id in self.instance.get_ids_of_dams()
         }
         self.all_past_powers = {
+            dam_id: np.array([]).reshape(
+                (0, self.num_scenarios)
+            )
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+        self.all_past_turbined = {
             dam_id: np.array([]).reshape(
                 (0, self.num_scenarios)
             )
@@ -424,6 +431,7 @@ class RiverBasin:
             # Update all past volumes and powers of dam
             self.all_past_volumes[dam.idx] = np.vstack((self.all_past_volumes[dam.idx], dam.volume))
             self.all_past_powers[dam.idx] = np.vstack((self.all_past_powers[dam.idx], dam.channel.power_group.power))
+            self.all_past_turbined[dam.idx] = np.vstack((self.all_past_turbined[dam.idx], dam.channel.power_group.turbined_flow))
             self.all_past_groups[dam.idx] = np.vstack((self.all_past_groups[dam.idx], dam.channel.power_group.num_active_groups))
 
         # Update all past flows

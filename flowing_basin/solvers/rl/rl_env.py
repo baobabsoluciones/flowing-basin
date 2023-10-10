@@ -44,7 +44,7 @@ class RLConfiguration(Configuration):  # noqa
 
         valid_features = {
             "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
-            "future_inflows", "past_groups", "past_powers", "past_clipped", "past_periods"
+            "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped", "past_periods"
         }
         for feature in self.features:
             if feature not in valid_features:
@@ -217,6 +217,7 @@ class RLEnvironment(gym.Env):
                 "future_prices": 0.,
                 "past_inflows": 0.,
                 "future_inflows": 0.,
+                "past_turbined": 0.,
                 "past_groups": 0,
                 "past_powers": 0.,
                 "past_clipped": (
@@ -254,6 +255,7 @@ class RLEnvironment(gym.Env):
                     if self.instance.get_order_of_dam(dam_id) > 1
                     else self.instance.get_max_unregulated_flow_of_dam(dam_id) + self.instance.get_max_incoming_flow()
                 ),
+                "past_turbined": self.instance.get_max_flow_of_channel(dam_id),
                 "past_groups": self.instance.get_max_num_power_groups(dam_id),
                 "past_powers": self.instance.get_max_power_of_power_group(dam_id),
                 "past_clipped": self.instance.get_max_flow_of_channel(dam_id),
@@ -358,6 +360,12 @@ class RLEnvironment(gym.Env):
                     ]
                 ) if self.instance.get_order_of_dam(dam_id) == 1
                 else 0.
+            ),
+
+            "past_turbined": lambda dam_id: np.flip(
+                self.river_basin.all_past_turbined[dam_id].squeeze()[
+                    -self.config.num_steps_sight:
+                ]
             ),
 
             "past_groups": lambda dam_id: np.flip(

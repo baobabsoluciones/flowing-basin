@@ -11,8 +11,8 @@ config = RLConfiguration(
     flow_smoothing_clip=False,
     action_type="exiting_flows",
     features=[
-        "past_vols", "past_flows", "past_prices", "future_prices", "past_inflows", "future_inflows",
-        "past_groups", "past_powers", "past_clipped", "past_periods"
+        "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
+        "future_inflows", "past_groups", "past_powers", "past_clipped", "past_periods"
     ],
     num_steps_sight=16,
     length_episodes=24 * 4 + 3,

@@ -58,6 +58,10 @@ class RiverBasin:
         # Initialize the time-dependent attributes (variables)
         self._reset_variables()
 
+        # Update river basin until the start of decisions
+        if self.info_offset > 0:  # noqa
+            self.update_until_decisions_start()
+
     def _reset_variables(self):
 
         """
@@ -101,17 +105,6 @@ class RiverBasin:
         # Data frame that will contain all states of the river basin throughout time
         self.history = self.create_history()
 
-        # Update river basin until the start of decisions
-        if self.info_offset > 0:
-            starting_flows = [
-                [self.instance.get_starting_flows(dam_id) for dam_id in self.instance.get_ids_of_dams()]
-                for _ in range(self.num_scenarios)
-            ]
-            starting_flows = np.array(starting_flows)  # Array of shape num_scenarios x num_dams x num_steps
-            starting_flows = np.transpose(starting_flows)  # Array of shape num_steps x num_dams x num_scenarios
-            self.deep_update_flows(starting_flows)
-            assert self.time == -1
-
         return
 
     def reset(
@@ -143,7 +136,27 @@ class RiverBasin:
                 num_scenarios=self.num_scenarios,
             )
 
+        # Update river basin until the start of decisions
+        if self.info_offset > 0:
+            self.update_until_decisions_start()
+
         return
+
+    def update_until_decisions_start(self):
+
+        """
+        Update the river basin with the starting flows
+        until decisions must start
+        """
+
+        starting_flows = [
+            [self.instance.get_starting_flows(dam_id) for dam_id in self.instance.get_ids_of_dams()]
+            for _ in range(self.num_scenarios)
+        ]
+        starting_flows = np.array(starting_flows)  # Array of shape num_scenarios x num_dams x num_steps
+        starting_flows = np.transpose(starting_flows)  # Array of shape num_steps x num_dams x num_scenarios
+        self.deep_update_flows(starting_flows)
+        assert self.time == -1
 
     def create_history(self) -> pd.DataFrame:
 

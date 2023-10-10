@@ -43,8 +43,8 @@ class RLConfiguration(Configuration):  # noqa
             raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
         valid_features = {
-            "past_vols", "past_flows", "past_prices", "future_prices", "past_inflows", "future_inflows",
-            "past_groups", "past_powers", "past_clipped", "past_periods"
+            "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
+            "future_inflows", "past_groups", "past_powers", "past_clipped", "past_periods"
         }
         for feature in self.features:
             if feature not in valid_features:
@@ -212,6 +212,7 @@ class RLEnvironment(gym.Env):
             dam_id: {
                 "past_vols": self.instance.get_min_vol_of_dam(dam_id),
                 "past_flows": 0.,
+                "past_variations": - self.instance.get_max_flow_of_channel(dam_id),
                 "past_prices": 0.,
                 "future_prices": 0.,
                 "past_inflows": 0.,
@@ -240,6 +241,7 @@ class RLEnvironment(gym.Env):
             dam_id: {
                 "past_vols": self.instance.get_max_vol_of_dam(dam_id),
                 "past_flows": self.instance.get_max_flow_of_channel(dam_id),
+                "past_variations": self.instance.get_max_flow_of_channel(dam_id),
                 "past_prices": self.instance.get_largest_price(),
                 "future_prices": self.instance.get_largest_price(),
                 "past_inflows": (
@@ -305,6 +307,12 @@ class RLEnvironment(gym.Env):
             "past_flows": lambda dam_id: np.flip(
                 self.river_basin.all_past_clipped_flows.squeeze()[
                     -self.config.num_steps_sight:, self.instance.get_order_of_dam(dam_id) - 1
+                ]
+            ),
+
+            "past_variations": lambda dam_id: np.flip(
+                self.river_basin.dams[self.instance.get_order_of_dam(dam_id) - 1].all_previous_variations.squeeze()[
+                    -self.config.num_steps_sight:
                 ]
             ),
 

@@ -218,7 +218,10 @@ class RLEnvironment(gym.Env):
                 "future_inflows": 0.,
                 "past_groups": 0,
                 "past_powers": 0.,
-                "past_clipped": - self.instance.get_max_flow_of_channel(dam_id),
+                "past_clipped": (
+                    0. if not self.config.flow_smoothing_clip
+                    else - self.instance.get_max_flow_of_channel(dam_id)
+                ),
                 "past_periods": - self.config.num_steps_sight
             }
             for dam_id in self.instance.get_ids_of_dams()
@@ -259,6 +262,32 @@ class RLEnvironment(gym.Env):
 
         return max_values
 
+    def get_feature_past_clipped(self, dam_id: str) -> np.array:
+
+        """
+        Get the amount of flow by which the past actions were clipped
+        """
+
+        assigned_flows = np.flip(
+            self.river_basin.all_past_flows.squeeze()[
+                -self.config.num_steps_sight:, self.instance.get_order_of_dam(dam_id) - 1
+            ]
+        )
+        actual_flows = np.flip(
+            self.river_basin.all_past_clipped_flows.squeeze()[
+                -self.config.num_steps_sight:, self.instance.get_order_of_dam(dam_id) - 1
+            ]
+        )
+        flow_clipping = assigned_flows - actual_flows
+
+        # If flow is not being smoothed, then clipping cannot be positive
+        # (i.e., the actual flow cannot be higher than the assigned flow)
+        # Force it is positive to avoid small negative values due to rounding errors
+        if not self.config.flow_smoothing_clip:
+            flow_clipping = np.clip(flow_clipping, 0., None)
+
+        return flow_clipping
+
     def get_features_functions(self) -> dict[str, Callable[[str], np.array]]:
 
         """
@@ -266,28 +295,33 @@ class RLEnvironment(gym.Env):
         """
 
         features_functions = {
+
             "past_vols": lambda dam_id: np.flip(
                 self.river_basin.all_past_volumes[dam_id].squeeze()[
                     -self.config.num_steps_sight:
                 ]
             ),
+
             "past_flows": lambda dam_id: np.flip(
                 self.river_basin.all_past_clipped_flows.squeeze()[
                     -self.config.num_steps_sight:, self.instance.get_order_of_dam(dam_id) - 1
                 ]
             ),
+
             "past_prices": lambda dam_id: np.flip(
                 self.instance.get_all_prices()[
                     self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight:
                         self.river_basin.time + 1 + self.instance.get_start_information_offset()
                 ]
             ),
+
             "future_prices": lambda dam_id: np.array(
                 self.instance.get_all_prices()[
                     self.river_basin.time + 1 + self.instance.get_start_information_offset():
                         self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight
                 ]
             ),
+
             "past_inflows": lambda dam_id: np.flip(
                 self.instance.get_all_unregulated_flows_of_dam(dam_id)[
                     self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight:
@@ -302,6 +336,7 @@ class RLEnvironment(gym.Env):
                 ) if self.instance.get_order_of_dam(dam_id) == 1
                 else 0.
             ),
+
             "future_inflows": lambda dam_id: np.array(
                 self.instance.get_all_unregulated_flows_of_dam(dam_id)[
                     self.river_basin.time + 1 + self.instance.get_start_information_offset():
@@ -316,28 +351,25 @@ class RLEnvironment(gym.Env):
                 ) if self.instance.get_order_of_dam(dam_id) == 1
                 else 0.
             ),
+
             "past_groups": lambda dam_id: np.flip(
                 self.river_basin.all_past_groups[dam_id].squeeze()[
                     -self.config.num_steps_sight:
                 ]
             ),
+
             "past_powers": lambda dam_id: np.flip(
                 self.river_basin.all_past_powers[dam_id].squeeze()[
                     -self.config.num_steps_sight:
                 ]
             ),
-            "past_clipped": lambda dam_id: np.flip(
-                self.river_basin.all_past_flows.squeeze()[
-                    -self.config.num_steps_sight:, self.instance.get_order_of_dam(dam_id) - 1
-                ]
-            ) - np.flip(
-                self.river_basin.all_past_clipped_flows.squeeze()[
-                    -self.config.num_steps_sight:, self.instance.get_order_of_dam(dam_id) - 1
-                ]
-            ),
+
+            "past_clipped": self.get_feature_past_clipped,
+
             "past_periods": lambda dam_id: np.array(
                 [self.river_basin.time - i for i in range(self.config.num_steps_sight)]
             )
+
         }
 
         return features_functions

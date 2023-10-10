@@ -14,7 +14,8 @@ class RLTrain(Experiment):
 
     def __init__(
             self,
-            config: RLConfiguration,
+            config:
+            RLConfiguration,
             path_constants: str,
             path_train_data: str,
             path_test_data: str,

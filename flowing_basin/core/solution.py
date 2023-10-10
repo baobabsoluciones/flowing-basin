@@ -367,10 +367,10 @@ class Solution(SolutionCore):
 
         return cls(
             dict(
-                dams=[
-                    dict(id=dam_id, flows=flows_p[dam_index].tolist())
+                dams={
+                    dam_id: dict(id=dam_id, flows=flows_p[dam_index].tolist())
                     for dam_index, dam_id in enumerate(dam_ids)
-                ]
+                }
             )
         )
 

@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance, Solution, Experiment
 from .rl_env import RLConfiguration, RLEnvironment
 from stable_baselines3 import SAC
-import numpy as np
+from dataclasses import asdict
 
 
 class RLRun(Experiment):
@@ -17,6 +17,7 @@ class RLRun(Experiment):
         if solution is None:
             self.solution = None
 
+        self.config = config
         self.env = RLEnvironment(
             instance=instance,
             config=config,
@@ -36,8 +37,32 @@ class RLRun(Experiment):
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, _, _ = self.env.step(action)
 
-        self.solution = Solution.from_flows_array(
-            self.env.river_basin.all_past_clipped_flows, dam_ids=self.instance.get_ids_of_dams()
+        income = self.env.river_basin.get_acc_income()
+        num_startups = self.env.river_basin.get_acc_num_startups()
+        num_limit_zones = self.env.river_basin.get_acc_num_times_in_limit()
+        obj_fun = income - num_startups * self.config.startups_penalty - num_limit_zones * self.config.limit_zones_penalty
+
+        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
+
+        self.solution = Solution.from_dict(
+            dict(
+                instance_datetimes=dict(
+                    start=start_datetime,
+                    end_decisions=end_datetime
+                ),
+                solution_datetime=solution_datetime,
+                solver="RL",
+                configuration=asdict(self.config),
+                objective_function=obj_fun.item(),
+                dams=[
+                    dict(
+                        id=dam_id,
+                        flows=self.env.river_basin.all_past_flows.squeeze()[:, self.instance.get_order_of_dam(dam_id) - 1].tolist(),
+                    )
+                    for dam_id in self.instance.get_ids_of_dams()
+                ],
+                price=self.instance.get_all_prices(),
+            )
         )
 
         return dict()

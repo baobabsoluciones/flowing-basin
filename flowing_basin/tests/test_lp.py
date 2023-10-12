@@ -4,7 +4,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from itertools import product
 
-INSTANCES = ['Percentile25', 'Percentile75']
+INSTANCES = ['1', '3']
 NUMS_DAMS = [2, 6]
 
 PLOT_SOL = False

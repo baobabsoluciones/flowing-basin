@@ -57,7 +57,7 @@ instance = RLEnvironment.create_instance(
 print(instance.data)
 
 # Get necessary values from instance
-start, _ = instance.get_start_end_datetimes()
+start = instance.get_start_decisions_datetime()
 initial_row = df.index[df["datetime"] == start].tolist()[0]
 last_row = initial_row + LENGTH_EPISODE - 1
 print(start)

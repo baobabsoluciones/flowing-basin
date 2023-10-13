@@ -10,6 +10,15 @@
                 },
                 "end_decisions": {
                     "type": "string"
+                },
+                "end_impact": {
+                    "type": "string"
+                },
+                "start_information": {
+                    "type": "string"
+                },
+                "end_information": {
+                    "type": "string"
                 }
             },
             "required": [
@@ -22,6 +31,9 @@
         },
         "solver": {
             "type": "string"
+        },
+        "time_step_minutes": {
+            "type": "integer"
         },
         "configuration": {
             "type": "object",

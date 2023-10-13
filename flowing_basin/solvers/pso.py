@@ -393,7 +393,7 @@ class PSO(Experiment):
         obj_fun_values = list(obj_fun_values)
 
         # Get datetimes
-        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
+        start_datetime, end_datetime, _, _, _, solution_datetime = self.get_instance_solution_datetimes()
 
         # Store solution in attribute
         self.solution = Solution.from_dict(

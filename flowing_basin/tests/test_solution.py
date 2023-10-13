@@ -4,11 +4,19 @@ from matplotlib import pyplot as plt
 
 INSTANCE = 1
 NUM_DAMS = 2
-SOLVER = "Heuristic"
-SOL_DATETIME = "2023-09-25_14-07"
+# SOLVER = "Heuristic"
+# SOL_DATETIME = "2023-09-25_14-07"
+SOLVER = "RLmodel"
+SOL_DATETIME = "2023-10-11 01.18"
 PLOT_SOL = True
 
 solution = Solution.from_json(f"../solutions/instance{INSTANCE}_{SOLVER}_{NUM_DAMS}dams_1days_time{SOL_DATETIME}.json")
+if SOLVER != "RLmodel":
+    instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
+else:
+    assert NUM_DAMS == 2
+    instance = Instance.from_json(f"../instances/instances_rl/instance{INSTANCE}_expanded16steps_backforth.json")
+
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = solution.check()
@@ -16,11 +24,12 @@ if inconsistencies:
     raise Exception(f"There are inconsistencies in the data: {inconsistencies}")
 
 # Print general info
-instance_datetimes = solution.get_instance_start_end_datetimes()
-if instance_datetimes is not None:
+start = solution.get_start_decisions_datetime()
+end = solution.get_end_decisions_datetime()
+if start is not None and end is not None:
     print(
-        f"The instance solved starts at {instance_datetimes[0].strftime('%Y-%m-%d %H:%M')} "
-        f"and ends at {instance_datetimes[1].strftime('%Y-%m-%d %H:%M')}."
+        f"The instance solved starts at {start.strftime('%Y-%m-%d %H:%M')} "
+        f"and ends at {end.strftime('%Y-%m-%d %H:%M')}."
     )
 solution_datetime = solution.get_solution_datetime()
 if solution_datetime is not None:
@@ -45,11 +54,10 @@ if PLOT_SOL:
         plt.show()
 
 # Check with river basin simulator
-instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
 river_basin = RiverBasin(instance=instance, mode="linear")
 flows = solution.get_flows_array()
 river_basin.deep_update_flows(flows)
-actual_flows = river_basin.all_past_clipped_flows
+actual_flows = river_basin.all_past_clipped_flows[instance.get_start_information_offset():]
 print("Flows array:", flows.tolist())
 print("Actual flows:", actual_flows.tolist())
 for dam_index, dam_id in enumerate(instance.get_ids_of_dams()):
@@ -61,3 +69,4 @@ for dam_index, dam_id in enumerate(instance.get_ids_of_dams()):
                 f"WARNING - For dam {dam_id} and time {time_step}, "
                 f"the flow is {flow} but the actual flow is {actual_flow}"
             )
+print(river_basin.history.to_string())

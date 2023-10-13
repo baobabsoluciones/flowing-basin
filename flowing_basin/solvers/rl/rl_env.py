@@ -519,7 +519,7 @@ class RLEnvironment(gym.Env):
         reward = self.get_reward()
         done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
-        return next_obs, reward, done, False, dict()
+        return next_obs, reward, done, False, dict(flow=new_flows)
 
     @staticmethod
     def create_instance(

@@ -3,7 +3,7 @@ from typing import Dict
 from pytups import SuperDict
 from .instance import Instance
 from .solution import Solution
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -16,11 +16,11 @@ class Configuration:
     limit_zones_penalty: float
 
     # Objective final volumes
-    volume_objectives: dict[str, float] = None
+    volume_objectives: dict[str, float] = field(default_factory=lambda: dict())
 
     # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
-    volume_shortage_penalty: float = None
-    volume_exceedance_bonus: float = None
+    volume_shortage_penalty: float = 0.
+    volume_exceedance_bonus: float = 0.
 
 
 class Experiment(ExperimentCore):
@@ -33,11 +33,11 @@ class Experiment(ExperimentCore):
 
     @property
     def instance(self) -> Instance:
-        return super().instance
+        return super().instance  # noqa
 
     @property
     def solution(self) -> Solution:
-        return super().solution
+        return super().solution  # noqa
 
     @solution.setter
     def solution(self, value):
@@ -52,18 +52,23 @@ class Experiment(ExperimentCore):
     def check_solution(self, *args, **kwargs) -> Dict[str, Dict]:
         return dict()
 
-    def get_instance_solution_datetimes(self, format_datetime: str = "%Y-%m-%d %H:%M") -> tuple[str, str, str]:
+    def get_instance_solution_datetimes(self, format_datetime: str = "%Y-%m-%d %H:%M") -> tuple[str, str, str, str, str, str]:
 
         """
-        Get the start and end datetimes of the solved instance,
+        Get the decision and information start end datetimes of the solved instance,
         as well as the datetime of when it was solved
         """
 
-        start_datetime, end_datetime = self.instance.get_start_end_datetimes()
-        start_datetime = start_datetime.strftime(format_datetime)
-        end_datetime = end_datetime.strftime(format_datetime)
+        start_decisions = self.instance.get_start_decisions_datetime().strftime(format_datetime)
+        end_decisions = self.instance.get_end_decisions_datetime().strftime(format_datetime)
+
+        end_impact = self.instance.get_end_impact_datetime().strftime(format_datetime)
+
+        start_information = self.instance.get_start_information_datetime().strftime(format_datetime)
+        end_information = self.instance.get_end_information_datetime().strftime(format_datetime)
+
         solution_datetime = datetime.now().strftime(format_datetime)
 
-        return start_datetime, end_datetime, solution_datetime
+        return start_decisions, end_decisions, end_impact, start_information, end_information, solution_datetime
 
 

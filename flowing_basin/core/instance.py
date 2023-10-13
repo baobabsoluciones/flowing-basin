@@ -1,7 +1,7 @@
 from cornflow_client import InstanceCore, get_empty_schema
 from cornflow_client.core.tools import load_json
 import pickle
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import warnings
 from copy import copy
@@ -196,17 +196,27 @@ class Instance(InstanceCore):
 
         return inconsistencies
 
-    def get_start_end_datetimes(self) -> tuple[datetime, datetime]:
+    def get_start_decisions_datetime(self) -> datetime:
 
         """
 
-        :return: Starting datetime and final datetime (decision horizon)
+        :return: Starting datetime for the decisions, after the starting information offset
         """
 
         start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
-        end_decisions = datetime.strptime(self.data["datetime"]["end_decisions"], "%Y-%m-%d %H:%M")
 
-        return start, end_decisions
+        return start
+
+    def get_end_decisions_datetime(self) -> datetime:
+
+        """
+
+        :return: Final datetime for the decisions, before the impact buffer and final information offset
+        """
+
+        end = datetime.strptime(self.data["datetime"]["end_decisions"], "%Y-%m-%d %H:%M")
+
+        return end
 
     def get_start_information_datetime(self) -> datetime:
 
@@ -221,8 +231,43 @@ class Instance(InstanceCore):
         if start_info is not None:
             start_info = datetime.strptime(start_info, "%Y-%m-%d %H:%M")
         else:
-            start_info, _ = self.get_start_end_datetimes()
+            start_info = self.get_start_decisions_datetime()
         return start_info
+
+    def get_end_impact_datetime(self) -> datetime:
+
+        """
+       Get the datetime of the largest impact horizon
+       (the datetime up to which the chosen flows have an impact in the income obtained).
+
+       For example, if the instance spans one day, we consider steps of 1/4 hour, and
+       the longest channel has a maximum delay of 3/4 hour, this will be (24 + 3/4) * 4 = 99 time steps
+       after the beginning of the decisions.
+
+       :return: Datetime of the largest impact horizon
+       """
+
+        end_decisions = self.get_end_decisions_datetime()
+        impact_buffer = max([self.get_relevant_lags_of_dam(dam_id)[0] for dam_id in self.get_ids_of_dams()])
+        end_impact = end_decisions + timedelta(seconds=self.get_time_step_seconds()) * impact_buffer
+
+        return end_impact
+
+    def get_end_information_datetime(self) -> datetime:
+
+        """
+        Get the datetime where the information of the instance ends.
+        This is the same as the end of the largest impact horizon,
+        except when information about the future is necessary when making the final decisions
+        (like in RL).
+        """
+
+        end_info = self.data["datetime"].get("end_information")
+        if end_info is not None:
+            end_info = datetime.strptime(end_info, "%Y-%m-%d %H:%M")
+        else:
+            end_info = self.get_end_impact_datetime()
+        return end_info
 
     def get_start_information_offset(self) -> int:
 
@@ -233,7 +278,7 @@ class Instance(InstanceCore):
         (like in RL).
         """
 
-        start_decisions, _ = self.get_start_end_datetimes()
+        start_decisions = self.get_start_decisions_datetime()
         start_info = self.get_start_information_datetime()
         difference = start_decisions - start_info
         num_time_steps_offset = difference.total_seconds() // self.get_time_step_seconds()
@@ -261,8 +306,9 @@ class Instance(InstanceCore):
         :return: Number of time steps up to the decision horizon
         """
 
-        start, end_decisions = self.get_start_end_datetimes()
-        difference = end_decisions - start
+        start_decisions = self.get_start_decisions_datetime()
+        end_decisions = self.get_end_decisions_datetime()
+        difference = end_decisions - start_decisions
         num_time_steps_decisions = difference.total_seconds() // self.get_time_step_seconds() + 1
 
         return int(num_time_steps_decisions)
@@ -281,18 +327,18 @@ class Instance(InstanceCore):
         :return: Number of time steps up to the largest impact horizon
         """
 
-        decision_horizon = self.get_decision_horizon()
-        max_lag = max([self.get_relevant_lags_of_dam(dam_id)[0] for dam_id in self.get_ids_of_dams()])
-        # TODO: Shouldn't we take self.get_relevant_lags_of_dam(dam_id)[-1],
-        #  to get the max delay of each channel, and not the min?
+        start_decisions = self.get_start_decisions_datetime()
+        end_impact = self.get_end_impact_datetime()
+        difference = end_impact - start_decisions
 
-        return decision_horizon + max_lag
+        return int(difference.total_seconds() // self.get_time_step_seconds() + 1)
 
     def get_information_horizon(self) -> int:
 
         """
         Get the number of time steps up to the information horizon
-        (number of time steps in which we need to know the price, incoming flow, and unregulated flow).
+        (number of time steps in which we need to know the price, incoming flow, and unregulated flow,
+        from the start of the decisions).
 
         This horizon is, by default, equal to the largest impact horizon,
         but may need to be larger with some solvers (RL).
@@ -300,13 +346,11 @@ class Instance(InstanceCore):
         :return: Number of time steps up to the information horizon
         """
 
-        start, _ = self.get_start_end_datetimes()
-        try:
-            end_info = datetime.strptime(self.data["datetime"]["end_information"], "%Y-%m-%d %H:%M")
-            difference = end_info - start
-            return int(difference.total_seconds() // self.get_time_step_seconds() + 1)
-        except KeyError:
-            return self.get_largest_impact_horizon()
+        start_decisions = self.get_start_decisions_datetime()
+        end_info = self.get_end_information_datetime()
+        difference = end_info - start_decisions
+
+        return int(difference.total_seconds() // self.get_time_step_seconds() + 1)
 
     def get_num_dams(self) -> int:
 

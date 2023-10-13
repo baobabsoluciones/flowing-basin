@@ -37,49 +37,49 @@ class Solution(SolutionCore):
 
         inconsistencies = dict()
 
-        # The number of flows given to all dams must be equal
-        first_dam = list(self.data["dams"].values())[0]
-        num_flows_first_dam = len(first_dam["flows"])
-        if not all([len(dam["flows"]) == num_flows_first_dam for dam in self.data["dams"].values()]):
-            inconsistencies.update(
-                {
-                    "The number of flows given to each dam is not equal":
-                    [len(dam['flows']) for dam in self.data['dams'].values()]
-                }
-            )
+        # Calculate number of decision time steps
+        num_decision_time_steps = len(self.get_decisions_time_steps())
 
         # If the volumes and powers of the dams are provided, their length should be the same as the number of flows
-        inconsistent_dams = dict(volumes=[], powers=[])
+        inconsistent_dams = dict(flows=[], volumes=[], powers=[])
         for dam_id in self.get_ids_of_dams():
+
+            flows = self.get_exiting_flows_of_dam(dam_id)
+            if len(flows) != num_decision_time_steps:
+                inconsistent_dams["flows"].append((dam_id, len(flows)))
+
             vols = self.data["dams"][dam_id].get("volume")
             if vols is not None:
-                if len(vols) != num_flows_first_dam:
+                if len(vols) != num_decision_time_steps:
                     inconsistent_dams["volumes"].append((dam_id, len(vols)))
+
             powers = self.data["dams"][dam_id].get("power")
             if powers is not None:
-                if len(powers) != num_flows_first_dam:
+                if len(powers) != num_decision_time_steps:
                     inconsistent_dams["powers"].append((dam_id, len(powers)))
-        for concept in ["volumes", "powers"]:
+
+        for concept in inconsistent_dams.keys():
             if len(inconsistent_dams[concept]) != 0:
                 inconsistencies.update(
                     {
-                        f"The number of {concept} of some dams does not equal the number of flows":
+                        f"The number of {concept} of some dams does not equal the number of decision time steps":
                             [
                                 f"The number of {concept} in dam {dam_id} is {num_of_concept}, "
-                                f"but the number of flows is {num_flows_first_dam}."
+                                f"but the number of decision time steps is {num_decision_time_steps}."
                                 for dam_id, num_of_concept in inconsistent_dams[concept]
                             ]
                     }
                 )
 
-        # The number of prices provided should be the same as the number of flows
+        # The number of prices provided should be the same as the number of information time steps
+        num_info_time_steps = len(self.get_information_time_steps())
         num_prices = len(self.data["price"])
-        if num_prices != num_flows_first_dam:
+        if num_prices != num_info_time_steps:
             inconsistencies.update(
                 {
-                    f"The number of prices does not equal the number of flows":
+                    f"The number of prices is not equal to the number of information time steps":
                         f"The number of prices is {num_prices}, "
-                        f"but the number of flows is {num_flows_first_dam}."
+                        f"and the number of information time steps is {num_info_time_steps}."
                 }
             )
 
@@ -214,21 +214,130 @@ class Solution(SolutionCore):
 
         return compliance
 
-    def get_instance_start_end_datetimes(self) -> tuple[datetime, datetime] | None:
+    def get_time_step_seconds(self) -> float | None:
+
+        time_step_min = self.data.get("time_step_minutes")
+        if time_step_min is None:
+            return None
+
+        return time_step_min * 60
+
+    def get_start_decisions_datetime(self) -> datetime | None:
+
+        # Get all datetimes
+        datetimes = self.data.get("instance_datetimes")
+        if datetimes is None:
+            return None
+
+        # Get start decisions datetime
+        start_decisions = datetimes.get("start")
+        if start_decisions is None:
+            return None
+
+        # Turn into string
+        start_decisions = datetime.strptime(start_decisions, "%Y-%m-%d %H:%M")
+        return start_decisions
+
+    def get_end_decisions_datetime(self) -> datetime | None:
+
+        # Get all datetimes
+        datetimes = self.data.get("instance_datetimes")
+        if datetimes is None:
+            return None
+
+        # Get end decisions datetime
+        end_decisions = datetimes.get("end_decisions")
+        if end_decisions is None:
+            return None
+
+        # Turn into string
+        end_decisions = datetime.strptime(end_decisions, "%Y-%m-%d %H:%M")
+        return end_decisions
+
+    def get_start_information_datetime(self) -> datetime | None:
+
+        # Get all datetimes
+        datetimes = self.data.get("instance_datetimes")
+        if datetimes is None:
+            return None
+
+        # Get start information datetime
+        # If this information is not provided, assume information starts when decisions start
+        start_info = datetimes.get("start_information")
+        if start_info is None:
+            return self.get_start_decisions_datetime()
+
+        # Turn into string
+        start_info = datetime.strptime(start_info, "%Y-%m-%d %H:%M")
+        return start_info
+
+    def get_end_impact_datetime(self) -> datetime | None:
+
+        # Get all datetimes
+        datetimes = self.data.get("instance_datetimes")
+        if datetimes is None:
+            return None
+
+        # Get end impact datetime
+        end_impact = datetimes.get("end_impact")
+        if end_impact is None:
+            return None
+
+        # Turn into string
+        end_impact = datetime.strptime(end_impact, "%Y-%m-%d %H:%M")
+        return end_impact
+
+    def get_end_information_datetime(self) -> datetime | None:
+
+        # Get all datetimes
+        datetimes = self.data.get("instance_datetimes")
+        if datetimes is None:
+            return None
+
+        # Get end information datetime
+        # If this information is not provided, assume information ends when impact ends
+        end_info = datetimes.get("end_information")
+        if end_info is None:
+            return self.get_end_impact_datetime()
+
+        # Turn into string
+        end_info = datetime.strptime(end_info, "%Y-%m-%d %H:%M")
+        return end_info
+
+    def get_decisions_time_steps(self) -> list[int]:
 
         """
-
-        :return: Starting datetime and final datetime (decision horizon) of the solved instance
+        Get the time steps corresponding to the decided flows
+        For a one-day instance with a max lag of 4 and 15min long time steps, this will be 0, 1, ..., 98
         """
 
-        instance_datetimes = self.data.get("instance_datetimes")
-        if instance_datetimes is not None:
-            instance_datetimes = (
-                datetime.strptime(instance_datetimes["start"], "%Y-%m-%d %H:%M"),
-                datetime.strptime(instance_datetimes["end_decisions"], "%Y-%m-%d %H:%M")
-            )
+        # Calculate using datetimes, if provided
+        start_decisions = self.get_start_decisions_datetime()
+        end_impact = self.get_end_impact_datetime()
+        time_step_seconds = self.get_time_step_seconds()
+        if start_decisions is not None and end_impact is not None and time_step_seconds is not None:
+            difference = end_impact - start_decisions
+            num_time_steps = difference.total_seconds() // time_step_seconds + 1
+            return list(range(int(num_time_steps)))
 
-        return instance_datetimes
+        # If datetimes are not provided, calculate using the number of flows of the first dam
+        num_flows = len(self.get_exiting_flows_of_dam(self.get_ids_of_dams()[0]))
+        return list(range(num_flows))
+
+    def get_information_time_steps(self) -> list[int]:
+
+        # Calculate using datetimes, if provided
+        start_decisions = self.get_start_decisions_datetime()
+        start_info = self.get_start_information_datetime()
+        end_info = self.get_end_information_datetime()
+        time_step_seconds = self.get_time_step_seconds()
+        if start_decisions is not None and start_info is not None and end_info is not None and time_step_seconds is not None:
+            start_info_offset = (start_decisions - start_info).total_seconds() // time_step_seconds
+            num_time_steps = (end_info - start_decisions).total_seconds() // time_step_seconds
+            return list(range(-int(start_info_offset), int(num_time_steps) + 1))
+
+        # If datetimes are not provided, assume information time steps equal decision time steps
+        return self.get_decisions_time_steps()
 
     def get_solution_datetime(self) -> datetime | None:
 
@@ -401,18 +510,21 @@ class Solution(SolutionCore):
         on top of the graph of the price of energy
         """
 
+        decision_time_steps = self.get_decisions_time_steps()
+        info_time_steps = self.get_information_time_steps()
+
         flows = self.get_exiting_flows_of_dam(dam_id)
         volumes = self.get_volumes_of_dam(dam_id)
 
-        ax.plot(volumes, color='b', label="Predicted volume")
+        ax.plot(decision_time_steps, volumes, color='b', label="Predicted volume")
         ax.set_xlabel("Time (15min)")
         ax.set_ylabel("Volume (m3)")
         ax.set_title(f"Solution for {dam_id}")
         ax.legend()
 
         twinax = ax.twinx()
-        twinax.plot(self.get_all_prices(), color='r', label="Price")
-        twinax.plot(flows, color='g', label="Flow")
+        twinax.plot(info_time_steps, self.get_all_prices(), color='r', label="Price")
+        twinax.plot(decision_time_steps, flows, color='g', label="Flow")
         twinax.set_ylabel("Flow (m3/s), Price (€)")
         twinax.legend()
 

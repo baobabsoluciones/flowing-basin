@@ -7,7 +7,7 @@ NUM_STEPS_LOOKAHEAD = 16
 model_datetime = "2023-10-11 01.18"
 filepath_agent = f"../solutions/rl_models/RL_model_{model_datetime}.zip"
 filepath_instance = f"../instances/instances_rl/instance1_expanded{NUM_STEPS_LOOKAHEAD}steps_backforth.json"
-filepath_sol = f"../solutions/instance1_RLmodel{model_datetime}_sol.json"
+filepath_sol = f"../solutions/instance1_RLmodel_2dams_1days_time{model_datetime}.json"
 
 config = RLConfiguration(
     startups_penalty=50,
@@ -23,7 +23,7 @@ config = RLConfiguration(
     ],
     num_steps_sight=16,
     length_episodes=24 * 4 + 3,
-    do_history_updates=False,
+    do_history_updates=True,
 )
 run = RLRun(
     config=config,

@@ -100,7 +100,7 @@ class Channel:
 
         return flow_limit
 
-    def update(self, flow: np.ndarray, price: float, dam_vol: np.ndarray) -> np.ndarray:
+    def update(self, flow: np.ndarray, price: float, dam_vol: np.ndarray, time: int) -> np.ndarray:
 
         """
         Update the record of flows through the channel, its current maximum flow,
@@ -113,13 +113,14 @@ class Channel:
         :param dam_vol:
             Array of shape num_scenario with
             the volume of the dam connected to the channel in every scenario (m3)
+        :param time: Identifier of the time step
         :return:
             Array of shape num_scenarios with
             the turbined flow in the power group in every scenario (m3/s)
         """
 
         # Update power group and get turbined flow
-        turbined_flow = self.power_group.update(price=price, past_flows=self.past_flows)
+        turbined_flow = self.power_group.update(price=price, past_flows=self.past_flows, time=time)
 
         # Update flow limit to get the flow limit at the END of this time step
         # This is used in the next update() call of Dam to calculate flow_out_clipped1

@@ -37,27 +37,45 @@ class RLRun(Experiment):
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, _, _ = self.env.step(action)
 
+        clipped_flows = {
+            dam_id: self.env.river_basin.all_past_clipped_flows.squeeze()[
+                self.instance.get_start_information_offset():, self.instance.get_order_of_dam(dam_id) - 1
+            ].tolist()
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+        volume = {
+            dam_id: self.env.river_basin.all_past_volumes[dam_id].squeeze()[
+                self.instance.get_start_information_offset():
+            ].tolist()
+            for dam_id in self.instance.get_ids_of_dams()
+        }
+
         income = self.env.river_basin.get_acc_income()
         num_startups = self.env.river_basin.get_acc_num_startups()
         num_limit_zones = self.env.river_basin.get_acc_num_times_in_limit()
         obj_fun = income - num_startups * self.config.startups_penalty - num_limit_zones * self.config.limit_zones_penalty
 
-        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
+        start_decisions, end_decisions, end_impact, start_info, end_info, solution_datetime = self.get_instance_solution_datetimes()
 
         self.solution = Solution.from_dict(
             dict(
                 instance_datetimes=dict(
-                    start=start_datetime,
-                    end_decisions=end_datetime
+                    start=start_decisions,
+                    end_decisions=end_decisions,
+                    end_impact=end_impact,
+                    start_information=start_info,
+                    end_information=end_info,
                 ),
                 solution_datetime=solution_datetime,
                 solver="RL",
+                time_step_minutes=self.instance.get_time_step_seconds() // 60,
                 configuration=asdict(self.config),
                 objective_function=obj_fun.item(),
                 dams=[
                     dict(
                         id=dam_id,
-                        flows=self.env.river_basin.all_past_flows.squeeze()[:, self.instance.get_order_of_dam(dam_id) - 1].tolist(),
+                        flows=clipped_flows[dam_id],
+                        volume=volume[dam_id]
                     )
                     for dam_id in self.instance.get_ids_of_dams()
                 ],

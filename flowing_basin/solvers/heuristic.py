@@ -734,7 +734,7 @@ class Heuristic(Experiment):
         )
 
         # Get datetimes
-        start_datetime, end_datetime, solution_datetime = self.get_instance_solution_datetimes()
+        start_datetime, end_datetime, _, _, _, solution_datetime = self.get_instance_solution_datetimes()
 
         sol_dict = dict(
             instance_datetimes=dict(

@@ -121,7 +121,9 @@ class Dam:
         :param flow_contribution:
             Array of shape num_scenarios with
             the flow entering this dam (from the river or the previous dam) in every scenario (m3/s)
-        :param time: Identifier of the time step (used to save the volume at the decision horizon)
+        :param time:
+            Identifier of the time step, used to save the volume at the decision horizon
+            and to accumulate the income of only the decision time steps
         :return:
             Array of shape num_scenarios with
             the turbined flow in the power group in every scenario (m3/s)
@@ -207,4 +209,4 @@ class Dam:
 
         # We update the channel with the new volume (the FINAL volume in this time step),
         # because the channel stores the FINAL maximum flow, which is calculated with this volume
-        return self.channel.update(price=price, flow=self.flow_out_clipped2, dam_vol=self.volume)
+        return self.channel.update(price=price, flow=self.flow_out_clipped2, dam_vol=self.volume, time=time)

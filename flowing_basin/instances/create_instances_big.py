@@ -17,7 +17,7 @@ historical_data = pd.read_pickle(path_historical_data)
 for example, num_dams, num_days in product(EXAMPLES, NUMS_DAMS, NUMS_DAYS):
 
     base_instance = Instance.from_json(f"instances_base/instance{example}.json")
-    start_date, _ = base_instance.get_start_end_datetimes()
+    start_date = base_instance.get_start_decisions_datetime()
     impact_buffer = max(
         [
             base_instance.get_relevant_lags_of_dam(dam_id)[0]

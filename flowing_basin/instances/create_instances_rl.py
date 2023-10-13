@@ -15,7 +15,7 @@ historical_data = pd.read_pickle(path_historical_data)
 for example in EXAMPLES:
 
     base_instance = Instance.from_json(f"instances_base/instance{example}.json")
-    start_date, _ = base_instance.get_start_end_datetimes()
+    start_date = base_instance.get_start_decisions_datetime()
 
     # Create instance
     instance = RLEnvironment.create_instance(

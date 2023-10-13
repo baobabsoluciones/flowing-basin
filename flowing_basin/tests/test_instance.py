@@ -13,10 +13,11 @@ def test_instance(instance: Instance, check_avg_inflow: bool = True, epsilon: fl
     time = 0
     print("data property:", instance.data)
     print("dictionary:", instance.to_dict())
-    start, end = instance.get_start_end_datetimes()
-    print("start of decisions:", start)
-    print("end of decisions:", end)
+    print("start of decisions:", instance.get_start_decisions_datetime())
+    print("end of decisions:", instance.get_end_decisions_datetime())
+    print("end of impact:", instance.get_end_impact_datetime())
     print("start of information:", instance.get_start_information_datetime())
+    print("end of information:", instance.get_end_information_datetime())
     print("start of information offset:", instance.get_start_information_offset())
     print("decision horizon:", instance.get_decision_horizon())
     print("impact horizon:", instance.get_largest_impact_horizon())
@@ -32,7 +33,7 @@ def test_instance(instance: Instance, check_avg_inflow: bool = True, epsilon: fl
     calculated_avg_inflow = instance.calculate_total_avg_inflow()
     print("total avg inflow:", calculated_avg_inflow)
     if check_avg_inflow:
-        date = instance.get_start_end_datetimes()[0].date()
+        date = instance.get_start_decisions_datetime().date()
         daily_inflow_data = pd.read_pickle("../data/history/historical_data_daily_avg_inflow.pickle")
         avg_inflow = daily_inflow_data.loc[date, 'total_avg_inflow']
         print("total avg inflow (as stored in data):", avg_inflow)

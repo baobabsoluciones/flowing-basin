@@ -54,7 +54,8 @@ else:
 
 # Get X axis, time ---- #
 
-start_date, end_date = instance.get_start_end_datetimes()
+start_date = instance.get_start_decisions_datetime()
+end_date = instance.get_end_decisions_datetime()
 print(start_date, end_date)
 times = []
 current_date = start_date

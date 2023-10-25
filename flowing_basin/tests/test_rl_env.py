@@ -1,3 +1,5 @@
+from flowing_basin.core import Instance
+from cornflow_client.core.tools import load_json
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 import numpy as np
 from stable_baselines3.common.env_checker import check_env
@@ -5,8 +7,11 @@ from datetime import datetime
 
 
 INITIAL_ROW = "2021-03-27 11:30"
+PATH_CONSTANTS = "../data/constants/constants_2dams.json"
+PATH_HISTORICAL_DATA = "../data/history/historical_data_clean.pickle"
 
 # ENVIRONMENT 1 (WITH INSTANCE 1)
+constants = Instance.from_dict(load_json(PATH_CONSTANTS))
 config = RLConfiguration(
     startups_penalty=50,
     limit_zones_penalty=50,
@@ -16,19 +21,24 @@ config = RLConfiguration(
     flow_smoothing_clip=False,
     action_type="exiting_flows",
     features=[
-        "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
-        "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped", "past_periods"
+        "past_vols", "past_flows", "past_variations", "future_prices",
+        "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped",
     ],
     obs_box_shape=False,
-    unique_features=["past_prices", "future_prices", "past_periods"],
-    num_steps_sight={"past_flows": 6, "past_variations": 2, "future_prices": 16, "future_inflows": 16, "other": 1},
+    unique_features=["future_prices", ],
+    num_steps_sight={
+        ("past_flows", "dam1"): constants.get_verification_lags_of_dam("dam1")[-1] + 1,
+        ("past_flows", "dam2"): constants.get_verification_lags_of_dam("dam2")[-1] + 1,
+        "past_variations": 2, "future_prices": 16, "future_inflows": 16,
+        "other": 1
+    },
     length_episodes=24 * 4 + 3,
     do_history_updates=True,
 )
 env1 = RLEnvironment(
     config=config,
-    path_constants="../data/constants/constants_2dams.json",
-    path_historical_data="../data/history/historical_data_clean.pickle",
+    path_constants=PATH_CONSTANTS,
+    path_historical_data=PATH_HISTORICAL_DATA,
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
 

@@ -22,7 +22,7 @@ class RLConfiguration(Configuration):  # noqa
     features: list[str]
     obs_box_shape: bool
     unique_features: list[str]  # Features that should NOT be repeated for each dam
-    num_steps_sight: dict[str, int] | int  # Number of time steps for every feature
+    num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
     length_episodes: int
 
     # RL environment's action options
@@ -65,33 +65,48 @@ class RLConfiguration(Configuration):  # noqa
                 f"Observation is box shaped but there are features marked as unique: {self.unique_features}"
             )
 
-        # Post-process self.num_steps_sight
-        if isinstance(self.num_steps_sight, int):
-            self.num_steps_sight = {feature: self.num_steps_sight for feature in self.features}
-        if "other" in self.num_steps_sight.keys():
-            self.num_steps_sight = {
-                feature: self.num_steps_sight[feature]
-                if feature in self.num_steps_sight.keys() else self.num_steps_sight["other"]
-                for feature in self.features
-            }
-
         # Check self.num_steps_sight
-        if self.num_steps_sight.keys() != set(self.features):
-            raise ValueError(
-                f"The features provided are {self.features}, but not all of them "
-                f"have a number of time steps defined: {self.num_steps_sight} "
-                f"(suggestion: use the key 'other' as a wildcard for the remaining features)"
-            )
-        if self.obs_box_shape and len(set(self.num_steps_sight.values())) != 1:
-            raise ValueError(
-                f"Observation is box shaped but the number of time steps "
-                f"of every feature is not the same: {self.num_steps_sight}"
-            )
+        if isinstance(self.num_steps_sight, dict):
+            flattened_keys = [
+                key
+                for tup_or_key in self.num_steps_sight.keys()
+                for key in (tup_or_key if isinstance(tup_or_key, tuple) else (tup_or_key,))
+            ]
+            if not set(self.features).issubset(flattened_keys) and "other" not in flattened_keys:
+                raise ValueError(
+                    f"The features provided are {self.features}, but not all of them "
+                    f"have a number of time steps defined: {self.num_steps_sight} "
+                    f"(suggestion: use the key 'other' as a wildcard for the remaining features)"
+                )
+            if self.obs_box_shape and len(set(self.num_steps_sight.values())) != 1:
+                raise ValueError(
+                    f"Observation is box shaped but the number of time steps "
+                    f"of every feature is not the same: {self.num_steps_sight}"
+                )
 
         # Check self.action_type
         valid_actions = {"exiting_flows", "exiting_relvars"}
         if self.action_type not in valid_actions:
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
+
+    def post_process(self, dam_ids: list[str]):
+
+        # Post-process self.num_steps_sight
+        # Turn all keys into (feature, dam_id)
+        if isinstance(self.num_steps_sight, int):
+            self.num_steps_sight = {
+                (feature, dam_id): self.num_steps_sight
+                for feature in self.features for dam_id in dam_ids
+            }
+        if "other" in self.num_steps_sight.keys():
+            self.num_steps_sight = {
+                (feature, dam_id):
+                    self.num_steps_sight[feature, dam_id] if (feature, dam_id) in self.num_steps_sight.keys() else (
+                        self.num_steps_sight[feature] if feature in self.num_steps_sight.keys() else
+                        self.num_steps_sight["other"]
+                    )
+                for feature in self.features for dam_id in dam_ids
+            }
 
 
 class RLEnvironment(gym.Env):
@@ -115,16 +130,20 @@ class RLEnvironment(gym.Env):
 
         super(RLEnvironment, self).__init__()
 
+        # Configuration
         self.config = config
 
         # Create instance
         self.constants = None
         if path_constants is not None:
-            self.constants = load_json(path_constants)
+            self.constants = Instance.from_dict(load_json(path_constants))
         self.historical_data = None
         if path_historical_data is not None:
             self.historical_data = pd.read_pickle(path_historical_data)
         self._reset_instance(instance, initial_row)
+
+        # Post-process configuration
+        self.config.post_process(self.constants.get_ids_of_dams())
 
         # Simulator (the core of the environment)
         self.river_basin = RiverBasin(
@@ -143,15 +162,15 @@ class RLEnvironment(gym.Env):
                 shape=(
                     self.instance.get_num_dams(),
                     len(self.config.features),
-                    self.config.num_steps_sight[self.config.features[0]]
+                    self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]]
                 ),
                 dtype=np.float32
             )
         else:
             array_length = sum(
-                self.instance.get_num_dams() * self.config.num_steps_sight[feature]
-                if feature not in self.config.unique_features else self.config.num_steps_sight[feature]
-                for feature in self.config.features
+                self.config.num_steps_sight[feature, dam_id]
+                for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
+                if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
             )
             self.observation_space = gym.spaces.Box(
                 low=0,
@@ -281,7 +300,10 @@ class RLEnvironment(gym.Env):
                     0. if not self.config.flow_smoothing_clip
                     else - self.instance.get_max_flow_of_channel(dam_id)
                 ),
-                "past_periods": - self.config.num_steps_sight["past_periods"]
+                "past_periods": (
+                    - self.config.num_steps_sight["past_periods", dam_id] if "past_periods" in self.config.features
+                    else None
+                )
             }
             for dam_id in self.instance.get_ids_of_dams()
         }
@@ -331,12 +353,12 @@ class RLEnvironment(gym.Env):
 
         assigned_flows = np.flip(
             self.river_basin.all_past_flows.squeeze()[
-                -self.config.num_steps_sight["past_clipped"]:, self.instance.get_order_of_dam(dam_id) - 1
+                -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
             ]
         )
         actual_flows = np.flip(
             self.river_basin.all_past_clipped_flows.squeeze()[
-                -self.config.num_steps_sight["past_clipped"]:, self.instance.get_order_of_dam(dam_id) - 1
+                -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
             ]
         )
         flow_clipping = assigned_flows - actual_flows
@@ -359,25 +381,25 @@ class RLEnvironment(gym.Env):
 
             "past_vols": lambda dam_id: np.flip(
                 self.river_basin.all_past_volumes[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_vols"]:
+                    -self.config.num_steps_sight["past_vols", dam_id]:
                 ]
             ),
 
             "past_flows": lambda dam_id: np.flip(
                 self.river_basin.all_past_clipped_flows.squeeze()[
-                    -self.config.num_steps_sight["past_flows"]:, self.instance.get_order_of_dam(dam_id) - 1
+                    -self.config.num_steps_sight["past_flows", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
                 ]
             ),
 
             "past_variations": lambda dam_id: np.flip(
                 self.river_basin.dams[self.instance.get_order_of_dam(dam_id) - 1].all_previous_variations.squeeze()[
-                    -self.config.num_steps_sight["past_variations"]:
+                    -self.config.num_steps_sight["past_variations", dam_id]:
                 ]
             ),
 
             "past_prices": lambda dam_id: np.flip(
                 self.instance.get_all_prices()[
-                    self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_prices"]:
+                    self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_prices", dam_id]:
                         self.river_basin.time + 1 + self.instance.get_start_information_offset()
                 ]
             ),
@@ -385,19 +407,19 @@ class RLEnvironment(gym.Env):
             "future_prices": lambda dam_id: np.array(
                 self.instance.get_all_prices()[
                     self.river_basin.time + 1 + self.instance.get_start_information_offset():
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_prices"]
+                        self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_prices", dam_id]
                 ]
             ),
 
             "past_inflows": lambda dam_id: np.flip(
                 self.instance.get_all_unregulated_flows_of_dam(dam_id)[
-                    self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_inflows"]:
+                    self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_inflows", dam_id]:
                         self.river_basin.time + 1 + self.instance.get_start_information_offset()
                 ]
             ) + (
                 np.flip(
                     self.instance.get_all_incoming_flows()[
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_inflows"]:
+                        self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_inflows", dam_id]:
                             self.river_basin.time + 1 + self.instance.get_start_information_offset()
                     ]
                 ) if self.instance.get_order_of_dam(dam_id) == 1
@@ -407,13 +429,13 @@ class RLEnvironment(gym.Env):
             "future_inflows": lambda dam_id: np.array(
                 self.instance.get_all_unregulated_flows_of_dam(dam_id)[
                     self.river_basin.time + 1 + self.instance.get_start_information_offset():
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_inflows"]
+                        self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_inflows", dam_id]
                 ]
             ) + (
                 np.array(
                     self.instance.get_all_incoming_flows()[
                         self.river_basin.time + 1 + self.instance.get_start_information_offset():
-                            self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_inflows"]
+                            self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_inflows", dam_id]
                     ]
                 ) if self.instance.get_order_of_dam(dam_id) == 1
                 else 0.
@@ -421,26 +443,26 @@ class RLEnvironment(gym.Env):
 
             "past_turbined": lambda dam_id: np.flip(
                 self.river_basin.all_past_turbined[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_turbined"]:
+                    -self.config.num_steps_sight["past_turbined", dam_id]:
                 ]
             ),
 
             "past_groups": lambda dam_id: np.flip(
                 self.river_basin.all_past_groups[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_groups"]:
+                    -self.config.num_steps_sight["past_groups", dam_id]:
                 ]
             ),
 
             "past_powers": lambda dam_id: np.flip(
                 self.river_basin.all_past_powers[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_powers"]:
+                    -self.config.num_steps_sight["past_powers", dam_id]:
                 ]
             ),
 
             "past_clipped": self.get_feature_past_clipped,
 
             "past_periods": lambda dam_id: np.array(
-                [self.river_basin.time - i for i in range(self.config.num_steps_sight["past_periods"])]
+                [self.river_basin.time - i for i in range(self.config.num_steps_sight["past_periods", dam_id])]
             ).astype(np.float32)
 
         }
@@ -486,7 +508,7 @@ class RLEnvironment(gym.Env):
 
         return obs_normalized
 
-    def print_observation(self, dam_id: str, normalize: bool = False, decimals: int = 2, spacing: int = 15):
+    def print_observation(self, dam_id: str, normalize: bool = False, decimals: int = 2, spacing: int = 16):
 
         """
         Prints the observation of the agent for the current state of the river basin
@@ -590,7 +612,7 @@ class RLEnvironment(gym.Env):
     @staticmethod
     def create_instance(
             length_episodes: int,
-            constants: dict,
+            constants: dict | Instance,
             historical_data: pd.DataFrame,
             info_buffer_start: int = 0,
             info_buffer_end: int = 0,
@@ -608,22 +630,24 @@ class RLEnvironment(gym.Env):
         :param initial_row_decisions: If given, starts the episode in this row or datetime
         """
 
-        # Incomplete instance (we create a deepcopy of constants to avoid modifying it)
-        data = pickle.loads(pickle.dumps(constants, -1))
-        instance_constants = Instance.from_dict(data)
+        if isinstance(constants, dict):
+            constants = Instance.from_dict(constants)
+
+        # Incomplete instance dictionary (we will fill it throughout this method)
+        data = pickle.loads(pickle.dumps(constants.to_dict(), -1))
 
         # Get necessary constants
-        dam_ids = instance_constants.get_ids_of_dams()
+        dam_ids = constants.get_ids_of_dams()
         channel_last_lags = {
-            dam_id: instance_constants.get_relevant_lags_of_dam(dam_id)[-1]
+            dam_id: constants.get_relevant_lags_of_dam(dam_id)[-1]
             for dam_id in dam_ids
         }
 
         # Impact buffer (included in the length of the episode) and information buffer (added on top of it)
         impact_buffer = max(
             [
-                instance_constants.get_relevant_lags_of_dam(dam_id)[0]
-                for dam_id in instance_constants.get_ids_of_dams()
+                constants.get_relevant_lags_of_dam(dam_id)[0]
+                for dam_id in constants.get_ids_of_dams()
             ]
         )
 

@@ -53,14 +53,23 @@ class RLConfiguration(Configuration):  # noqa
 
         if isinstance(self.num_steps_sight, int):
             self.num_steps_sight = {feature: self.num_steps_sight for feature in self.features}
-
-        if self.obs_box_shape:
-            # All values of self.num_steps_sight must be the same
-            if len(set(self.num_steps_sight.values())) != 1:
-                raise ValueError(
-                    f"Observation is box shaped but the number of time steps "
-                    f"of every feature is not the same: {self.num_steps_sight}"
-                )
+        if "other" in self.num_steps_sight.keys():
+            self.num_steps_sight = {
+                feature: self.num_steps_sight[feature]
+                if feature in self.num_steps_sight.keys() else self.num_steps_sight["other"]
+                for feature in self.features
+            }
+        if self.num_steps_sight.keys() != set(self.features):
+            raise ValueError(
+                f"The features provided are {self.features}, but not all of them "
+                f"have a number of time steps defined: {self.num_steps_sight} "
+                f"(suggestion: use the key 'other' as a wildcard for the remaining features)"
+            )
+        if self.obs_box_shape and len(set(self.num_steps_sight.values())) != 1:
+            raise ValueError(
+                f"Observation is box shaped but the number of time steps "
+                f"of every feature is not the same: {self.num_steps_sight}"
+            )
 
         valid_actions = {"exiting_flows", "exiting_relvars"}
         if self.action_type not in valid_actions:
@@ -122,7 +131,7 @@ class RLEnvironment(gym.Env):
             )
         else:
             array_length = (
-                self.instance.get_num_dams() * len(self.config.features) * sum(self.config.num_steps_sight.values())
+                self.instance.get_num_dams() * sum(self.config.num_steps_sight.values())
             )
             self.observation_space = gym.spaces.Box(
                 low=0,
@@ -412,7 +421,7 @@ class RLEnvironment(gym.Env):
 
             "past_periods": lambda dam_id: np.array(
                 [self.river_basin.time - i for i in range(self.config.num_steps_sight["past_periods"])]
-            )
+            ).astype(np.float32)
 
         }
 
@@ -437,13 +446,22 @@ class RLEnvironment(gym.Env):
         :return: Array of shape num_dams x num_features x num_steps with normalized values
         """
 
-        obs_normalized = np.array([
-            [
-                self.get_feature_normalized(feature, dam_id)
-                for feature in self.config.features
-            ]
-            for dam_id in self.instance.get_ids_of_dams()
-        ]).astype(np.float32)
+        if self.config.obs_box_shape:
+            obs_normalized = np.array([
+                [
+                    self.get_feature_normalized(feature, dam_id)
+                    for feature in self.config.features
+                ]
+                for dam_id in self.instance.get_ids_of_dams()
+            ]).astype(np.float32)
+        else:
+            obs_normalized = np.concatenate([
+                np.concatenate([
+                    self.get_feature_normalized(feature, dam_id)
+                    for feature in self.config.features
+                ])
+                for dam_id in self.instance.get_ids_of_dams()
+            ]).astype(np.float32)
 
         return obs_normalized
 
@@ -466,14 +484,13 @@ class RLEnvironment(gym.Env):
             obs = np.vstack((obs, padded_feature_array))
 
         # Header
-        print(f"Observation for {dam_id}")
+        print(f"Observation for {dam_id}{' (normalized)' if normalize else ''}")
         print(''.join([f"{feature:^{spacing}}" for feature in self.config.features]))
 
         # Rows
-        dam_index = self.instance.get_order_of_dam(dam_id) - 1
         for time_step in range(max_sight):
             print(''.join([
-                f"{obs[dam_index, feature_index, time_step]:^{spacing}.{decimals}f}"
+                f"{obs[feature_index, time_step]:^{spacing}.{decimals}f}"
                 for feature_index, feature in enumerate(self.config.features)
             ]))
         print()

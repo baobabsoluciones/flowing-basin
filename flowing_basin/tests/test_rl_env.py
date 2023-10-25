@@ -20,6 +20,7 @@ config = RLConfiguration(
         "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped", "past_periods"
     ],
     obs_box_shape=False,
+    unique_features=["past_prices", "future_prices", "past_periods"],
     num_steps_sight={"past_flows": 6, "past_variations": 2, "future_prices": 16, "future_inflows": 16, "other": 1},
     length_episodes=24 * 4 + 3,
     do_history_updates=True,

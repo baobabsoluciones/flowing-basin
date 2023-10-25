@@ -20,8 +20,9 @@ class RLConfiguration(Configuration):  # noqa
 
     # RL environment's observation options
     features: list[str]
-    num_steps_sight: dict[str, int] | int
     obs_box_shape: bool
+    unique_features: list[str]  # Features that should NOT be repeated for each dam
+    num_steps_sight: dict[str, int] | int  # Number of time steps for every feature
     length_episodes: int
 
     # RL environment's action options
@@ -39,10 +40,12 @@ class RLConfiguration(Configuration):  # noqa
 
     def __post_init__(self):
 
+        # Check self.mode
         valid_modes = {"linear", "nonlinear"}
         if self.mode not in valid_modes:
             raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
+        # Check self.features
         valid_features = {
             "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
             "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped", "past_periods"
@@ -51,6 +54,18 @@ class RLConfiguration(Configuration):  # noqa
             if feature not in valid_features:
                 raise ValueError(f"Invalid feature: {feature}. Allowed features are {valid_features}")
 
+        # Check self.unique_features
+        if not set(self.unique_features).issubset(self.features):
+            raise ValueError(
+                f"The features marked as unique, {self.unique_features}, "
+                f"should be a subset of the features, {self.features}"
+            )
+        if self.obs_box_shape and len(self.unique_features) != 0:
+            raise ValueError(
+                f"Observation is box shaped but there are features marked as unique: {self.unique_features}"
+            )
+
+        # Post-process self.num_steps_sight
         if isinstance(self.num_steps_sight, int):
             self.num_steps_sight = {feature: self.num_steps_sight for feature in self.features}
         if "other" in self.num_steps_sight.keys():
@@ -59,6 +74,8 @@ class RLConfiguration(Configuration):  # noqa
                 if feature in self.num_steps_sight.keys() else self.num_steps_sight["other"]
                 for feature in self.features
             }
+
+        # Check self.num_steps_sight
         if self.num_steps_sight.keys() != set(self.features):
             raise ValueError(
                 f"The features provided are {self.features}, but not all of them "
@@ -71,6 +88,7 @@ class RLConfiguration(Configuration):  # noqa
                 f"of every feature is not the same: {self.num_steps_sight}"
             )
 
+        # Check self.action_type
         valid_actions = {"exiting_flows", "exiting_relvars"}
         if self.action_type not in valid_actions:
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
@@ -130,8 +148,10 @@ class RLEnvironment(gym.Env):
                 dtype=np.float32
             )
         else:
-            array_length = (
-                self.instance.get_num_dams() * sum(self.config.num_steps_sight.values())
+            array_length = sum(
+                self.instance.get_num_dams() * self.config.num_steps_sight[feature]
+                if feature not in self.config.unique_features else self.config.num_steps_sight[feature]
+                for feature in self.config.features
             )
             self.observation_space = gym.spaces.Box(
                 low=0,
@@ -459,6 +479,7 @@ class RLEnvironment(gym.Env):
                 np.concatenate([
                     self.get_feature_normalized(feature, dam_id)
                     for feature in self.config.features
+                    if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
                 ])
                 for dam_id in self.instance.get_ids_of_dams()
             ]).astype(np.float32)
@@ -472,9 +493,13 @@ class RLEnvironment(gym.Env):
         """
 
         # Get observation array of shape num_features x max_sight
+        features = [
+            feature for feature in self.config.features
+            if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
+        ]
         max_sight = max(self.config.num_steps_sight.values())
         obs = np.array([]).reshape(0, max_sight)
-        for feature in self.config.features:
+        for feature in features:
             if not normalize:
                 feature_array = self.features_functions[feature](dam_id)
             else:
@@ -485,13 +510,13 @@ class RLEnvironment(gym.Env):
 
         # Header
         print(f"Observation for {dam_id}{' (normalized)' if normalize else ''}")
-        print(''.join([f"{feature:^{spacing}}" for feature in self.config.features]))
+        print(''.join([f"{feature:^{spacing}}" for feature in features]))
 
         # Rows
         for time_step in range(max_sight):
             print(''.join([
                 f"{obs[feature_index, time_step]:^{spacing}.{decimals}f}"
-                for feature_index, feature in enumerate(self.config.features)
+                for feature_index, feature in enumerate(features)
             ]))
         print()
 

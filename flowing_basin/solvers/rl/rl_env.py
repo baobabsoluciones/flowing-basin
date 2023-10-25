@@ -25,6 +25,7 @@ class RLConfiguration(Configuration):  # noqa
     unique_features: list[str]  # Features that should NOT be repeated for each dam
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
     length_episodes: int
+    update_observation_record: bool  # Whether to save observations experienced by agent
 
     # RL environment's action options
     action_type: str
@@ -195,17 +196,13 @@ class RLEnvironment(gym.Env):
             do_history_updates=self.config.do_history_updates
         )
 
+        # Observation space
         if self.config.obs_box_shape:
             # Observation is an array of shape num_dams x num_features x num_steps
-            self.observation_space = gym.spaces.Box(
-                low=0,
-                high=1,
-                shape=(
-                    self.instance.get_num_dams(),
-                    len(self.config.features),
-                    self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]]
-                ),
-                dtype=np.float32
+            obs_shape = (
+                self.instance.get_num_dams(),
+                len(self.config.features),
+                self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]]
             )
         else:
             array_length = sum(
@@ -213,13 +210,21 @@ class RLEnvironment(gym.Env):
                 for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
                 if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
             )
-            self.observation_space = gym.spaces.Box(
-                low=0,
-                high=1,
-                shape=(array_length, ),
-                dtype=np.float32
-            )
+            obs_shape = (array_length, )
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=1,
+            shape=obs_shape,
+            dtype=np.float32
+        )
 
+        # Record of observations experienced by the agent
+        # Array of shape num_observations x num_features (each observation will be flattened)
+        self.observation_record = np.array([]).reshape(
+            (0, np.prod(obs_shape))
+        )
+
+        # Action space
         # Action is an array of shape num_dams
         self.action_space = gym.spaces.Box(
             low=-1,
@@ -258,7 +263,11 @@ class RLEnvironment(gym.Env):
         # info_horizon = self.instance.get_information_horizon()
         # print(f"New episode's information horizon: {info_horizon}")
 
-        return self.get_observation_normalized(), dict()
+        obs = self.get_observation_normalized()
+        if self.config.update_observation_record:
+            self.observation_record = np.vstack((self.observation_record, [obs.flatten()]))
+
+        return obs, dict()
 
     def _reset_instance(self, instance: Instance = None, initial_row: int | datetime = None):
 
@@ -639,6 +648,9 @@ class RLEnvironment(gym.Env):
         self.river_basin.update(new_flows.reshape(-1, 1))
 
         next_obs = self.get_observation_normalized()
+        if self.config.update_observation_record:
+            self.observation_record = np.vstack((self.observation_record, [next_obs.flatten()]))
+
         reward = self.get_reward()
         done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 

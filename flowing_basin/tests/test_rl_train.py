@@ -3,10 +3,17 @@ from cornflow_client.core.tools import load_json
 from flowing_basin.solvers.rl import RLConfiguration, RLTrain
 from datetime import datetime
 from matplotlib import pyplot as plt
+import numpy as np
+
 
 PATH_CONSTANTS = "../data/constants/constants_2dams.json"
 PATH_TRAIN_DATA = "../data/history/historical_data_clean_train.pickle"
 PATH_TEST_DATA = "../data/history/historical_data_clean_test.pickle"
+
+PLOT_TRAINING_CURVE = True
+SAVE_OBSERVATIONS = True
+PATH_OBSERVATIONS = "../analyses/rl_pca/observations_data/observationsO2.npy"
+PATH_OBSERVATIONS_CONFIG = "../analyses/rl_pca/observations_data/observationsO2_config.json"
 
 current_datetime = datetime.now().strftime('%Y-%m-%d %H.%M')
 filepath_agent = f"../solutions/rl_models/RL_model_{current_datetime}.zip"
@@ -23,17 +30,23 @@ config = RLConfiguration(
     flow_smoothing_clip=False,
     action_type="exiting_flows",
     features=[
-        "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
-        "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped", "past_periods"
+        "past_vols", "past_flows", "past_variations", "future_prices",
+        "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped",
     ],
-    obs_box_shape=True,
-    unique_features=[],
-    num_steps_sight=16,
+    obs_box_shape=False,
+    unique_features=["future_prices", ],
+    num_steps_sight={
+        ("past_flows", "dam1"): constants.get_verification_lags_of_dam("dam1")[-1] + 1,
+        ("past_flows", "dam2"): constants.get_verification_lags_of_dam("dam2")[-1] + 1,
+        "past_variations": 2, "future_prices": 16, "future_inflows": 16,
+        "other": 1
+    },
     length_episodes=24 * 4 + 3,
     log_ep_freq=5,
     eval_ep_freq=5,
     eval_num_episodes=10,
     do_history_updates=False,
+    update_observation_record=SAVE_OBSERVATIONS,
 )
 train = RLTrain(
     config=config,
@@ -43,7 +56,7 @@ train = RLTrain(
 )
 
 train.solve(
-    num_episodes=200,
+    num_episodes=100,
     path_agent=filepath_agent,
     periodic_evaluation=True
 )
@@ -58,5 +71,18 @@ train.save_training_data(filepath_training)
 print(f"Created JSON file '{filepath_training}'.")
 
 # Plot training curve
-plt.show()
-print(train.model.policy)
+if PLOT_TRAINING_CURVE:
+    plt.show()
+    print(train.model.policy)
+
+# Save observation record for later PCA analysis
+if SAVE_OBSERVATIONS:
+
+    print("Observation record shape:", train.train_env.observation_record.shape)
+    print("Observation record:", train.train_env.observation_record)
+
+    np.save(PATH_OBSERVATIONS, train.train_env.observation_record)
+    print(f"Created .npy file '{PATH_OBSERVATIONS}'.")
+
+    config.to_json(PATH_OBSERVATIONS_CONFIG)
+    print(f"Created JSON file '{PATH_OBSERVATIONS_CONFIG}'.")

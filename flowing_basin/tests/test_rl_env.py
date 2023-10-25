@@ -34,6 +34,7 @@ config = RLConfiguration(
     },
     length_episodes=24 * 4 + 3,
     do_history_updates=True,
+    update_observation_record=True,
 )
 env1 = RLEnvironment(
     config=config,
@@ -79,6 +80,8 @@ for i, action in enumerate(actions):
     print("done:", done)
 print(">>>> history:")
 print(env1.river_basin.history.to_string())
+print(">>>> observation record:")
+print(env1.observation_record)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS II (FULL SOLUTION)
 # print("---- hardcoded actions II (full solution) ----")

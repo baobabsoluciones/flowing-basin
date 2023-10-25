@@ -31,7 +31,7 @@ class RLRun(Experiment):
         """
 
         model = SAC.load(path_agent)
-        obs = self.env.get_observation()
+        obs = self.env.get_observation_normalized()
         done = False
         while not done:
             action, _states = model.predict(obs, deterministic=True)

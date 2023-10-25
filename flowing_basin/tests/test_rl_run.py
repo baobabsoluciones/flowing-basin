@@ -4,7 +4,7 @@ import time
 
 NUM_STEPS_LOOKAHEAD = 16
 
-model_datetime = "2023-10-25 14.41"
+model_datetime = "2023-10-26 01.10"
 filepath_agent = f"../solutions/rl_models/RL_model_{model_datetime}.zip"
 filepath_config = f"../solutions/rl_models/RL_model_{model_datetime}_config.json"
 filepath_instance = f"../instances/instances_rl/instance1_expanded{NUM_STEPS_LOOKAHEAD}steps_backforth.json"

@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import warnings
 import os
 import tempfile
+import json
 
 
 class RLTrain(Experiment):
@@ -104,5 +105,21 @@ class RLTrain(Experiment):
         ax.plot(self.eval_episodes, self.eval_avg_results)
 
         return ax
+
+    def save_training_data(self, path: str):
+
+        if self.eval_episodes is None or self.eval_avg_results is None:
+            warnings.warn(
+                "No evaluation data found. Please make sure you have called the `solve` method of `RLTrain` "
+                "with `periodic_evaluation=True`."
+            )
+            return
+
+        training_data = {
+            "episode": self.eval_episodes.tolist(),
+            "average_result": self.eval_avg_results.tolist(),
+        }
+        with open(path, "w") as f:
+            json.dump(training_data, f, indent=4, sort_keys=True)
 
 

@@ -171,18 +171,20 @@ class RLEnvironment(gym.Env):
         # Configuration
         self.config = config
 
-        # Create instance
+        # Set data
         self.constants = None
         if path_constants is not None:
             self.constants = Instance.from_dict(load_json(path_constants))
         self.historical_data = None
         if path_historical_data is not None:
             self.historical_data = pd.read_pickle(path_historical_data)
-        self._reset_instance(instance, initial_row)
 
         # Post-process configuration
-        dam_ids = self.constants.get_ids_of_dams() if self.constants is not None else self.instance.get_ids_of_dams()
+        dam_ids = self.constants.get_ids_of_dams() if self.constants is not None else instance.get_ids_of_dams()
         self.config.post_process(dam_ids)
+
+        # Create instance
+        self._reset_instance(instance, initial_row)
 
         # Simulator (the core of the environment)
         self.river_basin = RiverBasin(

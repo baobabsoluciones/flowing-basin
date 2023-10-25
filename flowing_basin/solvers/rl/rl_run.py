@@ -1,7 +1,6 @@
 from flowing_basin.core import Instance, Solution, Experiment
 from .rl_env import RLConfiguration, RLEnvironment
 from stable_baselines3 import SAC
-from dataclasses import asdict
 
 
 class RLRun(Experiment):
@@ -69,7 +68,7 @@ class RLRun(Experiment):
                 solution_datetime=solution_datetime,
                 solver="RL",
                 time_step_minutes=self.instance.get_time_step_seconds() // 60,
-                configuration=asdict(self.config),
+                configuration=self.config.to_dict(),
                 objective_function=obj_fun.item(),
                 dams=[
                     dict(

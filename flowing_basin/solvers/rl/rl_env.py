@@ -7,7 +7,8 @@ import pandas as pd
 from datetime import datetime
 import pickle
 from random import randint
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+import json
 from typing import Callable
 
 
@@ -108,6 +109,35 @@ class RLConfiguration(Configuration):  # noqa
                 for feature in self.features for dam_id in dam_ids
             }
 
+    def to_dict(self) -> dict:
+
+        """
+        Turn the dataclass into a JSON-serializable dictionary
+        """
+
+        data_json = asdict(self)
+        data_json["num_steps_sight"] = [{"key": k, "value": v} for k, v in data_json["num_steps_sight"].items()]
+
+        return data_json
+
+    def to_json(self, path: str):
+
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f, indent=4, sort_keys=True)
+
+    @classmethod
+    def from_json(cls, path: str):
+
+        with open(path, "r") as f:
+            data_json = json.load(f)
+
+        # Convert 'num_steps_sight' back into a dictionary
+        num_steps_sight_list = data_json.pop("num_steps_sight")
+        num_steps_sight_dict = {tuple(item["key"]): item["value"] for item in num_steps_sight_list}
+        data_json["num_steps_sight"] = num_steps_sight_dict
+
+        return cls(**data_json)
+
 
 class RLEnvironment(gym.Env):
 
@@ -130,6 +160,14 @@ class RLEnvironment(gym.Env):
 
         super(RLEnvironment, self).__init__()
 
+        if instance is None:
+            if path_constants is None or path_historical_data is None:
+                raise ValueError(
+                    "If you do not give an instance to the RLEnvironment class constructor, "
+                    "you need to give both path_constants and path_historical_data "
+                    "in order to be able to create random instances."
+                )
+
         # Configuration
         self.config = config
 
@@ -143,7 +181,8 @@ class RLEnvironment(gym.Env):
         self._reset_instance(instance, initial_row)
 
         # Post-process configuration
-        self.config.post_process(self.constants.get_ids_of_dams())
+        dam_ids = self.constants.get_ids_of_dams() if self.constants is not None else self.instance.get_ids_of_dams()
+        self.config.post_process(dam_ids)
 
         # Simulator (the core of the environment)
         self.river_basin = RiverBasin(
@@ -226,12 +265,6 @@ class RLEnvironment(gym.Env):
         """
 
         if instance is None:
-
-            assert self.constants is not None and self.historical_data is not None, (
-                "If you reset the environment without giving an instance,"
-                "you need to give the path to the constants JSON and history dataframe in the class constructor,"
-                "in order to be able to create a random instance."
-            )
 
             max_sight = max(self.config.num_steps_sight.values())
             self.instance = self.create_instance(

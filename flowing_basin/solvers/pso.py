@@ -376,7 +376,6 @@ class PSO(Experiment):
             self.reshape_as_flows_or_relvars(swarm=swarm.best_pos.reshape(1, -1)),
             is_relvars=self.config.use_relvars,
         )
-        print(self.river_basin.history.to_string())
 
         # Optimal smoothed flows
         # We consider the smoothed flows so the resulting solution complies with the flow smoothing parameter

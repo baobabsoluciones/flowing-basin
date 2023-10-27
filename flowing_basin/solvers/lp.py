@@ -23,7 +23,7 @@ class LPConfiguration:
     MIPGap: float
 
     # Solver timeout
-    time_limit_seconds: float
+    max_time: float
 
     # Number of periods during which the flow through the channel may not vary
     # in order to change the sense of the flow's change
@@ -1193,7 +1193,7 @@ class LPModel(Experiment):
         solver_output = tempfile.NamedTemporaryFile(delete=False)
         solver = lp.GUROBI_CMD(
             gapRel=self.config.MIPGap,
-            timeLimit=self.config.time_limit_seconds,
+            timeLimit=self.config.max_time,
             logPath=solver_output.name
         )  # Other arguments: https://coin-or.github.io/pulp/technical/solvers.html#pulp.apis.GUROBI_CMD
         lpproblem.solve(solver)

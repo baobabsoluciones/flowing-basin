@@ -1,6 +1,5 @@
 from flowing_basin.core import Instance
 from flowing_basin.solvers import LPModel, LPConfiguration
-from datetime import datetime
 import matplotlib.pyplot as plt
 from itertools import product
 
@@ -26,7 +25,7 @@ for example, num_dams in product(INSTANCES, NUMS_DAMS):
             dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
         },
         MIPGap=0.01,
-        time_limit_seconds=TIME_LIMIT_MINUTES * 60,
+        max_time=TIME_LIMIT_MINUTES * 60,
         flow_smoothing=2,
     )
 

@@ -82,7 +82,7 @@ if __name__ == '__main__':
             lp_config.volume_objectives = pso_config.volume_objectives = {
                 dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
             }
-            lp_config.time_limit_seconds = num_dams * 30
+            lp_config.max_time = num_dams * 30
 
             lp_sol, lp_obj = get_lp_sol_and_obj_fun(lp_config, instance)
             pso_obj = get_pso_obj_fun(pso_config, instance, lp_sol)

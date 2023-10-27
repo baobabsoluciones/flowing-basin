@@ -146,7 +146,7 @@ class Solution(SolutionCore):
 
         # For evey dam, the total income must be equal to the computed income from configuration and details
         inconsistent_dams = []
-        config = self.data.get("configuration")
+        config = self.get_configuration()
         if has_details and config is not None:
             for dam_id in self.get_ids_of_dams():
                 dam_details = self.data["dams"][dam_id]["objective_function_details"]
@@ -211,6 +211,7 @@ class Solution(SolutionCore):
             for flow in flows:
                 current_variation = flow - previous_flow
                 if any([current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]):
+                    print(dam_id, flow, current_variation, variations[-flow_smoothing:])
                     compliance = False
                 variations.append(current_variation)
                 previous_flow = flow
@@ -279,10 +280,27 @@ class Solution(SolutionCore):
         Get the assigned flows to the given dam.
 
         :param idx: ID of the dam in the river basin
-        :return: List indicating the flow exiting the reservoir at each point in time (m3/s)
+        :return: List indicating the assigned flow exiting the reservoir at each point in time (m3/s)
         """
 
         return self.data["dams"][idx]["flows"]
+
+    def get_predicted_exiting_flows_of_dam(self, idx: str) -> list[float]:
+
+        """
+        Get the actual exiting flows predicted for the given dam
+        (these may be different from the assigned flows due to clipping).
+
+        :param idx: ID of the dam in the river basin
+        :return: List indicating the predicted flow exiting the reservoir at each point in time (m3/s)
+        """
+
+        predicted_flows = self.data["dams"][idx].get("flows_predicted")
+        if predicted_flows is None:
+            # Assume predicted flows equal the assigned flows
+            predicted_flows = self.get_exiting_flows_of_dam(idx)
+
+        return predicted_flows
 
     def get_objective_function(self) -> float | None:
 
@@ -328,6 +346,14 @@ class Solution(SolutionCore):
             values = values["objective_values_eur"]
 
         return values
+
+    def get_configuration(self) -> dict | None:
+
+        """
+        Get the configuration used to find the current solution
+        """
+
+        return self.data.get("configuration")
 
     def get_volumes_of_dam(self, idx: str) -> list[float] | None:
 
@@ -415,10 +441,7 @@ class Solution(SolutionCore):
         on top of the graph of the price of energy
         """
 
-        flows = self.get_exiting_flows_of_dam(dam_id)
-        volumes = self.get_volumes_of_dam(dam_id)
-
-        ax.plot(volumes, color='b', label="Predicted volume")
+        ax.plot(self.get_volumes_of_dam(dam_id), color='b', label="Predicted volume")
         ax.set_xlabel("Time (15min)")
         ax.set_ylabel("Volume (m3)")
         ax.set_title(f"Solution for {dam_id}")
@@ -426,7 +449,8 @@ class Solution(SolutionCore):
 
         twinax = ax.twinx()
         twinax.plot(self.get_all_prices(), color='r', label="Price")
-        twinax.plot(flows, color='g', label="Flow")
+        twinax.plot(self.get_exiting_flows_of_dam(dam_id), color='g', linestyle='--',  label="Flow (assigned)")
+        twinax.plot(self.get_predicted_exiting_flows_of_dam(dam_id), color='g', linestyle='-', label="Flow (predicted)")
         twinax.set_ylabel("Flow (m3/s), Price (€)")
         twinax.legend()
 

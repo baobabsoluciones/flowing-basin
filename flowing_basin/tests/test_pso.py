@@ -5,6 +5,8 @@ from itertools import product
 SAVE_SOLUTION = True
 INSTANCES = ['1', '3', 'Percentile25', 'Percentile75']
 NUMS_DAMS = [2, 6]
+# INSTANCES = ['1']
+# NUMS_DAMS = [2]
 K_PARAMETER = 2
 USE_RELVARS = True
 TIME_LIMIT_MINUTES = 15
@@ -44,8 +46,16 @@ for example, num_dams in product(INSTANCES, NUMS_DAMS):
     sol_inconsistencies = pso.solution.check()
     if sol_inconsistencies:
         raise Exception(f"There are inconsistencies in the given solution: {sol_inconsistencies}")
+    assert pso.solution.complies_with_flow_smoothing(
+        flow_smoothing=2,
+        initial_flows={
+            dam_id: instance.get_initial_lags_of_channel(dam_id)[0]
+            for dam_id in instance.get_ids_of_dams()
+        }
+    ), "The solution does not comply with the flow smoothing parameter"
     print("Optimal solution:", pso.solution.data)
 
     # Save solution
     if SAVE_SOLUTION:
         pso.solution.to_json(path_sol)
+        print(f"Created file '{path_sol}'.")

@@ -44,6 +44,7 @@ class RiverBasin:
         # Time-dependent attributes
         self.time = None
         self.all_past_clipped_flows = None
+        self.all_past_smoothed_flows = None
         self.all_past_volumes = None
         self.all_past_powers = None
         self.history = None
@@ -63,6 +64,9 @@ class RiverBasin:
         # Record of flows exiting the dams,
         # initialized as an empty array of the correct shape (num_time_steps x num_dams x num_scenarios)
         self.all_past_clipped_flows = np.array([]).reshape(
+            (0, self.instance.get_num_dams(), self.num_scenarios)
+        )
+        self.all_past_smoothed_flows = np.array([]).reshape(
             (0, self.instance.get_num_dams(), self.num_scenarios)
         )
 
@@ -333,6 +337,18 @@ class RiverBasin:
 
         return np.array([dam.flow_out_clipped2 for dam in self.dams])
 
+    def get_smoothed_flows(self) -> np.ndarray:
+
+        """
+        Get the smoothed flows (assigned flows smoothed but not clipped).
+
+        :return:
+            Array of shape num_dams x num_scenarios with
+            the flows smoothed to comply with the flow smoothing parameter (m3/s)
+        """
+
+        return np.array([dam.flow_out_smoothed for dam in self.dams])
+
     def update(self, flows: np.ndarray, fast_mode: bool = False):
 
         """
@@ -389,6 +405,13 @@ class RiverBasin:
             [
                 self.all_past_clipped_flows,
                 self.get_clipped_flows().reshape((1, self.instance.get_num_dams(), -1)),
+            ],
+            axis=0,
+        )
+        self.all_past_smoothed_flows = np.concatenate(
+            [
+                self.all_past_smoothed_flows,
+                self.get_smoothed_flows().reshape((1, self.instance.get_num_dams(), -1)),
             ],
             axis=0,
         )

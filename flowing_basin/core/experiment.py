@@ -3,7 +3,7 @@ from typing import Dict
 from pytups import SuperDict
 from .instance import Instance
 from .solution import Solution
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
 
 
@@ -21,6 +21,15 @@ class Configuration:
     # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
     volume_shortage_penalty: float = None
     volume_exceedance_bonus: float = None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+
+        # We filter the data dictionary to include only the necessary keys/arguments
+        necessary_attributes = {field.name for field in fields(cls) if field.init}
+        filtered_data = {attr: val for attr, val in data.items() if attr in necessary_attributes}
+
+        return cls(**filtered_data)
 
 
 class Experiment(ExperimentCore):

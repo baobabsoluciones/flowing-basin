@@ -5,10 +5,14 @@ import csv
 
 # PSO-RBO plot
 # Values of discrete parameters considered (and the way we plot them)
-RELVARS = [True, False]
-LINES = ['-', '--']
-BOUNDARIES = ['periodic', 'nearest', 'intermediate', 'shrink', 'reflective']
-COLORS = ['black', 'green', 'red', 'orange', 'blue']
+# RELVARS = [True, False]
+# LINES = ['-', '--']
+# BOUNDARIES = ['periodic', 'nearest', 'intermediate', 'shrink', 'reflective']
+# COLORS = ['black', 'green', 'red', 'orange', 'blue']
+RELVARS = [False]
+LINES = ['--']
+BOUNDARIES = ['intermediate']
+COLORS = ['red']
 
 # PSO plot
 PSO_COLOR = 'purple'
@@ -19,14 +23,15 @@ MILP_COLOR = 'gray'
 # Instances solved
 INSTANCES = ['Percentile25', 'Percentile75']
 # INSTANCES = ['1', '3']
-NUMS_DAMS = [2, 6]
+# NUMS_DAMS = [2, 6]
+NUMS_DAMS = [8, 10]
 
 # Other options
-PLOT_SOL = False
-PLOT_PSO_RBO_SOL = False
-PLOT_PSO_SOL = False
-PLOT_MILP_SOL = False
-SAVE_REPORT = True
+PLOT_SOL = True
+PLOT_PSO_RBO_SOL = True
+PLOT_PSO_SOL = True
+PLOT_MILP_SOL = True
+SAVE_REPORT = False
 
 report_filepath = "reports/test_pso_rbo_boundaries_sols.csv"
 
@@ -50,7 +55,7 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
 
     # Get axes for the given instance and number of dams
     ax = axs[instance_index, num_dams_index]
-    min_obj_fun_value = float('inf') if PLOT_PSO_RBO_SOL else 0
+    min_obj_fun_value = 0  # float('inf')
     max_obj_fun_value = - float('inf')
 
     # MILP solution
@@ -73,6 +78,7 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
     if PLOT_PSO_SOL:
         time_stamps = sol.get_history_time_stamps()
         obj_fun_values = sol.get_history_values()
+        # min_obj_fun_value = min(min_obj_fun_value, min(obj_fun_values))
         max_obj_fun_value = max(max_obj_fun_value, max(obj_fun_values))
         ax.plot(
             time_stamps, obj_fun_values, color=PSO_COLOR, linestyle='-', label='PSO'

@@ -5,7 +5,7 @@ from itertools import product
 
 SOLVERS = ['MILP', 'PSO', 'PSO-RBO']
 INSTANCES = ['Percentile25', 'Percentile75']
-NUMS_DAMS = [8, 10]
+NUMS_DAMS = [2, 6, 8]
 
 PLOT_SOL = False
 SAVE_SOLUTION = True
@@ -18,9 +18,9 @@ for solver, example, num_dams in product(SOLVERS, INSTANCES, NUMS_DAMS):
     # Paths
     path_instance = f"../instances/instances_big/instance{example}_{num_dams}dams_1days.json"
     path_sol = {
-        'MILP': f"../solutions/test_milp/instance{example}_MILP_{num_dams}dams_1days.json",
-        'PSO': f"../solutions/test_pso/instance{example}_PSO_{num_dams}dams_1days.json",
-        'PSO-RBO': f"../solutions/test_pso_rbo_boundaries/instance{example}_PSO-RBO_{num_dams}dams_1days_v=False_b=intermediate.json"
+        'MILP': f"../solutions/test_milp/instance{example}_MILP_{num_dams}dams_1days_VolExceed.json",
+        'PSO': f"../solutions/test_pso/instance{example}_PSO_{num_dams}dams_1days_VolExceed.json",
+        'PSO-RBO': f"../solutions/test_pso_rbo_boundaries/instance{example}_PSO-RBO_{num_dams}dams_1days_v=False_b=intermediate_VolExceed.json"
     }[solver]
 
     # Instance
@@ -29,7 +29,7 @@ for solver, example, num_dams in product(SOLVERS, INSTANCES, NUMS_DAMS):
     # Configuration
     config_milp_pso_psorbo = dict(
         volume_shortage_penalty=3,
-        volume_exceedance_bonus=0,
+        volume_exceedance_bonus=0.035,
         startups_penalty=50,
         limit_zones_penalty=50,
         volume_objectives={

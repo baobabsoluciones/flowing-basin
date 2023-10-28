@@ -3,16 +3,13 @@ from flowing_basin.solvers import LPModel, LPConfiguration, PSO, PSOConfiguratio
 import matplotlib.pyplot as plt
 from itertools import product
 
-# SOLVERS = ['MILP', 'PSO', 'PSO-RBO']
-SOLVERS = ['PSO-RBO']
-# INSTANCES = ['Percentile25', 'Percentile75']
-# NUMS_DAMS = [8, 10]
-INSTANCES = ['Percentile25']
-NUMS_DAMS = [8]
+SOLVERS = ['MILP', 'PSO', 'PSO-RBO']
+INSTANCES = ['Percentile25', 'Percentile75']
+NUMS_DAMS = [8, 10]
 
 PLOT_SOL = False
 SAVE_SOLUTION = True
-TIME_LIMIT_MINUTES = 1
+TIME_LIMIT_MINUTES = 15
 
 for solver, example, num_dams in product(SOLVERS, INSTANCES, NUMS_DAMS):
 
@@ -23,7 +20,7 @@ for solver, example, num_dams in product(SOLVERS, INSTANCES, NUMS_DAMS):
     path_sol = {
         'MILP': f"../solutions/test_milp/instance{example}_MILP_{num_dams}dams_1days.json",
         'PSO': f"../solutions/test_pso/instance{example}_PSO_{num_dams}dams_1days.json",
-        'PSO-RBO': f"../solutions/test_pso_rbo_boundaries/instance{example}_PSO-RBO_{num_dams}dams_1days.json"
+        'PSO-RBO': f"../solutions/test_pso_rbo_boundaries/instance{example}_PSO-RBO_{num_dams}dams_1days_v=False_b=intermediate.json"
     }[solver]
 
     # Instance

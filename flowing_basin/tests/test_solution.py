@@ -8,12 +8,12 @@ PLOT_SOL = True
 # INSTANCE = 1
 # NUM_DAMS = 2
 # instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
-instance = Instance.from_json(f"../instances/instances_big/instance1_2dams_1days.json")
+instance = Instance.from_json(f"../instances/instances_big/instancePercentile25_2dams_1days.json")
 
 # SOLVER = "Heuristic"
 # SOL_DATETIME = "2023-09-25_14-07"
 # solution = Solution.from_json(f"../solutions/instance{INSTANCE}_{SOLVER}_{NUM_DAMS}dams_1days_time{SOL_DATETIME}.json")
-solution = Solution.from_json("../solutions/test_pso/instance1_PSO_2dams_1days.json")
+solution = Solution.from_json("../solutions/test_pso_rbo_boundaries/instancePercentile25_PSO-RBO_2dams_1days_v=False_b=intermediate.json")
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = solution.check()

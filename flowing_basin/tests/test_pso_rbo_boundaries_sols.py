@@ -24,7 +24,8 @@ MILP_COLOR = 'gray'
 INSTANCES = ['Percentile25', 'Percentile75']
 # INSTANCES = ['1', '3']
 # NUMS_DAMS = [2, 6]
-NUMS_DAMS = [8, 10]
+NUMS_DAMS = [2, 6, 8]
+VOL_BONUS = True
 
 # Other options
 PLOT_SOL = True
@@ -36,7 +37,7 @@ SAVE_REPORT = False
 report_filepath = "reports/test_pso_rbo_boundaries_sols.csv"
 
 # Create plots with appropriate spacing
-fig, axs = plt.subplots(2, 2)
+fig, axs = plt.subplots(len(INSTANCES), len(NUMS_DAMS))
 plt.subplots_adjust(wspace=0.7, hspace=0.4)
 
 spacing = 40
@@ -60,7 +61,7 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
 
     # MILP solution
     sol = Solution.from_json(
-        f"../solutions/test_milp/instance{instance_name}_MILP_{num_dams}dams_1days.json"
+        f"../solutions/test_milp/instance{instance_name}_MILP_{num_dams}dams_1days{'_VolExceed' if VOL_BONUS else ''}.json"
     )
     milp_obj_fun = sol.get_objective_function()
     if PLOT_MILP_SOL:
@@ -73,7 +74,7 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
 
     # PSO solution
     sol = Solution.from_json(
-        f"../solutions/test_pso/instance{instance_name}_PSO_{num_dams}dams_1days.json"
+        f"../solutions/test_pso/instance{instance_name}_PSO_{num_dams}dams_1days{'_VolExceed' if VOL_BONUS else ''}.json"
     )
     if PLOT_PSO_SOL:
         time_stamps = sol.get_history_time_stamps()
@@ -89,7 +90,7 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
 
         sol = Solution.from_json(
             f"../solutions/test_pso_rbo_boundaries/instance{instance_name}_PSO-RBO_{num_dams}dams_1days"
-            f"_v={relvar}_b={boundary}.json"
+            f"_v={relvar}_b={boundary}{'_VolExceed' if VOL_BONUS else ''}.json"
         )
 
         if PLOT_PSO_RBO_SOL:

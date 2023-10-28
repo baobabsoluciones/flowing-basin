@@ -5,22 +5,28 @@ from itertools import product
 
 SOLVERS = ['MILP', 'PSO', 'PSO-RBO']
 INSTANCES = ['Percentile25', 'Percentile75']
-NUMS_DAMS = [2, 6, 8]
+NUMS_DAMS = [6, 8, 10, 12]
+POWER_PENALTIES = [True, False]
+# 3 * 2 * 4 * 2 * 15min = 48 * 15min = 12h
 
 PLOT_SOL = False
 SAVE_SOLUTION = True
-TIME_LIMIT_MINUTES = 15
+TIME_LIMIT_MINUTES = 0.1
 
-for solver, example, num_dams in product(SOLVERS, INSTANCES, NUMS_DAMS):
+for solver, example, num_dams, power_penalty in product(SOLVERS, INSTANCES, NUMS_DAMS, POWER_PENALTIES):
 
-    print(f" --- Using solver {solver} to solve instance {example} with {num_dams} dams... --- ")
+    print(
+        f" --- Using solver {solver} to solve instance {example} with {num_dams} dams"
+        f"{' (no power penalty)' if not power_penalty else ''}"
+        f"... --- "
+    )
 
     # Paths
     path_instance = f"../instances/instances_big/instance{example}_{num_dams}dams_1days.json"
     path_sol = {
-        'MILP': f"../solutions/test_milp/instance{example}_MILP_{num_dams}dams_1days_VolExceed.json",
-        'PSO': f"../solutions/test_pso/instance{example}_PSO_{num_dams}dams_1days_VolExceed.json",
-        'PSO-RBO': f"../solutions/test_pso_rbo_boundaries/instance{example}_PSO-RBO_{num_dams}dams_1days_v=False_b=intermediate_VolExceed.json"
+        'MILP': f"../solutions/test_milp/instance{example}_MILP_{num_dams}dams_1days_VolExceed{'_NoPowerPenalty' if not power_penalty else ''}.json",
+        'PSO': f"../solutions/test_pso/instance{example}_PSO_{num_dams}dams_1days_VolExceed{'_NoPowerPenalty' if not power_penalty else ''}.json",
+        'PSO-RBO': f"../solutions/test_pso_rbo_boundaries/instance{example}_PSO-RBO_{num_dams}dams_1days_v=False_b=intermediate_VolExceed{'_NoPowerPenalty' if not power_penalty else ''}.json"
     }[solver]
 
     # Instance
@@ -30,10 +36,14 @@ for solver, example, num_dams in product(SOLVERS, INSTANCES, NUMS_DAMS):
     config_milp_pso_psorbo = dict(
         volume_shortage_penalty=3,
         volume_exceedance_bonus=0.035,
-        startups_penalty=50,
-        limit_zones_penalty=50,
+        startups_penalty=50 if power_penalty else 0,
+        limit_zones_penalty=50 if power_penalty else 0,
         volume_objectives={
-            dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
+            dam_id: (
+                 instance.get_min_vol_of_dam(dam_id) + (
+                    instance.get_max_vol_of_dam(dam_id) - instance.get_min_vol_of_dam(dam_id)
+                 ) / 2
+            ) for dam_id in instance.get_ids_of_dams()
         },
         max_time=TIME_LIMIT_MINUTES * 60,
         flow_smoothing=2,

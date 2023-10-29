@@ -11,7 +11,7 @@ POWER_PENALTIES = [True, False]
 
 PLOT_SOL = False
 SAVE_SOLUTION = True
-TIME_LIMIT_MINUTES = 0.1
+TIME_LIMIT_MINUTES = 15
 
 for solver, example, num_dams, power_penalty in product(SOLVERS, INSTANCES, NUMS_DAMS, POWER_PENALTIES):
 

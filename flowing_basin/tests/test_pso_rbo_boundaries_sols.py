@@ -24,30 +24,42 @@ MILP_COLOR = 'gray'
 INSTANCES = ['Percentile25', 'Percentile75']
 # INSTANCES = ['1', '3']
 # NUMS_DAMS = [2, 6]
-NUMS_DAMS = [2, 6, 8]
+NUMS_DAMS = [6, 8, 10, 12]
 VOL_BONUS = True
+POWER_PENALTY = True
 
 # Other options
 PLOT_SOL = True
 PLOT_PSO_RBO_SOL = True
 PLOT_PSO_SOL = True
 PLOT_MILP_SOL = True
-SAVE_REPORT = False
+SAVE_REPORT = True
+TIME_LIMITS = [5 * 60, 15 * 60]
 
-report_filepath = "reports/test_pso_rbo_boundaries_sols.csv"
+report_filepath = (
+    f"reports/test_pso_rbo_boundaries_sols"
+    f"{'_VolExceed' if VOL_BONUS else ''}{'_NoPowerPenalty' if not POWER_PENALTY else ''}.csv"
+)
 
 # Create plots with appropriate spacing
 fig, axs = plt.subplots(len(INSTANCES), len(NUMS_DAMS))
 plt.subplots_adjust(wspace=0.7, hspace=0.4)
 
-spacing = 40
-report = [
-    ['instance'] +
-    [f'obj_v={relvar}_b={boundary}' for relvar, boundary in product(RELVARS, BOUNDARIES)]
-]
+# First row of report
+first_row = ['instance']
+for time_limit in TIME_LIMITS:
+    first_row += [f'MILP gap ({time_limit}s)']
+    for relvar, boundary in product(RELVARS, BOUNDARIES):
+        first_row += [f'obj_v={relvar}_b={boundary} ({time_limit}s)']
+report = [first_row]
+
+# Values that will appear in report
+spacing = 40  # When printing the report
 final_objs = dict()
 final_objs_norm = dict()
 fraction_over_milp = dict()
+milp_obj_fun = dict()
+milp_final_gaps = dict()
 
 # Plot the curves
 for (instance_index, instance_name), (num_dams_index, num_dams) in product(
@@ -61,12 +73,15 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
 
     # MILP solution
     sol = Solution.from_json(
-        f"../solutions/test_milp/instance{instance_name}_MILP_{num_dams}dams_1days{'_VolExceed' if VOL_BONUS else ''}.json"
+        f"../solutions/test_milp/instance{instance_name}_MILP_{num_dams}dams_1days"
+        f"{'_VolExceed' if VOL_BONUS else ''}{'_NoPowerPenalty' if not POWER_PENALTY else ''}.json"
     )
-    milp_obj_fun = sol.get_objective_function()
+    for time_limit in TIME_LIMITS:
+        milp_obj_fun[(instance_name, num_dams, time_limit)] = sol.get_history_objective_function_value(time_limit)
+        milp_final_gaps[(instance_name, num_dams, time_limit)] = sol.get_history_gap_value(time_limit)
     if PLOT_MILP_SOL:
         time_stamps = sol.get_history_time_stamps()
-        obj_fun_values = sol.get_history_values()
+        obj_fun_values = sol.get_history_objective_function_values()
         max_obj_fun_value = max(max_obj_fun_value, max(obj_fun_values))
         ax.plot(
             time_stamps, obj_fun_values, color=MILP_COLOR, linestyle='-', label='MILP'
@@ -74,11 +89,12 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
 
     # PSO solution
     sol = Solution.from_json(
-        f"../solutions/test_pso/instance{instance_name}_PSO_{num_dams}dams_1days{'_VolExceed' if VOL_BONUS else ''}.json"
+        f"../solutions/test_pso/instance{instance_name}_PSO_{num_dams}dams_1days"
+        f"{'_VolExceed' if VOL_BONUS else ''}{'_NoPowerPenalty' if not POWER_PENALTY else ''}.json"
     )
     if PLOT_PSO_SOL:
         time_stamps = sol.get_history_time_stamps()
-        obj_fun_values = sol.get_history_values()
+        obj_fun_values = sol.get_history_objective_function_values()
         # min_obj_fun_value = min(min_obj_fun_value, min(obj_fun_values))
         max_obj_fun_value = max(max_obj_fun_value, max(obj_fun_values))
         ax.plot(
@@ -90,12 +106,13 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
 
         sol = Solution.from_json(
             f"../solutions/test_pso_rbo_boundaries/instance{instance_name}_PSO-RBO_{num_dams}dams_1days"
-            f"_v={relvar}_b={boundary}{'_VolExceed' if VOL_BONUS else ''}.json"
+            f"_v={relvar}_b={boundary}"
+            f"{'_VolExceed' if VOL_BONUS else ''}{'_NoPowerPenalty' if not POWER_PENALTY else ''}.json"
         )
 
         if PLOT_PSO_RBO_SOL:
             time_stamps = sol.get_history_time_stamps()
-            obj_fun_values = sol.get_history_values()
+            obj_fun_values = sol.get_history_objective_function_values()
             min_obj_fun_value = min(min_obj_fun_value, min(obj_fun_values))
             max_obj_fun_value = max(max_obj_fun_value, max(obj_fun_values))
             ax.plot(
@@ -103,17 +120,24 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
             )
 
         # Values in report
-        final_objs[(instance_name, num_dams, relvar, boundary)] = sol.get_objective_function()
-        instance = Instance.from_json(
-            f"../instances/instances_big/instance{instance_name}_{num_dams}dams_1days.json"
-        )
-        avg_inflow = instance.calculate_total_avg_inflow()
-        power_installed = sum(instance.get_max_power_of_power_group(dam_id) for dam_id in instance.get_ids_of_dams())
-        obj_norm = sol.get_objective_function() / (avg_inflow * power_installed)
-        final_objs_norm[(instance_name, num_dams, relvar, boundary)] = obj_norm
-        fraction_over_milp[(instance_name, num_dams, relvar, boundary)] = (
-            sol.get_objective_function() - milp_obj_fun
-        ) / milp_obj_fun
+        for time_limit in TIME_LIMITS:
+
+            pso_rbo_obj_fun = sol.get_history_objective_function_value(time_limit)
+            final_objs[(instance_name, num_dams, relvar, boundary, time_limit)] = pso_rbo_obj_fun
+
+            instance = Instance.from_json(
+                f"../instances/instances_big/instance{instance_name}_{num_dams}dams_1days.json"
+            )
+            avg_inflow = instance.calculate_total_avg_inflow()
+            power_installed = sum(instance.get_max_power_of_power_group(dam_id) for dam_id in instance.get_ids_of_dams())
+            obj_norm = pso_rbo_obj_fun / (avg_inflow * power_installed)
+            final_objs_norm[(instance_name, num_dams, relvar, boundary, time_limit)] = obj_norm
+
+            fraction_over_milp[(instance_name, num_dams, relvar, boundary, time_limit)] = (
+                pso_rbo_obj_fun - milp_obj_fun[(instance_name, num_dams, time_limit)]
+            ) / milp_obj_fun[(instance_name, num_dams, time_limit)] if milp_obj_fun[(instance_name, num_dams, time_limit)] > 0 else (
+                float('inf')
+            )
 
     # Add titles and legends
     if PLOT_SOL:
@@ -130,27 +154,33 @@ attributes = [
     (fraction_over_milp, "over MILP", "fraction over MILP mean")
 ]
 for attr, attr_name, aggr_name in attributes:
+
+    # Values for each instance
     for instance_name, num_dams in product(INSTANCES, NUMS_DAMS):
-        report.append(
-            [f'instance{instance_name} {num_dams}dams ({attr_name})'] +
-            [
-                round(attr[(instance_name, num_dams, relvar, boundary)], 2)
-                for relvar, boundary in product(RELVARS, BOUNDARIES)
+        row = [f'instance{instance_name} {num_dams}dams ({attr_name})']
+        for time_limit in TIME_LIMITS:
+            row += [milp_final_gaps[(instance_name, num_dams, time_limit)]]
+            for relvar, boundary in product(RELVARS, BOUNDARIES):
+                row += [round(attr[(instance_name, num_dams, relvar, boundary, time_limit)], 2)]
+        report.append(row)
+
+    # Mean across all instances
+    final_row = [aggr_name]
+    for time_limit in TIME_LIMITS:
+        final_row += ['-']
+        for relvar, boundary in product(RELVARS, BOUNDARIES):
+            final_row += [
+                round(sum(
+                    attr[(instance_name, num_dams, relvar, boundary, time_limit)]
+                    for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
+                    if attr[(instance_name, num_dams, relvar, boundary, time_limit)] < float('inf')
+                ) / len([
+                    attr[(instance_name, num_dams, relvar, boundary, time_limit)]
+                    for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
+                    if attr[(instance_name, num_dams, relvar, boundary, time_limit)] < float('inf')
+                ]), 2)
             ]
-        )
-    report.append(
-        [aggr_name] +
-        [
-            round(sum(
-                attr[(instance_name, num_dams, relvar, boundary)]
-                for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
-            ) / len([
-                attr[(instance_name, num_dams, relvar, boundary)]
-                for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
-            ]), 2)
-            for relvar, boundary in product(RELVARS, BOUNDARIES)
-        ]
-    )
+    report.append(final_row)
 
 if SAVE_REPORT:
     with open(report_filepath, 'w', newline='') as file:

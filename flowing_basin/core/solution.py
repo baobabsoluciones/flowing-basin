@@ -335,7 +335,7 @@ class Solution(SolutionCore):
 
         return time_stamps
 
-    def get_history_values(self) -> list[float] | None:
+    def get_history_objective_function_values(self) -> list[float] | None:
 
         """
         Get the history of objective function values
@@ -346,6 +346,63 @@ class Solution(SolutionCore):
             values = values["objective_values_eur"]
 
         return values
+
+    def get_history_gap_values(self) -> list[float] | None:
+
+        """
+        Get the gap values of the MILP solver
+        """
+
+        values = self.data.get("objective_history")
+        if values is not None:
+            values = values.get("gap_values_pct")
+
+        return values
+
+    def get_final_gap_value(self) -> float | None:
+
+        """
+        Get the final gap value of the MILP solver
+        """
+
+        gap_values = self.get_history_gap_values()
+        if gap_values is not None:
+            final_gap = gap_values[-1]
+        else:
+            final_gap = None
+
+        return final_gap
+
+    def get_history_objective_function_value(self, time_s: float) -> float:
+
+        """
+        Get the objective function value
+        for the given execution time in seconds
+        """
+
+        obj_fun_value = np.interp(
+            time_s,
+            self.get_history_time_stamps(),
+            self.get_history_objective_function_values(),
+        )
+
+        return obj_fun_value
+
+    def get_history_gap_value(self, time_s: float) -> float:
+
+        """
+        Get the gap value
+        for the given execution time in seconds
+        (valid only for the MILP solver)
+        """
+
+        obj_fun_value = np.interp(
+            time_s,
+            self.get_history_time_stamps(),
+            self.get_history_gap_values(),
+        )
+
+        return obj_fun_value
 
     def get_configuration(self) -> dict | None:
 
@@ -461,7 +518,7 @@ class Solution(SolutionCore):
         """
 
         time_stamps = self.get_history_time_stamps()
-        values = self.get_history_values()
+        values = self.get_history_objective_function_values()
         if time_stamps is None or values is None:
             warnings.warn("This solution object does not have the time stamps or objective function values recorded.")
             return

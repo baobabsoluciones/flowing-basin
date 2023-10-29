@@ -3,17 +3,17 @@ from flowing_basin.tools import RiverBasin
 from matplotlib import pyplot as plt
 
 
-PLOT_SOL = True
+PLOT_SOL = False
 
 # INSTANCE = 1
 # NUM_DAMS = 2
 # instance = Instance.from_json(f"../instances/instances_big/instance{INSTANCE}_{NUM_DAMS}dams_1days.json")
-instance = Instance.from_json(f"../instances/instances_big/instancePercentile25_2dams_1days.json")
+instance = Instance.from_json(f"../instances/instances_big/instancePercentile75_12dams_1days.json")
 
 # SOLVER = "Heuristic"
 # SOL_DATETIME = "2023-09-25_14-07"
 # solution = Solution.from_json(f"../solutions/instance{INSTANCE}_{SOLVER}_{NUM_DAMS}dams_1days_time{SOL_DATETIME}.json")
-solution = Solution.from_json("../solutions/test_pso_rbo_boundaries/instancePercentile25_PSO-RBO_2dams_1days_v=False_b=intermediate.json")
+solution = Solution.from_json("../solutions/test_milp/instancePercentile75_MILP_12dams_1days_VolExceed_NoPowerPenalty.json")
 
 # Make sure data follows schema and has no inconsistencies
 inconsistencies = solution.check()
@@ -52,10 +52,17 @@ print("Prices:", solution.get_all_prices())
 
 # History values
 time_stamps = solution.get_history_time_stamps()
-obj_values = solution.get_history_values()
+obj_values = solution.get_history_objective_function_values()
+gap_values = solution.get_history_gap_values()
 if time_stamps is not None and obj_values is not None:
     print(' '.join([f"{el:^15}" for el in time_stamps]))
     print(' '.join([f"{el:^15.2f}" for el in obj_values]))
+    if gap_values is not None:
+        print(' '.join([f"{el:^15.2f}" for el in gap_values]))
+        print("gap after 5 min", solution.get_history_gap_value(5 * 60))
+        print("gap after 15 min", solution.get_history_gap_value(15 * 60))
+    print("obj after 5 min", solution.get_history_objective_function_value(5 * 60))
+    print("obj after 15 min", solution.get_history_objective_function_value(15 * 60))
 
 # Plot solution
 if PLOT_SOL:
@@ -83,24 +90,50 @@ for dam_index, dam_id in enumerate(instance.get_ids_of_dams()):
                 f"the flow is {flow} but the actual flow is {actual_flow}"
             )
             
-# Print simulation historic values with solution
-income_energy = 0.
-startups = 0
-limits = 0
-print(river_basin.history.to_string())
-for dam_id in instance.get_ids_of_dams():
-    income_energy += river_basin.history[f'{dam_id}_income'].sum()
-    print(f"{dam_id}'s income from energy: {income_energy}")
-    startups += river_basin.history[f'{dam_id}_startups'].sum()
-    print(f"{dam_id}'s number of startups: {startups}")
-    limits += river_basin.history[f'{dam_id}_limits'].sum()
-    print(f"{dam_id}'s number of limit zones: {limits}")
 
-# Calculate obj fun manually
+print(river_basin.history.to_string())
+total_income_energy = 0.
+total_startups = 0
+total_limits = 0
+total_vol_shortage = 0.
+total_vol_exceedance = 0.
+
 config = solution.get_configuration()
 if config is not None:
     config = Configuration.from_dict(config)
-    obj_fun_calculated = income_energy - startups * config.startups_penalty - limits * config.limit_zones_penalty
+
+for dam_id in instance.get_ids_of_dams():
+
+    income_energy = river_basin.history[f'{dam_id}_income'].sum()
+    print(f"{dam_id}'s income from energy: {income_energy}")
+    total_income_energy += income_energy
+
+    startups = river_basin.history[f'{dam_id}_startups'].sum()
+    print(f"{dam_id}'s number of startups: {startups}")
+    total_startups += startups
+
+    limits = river_basin.history[f'{dam_id}_limits'].sum()
+    print(f"{dam_id}'s number of limit zones: {limits}")
+    total_limits += limits
+
+    if config is not None:
+
+        dam = river_basin.dams[instance.get_order_of_dam(dam_id) - 1]
+
+        vol_shortage = max(0, config.volume_objectives[dam_id] - dam.final_volume)
+        print(f"{dam_id}'s volume shortage: {vol_shortage}")
+        total_vol_shortage += vol_shortage
+
+        vol_exceedance = max(0, dam.final_volume - config.volume_objectives[dam_id])
+        print(f"{dam_id}'s volume exceedance: {vol_exceedance}")
+        total_vol_exceedance += vol_exceedance
+
+# Calculate obj fun manually
+if config is not None:
+    obj_fun_calculated = (
+            total_income_energy - total_startups * config.startups_penalty - total_limits * config.limit_zones_penalty
+            - total_vol_shortage * config.volume_shortage_penalty + total_vol_exceedance * config.volume_exceedance_bonus
+    )
     print("Calculated objective function:", obj_fun_calculated)
     obj_fun_stored = solution.get_objective_function()
     if obj_fun_stored is not None:

@@ -26,7 +26,7 @@ INSTANCES = ['Percentile25', 'Percentile75']
 # NUMS_DAMS = [2, 6]
 NUMS_DAMS = [6, 8, 10, 12]
 VOL_BONUS = True
-POWER_PENALTY = True
+POWER_PENALTY = False
 
 # Other options
 PLOT_SOL = True
@@ -48,7 +48,7 @@ plt.subplots_adjust(wspace=0.7, hspace=0.4)
 # First row of report
 first_row = ['instance']
 for time_limit in TIME_LIMITS:
-    first_row += [f'MILP gap ({time_limit}s)']
+    first_row += [f'MILP gap ({time_limit}s)', f'PSO ({time_limit}s)']
     for relvar, boundary in product(RELVARS, BOUNDARIES):
         first_row += [f'obj_v={relvar}_b={boundary} ({time_limit}s)']
 report = [first_row]
@@ -58,6 +58,7 @@ spacing = 40  # When printing the report
 final_objs = dict()
 final_objs_norm = dict()
 fraction_over_milp = dict()
+fraction_over_milp_pso = dict()
 milp_obj_fun = dict()
 milp_final_gaps = dict()
 
@@ -100,6 +101,13 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
         ax.plot(
             time_stamps, obj_fun_values, color=PSO_COLOR, linestyle='-', label='PSO'
         )
+        for time_limit in TIME_LIMITS:
+            pso_obj_fun = sol.get_history_objective_function_value(time_limit)
+            fraction_over_milp_pso[(instance_name, num_dams, time_limit)] = (
+                pso_obj_fun - milp_obj_fun[(instance_name, num_dams, time_limit)]
+            ) / milp_obj_fun[(instance_name, num_dams, time_limit)] if milp_obj_fun[(instance_name, num_dams, time_limit)] > 0 else (
+                float('inf')
+            )
 
     # PSO-RBO solutions
     for (relvar, line), (boundary, color) in product(zip(RELVARS, LINES), zip(BOUNDARIES, COLORS)):
@@ -159,7 +167,7 @@ for attr, attr_name, aggr_name in attributes:
     for instance_name, num_dams in product(INSTANCES, NUMS_DAMS):
         row = [f'instance{instance_name} {num_dams}dams ({attr_name})']
         for time_limit in TIME_LIMITS:
-            row += [milp_final_gaps[(instance_name, num_dams, time_limit)]]
+            row += [milp_final_gaps[(instance_name, num_dams, time_limit)], fraction_over_milp_pso[(instance_name, num_dams, time_limit)]]
             for relvar, boundary in product(RELVARS, BOUNDARIES):
                 row += [round(attr[(instance_name, num_dams, relvar, boundary, time_limit)], 2)]
         report.append(row)
@@ -167,7 +175,24 @@ for attr, attr_name, aggr_name in attributes:
     # Mean across all instances
     final_row = [aggr_name]
     for time_limit in TIME_LIMITS:
-        final_row += ['-']
+        final_row += [
+            sum(
+                milp_final_gaps[(instance_name, num_dams, time_limit)]
+                for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
+            ) / len([
+                milp_final_gaps[(instance_name, num_dams, time_limit)]
+                for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
+            ]),
+            sum(
+                fraction_over_milp_pso[(instance_name, num_dams, time_limit)]
+                for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
+                if fraction_over_milp_pso[(instance_name, num_dams, time_limit)] < float('inf')
+            ) / len([
+                fraction_over_milp_pso[(instance_name, num_dams, time_limit)]
+                for instance_name, num_dams in product(INSTANCES, NUMS_DAMS)
+                if fraction_over_milp_pso[(instance_name, num_dams, time_limit)] < float('inf')
+            ])
+        ]
         for relvar, boundary in product(RELVARS, BOUNDARIES):
             final_row += [
                 round(sum(

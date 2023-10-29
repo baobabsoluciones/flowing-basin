@@ -2,10 +2,11 @@ from flowing_basin.core import Instance
 from flowing_basin.solvers import LPModel, LPConfiguration, PSO, PSOConfiguration, PsoRbo, PsoRboConfiguration
 import matplotlib.pyplot as plt
 from itertools import product
+import os
 
 SOLVERS = ['MILP', 'PSO', 'PSO-RBO']
-INSTANCES = ['Percentile25', 'Percentile75']
-NUMS_DAMS = [6, 8, 10, 12]
+INSTANCES = ['Percentile25', 'Percentile50', 'Percentile75']
+NUMS_DAMS = [2, 4, 6, 8, 10, 12]
 POWER_PENALTIES = [True, False]
 # 3 * 2 * 4 * 2 * 15min = 48 * 15min = 12h
 
@@ -28,6 +29,9 @@ for solver, example, num_dams, power_penalty in product(SOLVERS, INSTANCES, NUMS
         'PSO': f"../solutions/test_pso/instance{example}_PSO_{num_dams}dams_1days_VolExceed{'_NoPowerPenalty' if not power_penalty else ''}.json",
         'PSO-RBO': f"../solutions/test_pso_rbo_boundaries/instance{example}_PSO-RBO_{num_dams}dams_1days_v=False_b=intermediate_VolExceed{'_NoPowerPenalty' if not power_penalty else ''}.json"
     }[solver]
+    if os.path.exists(path_sol):
+        print(f"Solution '{path_sol}' already exists. Skipping to next iteration...")
+        continue
 
     # Instance
     instance = Instance.from_json(path_instance)

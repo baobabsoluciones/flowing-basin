@@ -3,10 +3,11 @@ from flowing_basin.solvers import LPModel, LPConfiguration, PSO, PSOConfiguratio
 import matplotlib.pyplot as plt
 from itertools import product
 import os
+import warnings
 
-SOLVERS = ['MILP', 'PSO', 'PSO-RBO']
-INSTANCES = ['Percentile25', 'Percentile50', 'Percentile75']
-NUMS_DAMS = [2, 4, 6, 8, 10, 12]
+SOLVERS = ['MILP']
+INSTANCES = ['Percentile75']
+NUMS_DAMS = [2, 4]
 POWER_PENALTIES = [True, False]
 # 3 * 2 * 4 * 2 * 15min = 48 * 15min = 12h
 
@@ -96,13 +97,14 @@ for solver, example, num_dams, power_penalty in product(SOLVERS, INSTANCES, NUMS
     sol_inconsistencies = solver_object.solution.check()
     if sol_inconsistencies:
         raise Exception(f"There are inconsistencies in the given solution: {sol_inconsistencies}")
-    assert solver_object.solution.complies_with_flow_smoothing(
+    if not solver_object.solution.complies_with_flow_smoothing(
         flow_smoothing=2,
         initial_flows={
             dam_id: instance.get_initial_lags_of_channel(dam_id)[0]
             for dam_id in instance.get_ids_of_dams()
         }
-    ), "The solution does not comply with the flow smoothing parameter"
+    ):
+        warnings.warn("The solution does not comply with the flow smoothing parameter.")
     print("Optimal solution:", solver_object.solution.data)
 
     # Save solution

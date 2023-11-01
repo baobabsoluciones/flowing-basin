@@ -1,4 +1,4 @@
-from flowing_basin.core import Instance
+from flowing_basin.core import Instance, Solution
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from time import perf_counter
 from itertools import product
@@ -7,68 +7,92 @@ from dataclasses import asdict
 import csv
 import json
 
-# EXAMPLES = [f'_intermediate{i}' for i in range(11)]
-EXAMPLES = ['1', '3']
-# EXAMPLES = ['1']
-NUMS_DAMS = [i for i in range(1, 9)]
-# NUMS_DAMS = [5]
-NUM_REPLICATIONS = 200
-# NUM_REPLICATIONS = 1
-NUM_DAYS = 1
-K_PARAMETER = 2
+EXAMPLES = ['Percentile25', 'Percentile75']
+NUMS_DAMS = [2, 4, 6, 8, 10]
+VOL_BONUS = True
+POWER_PENALTY = True
+
+NUM_REPLICATIONS = 100
 RANDOM_BIASED_FLOWS = True
-PROB_BELOW_HALF = 0.15
 RANDOM_BIASED_SORTING = True
-COMMON_RATIO = 0.6
-MAXIMIZE_FINAL_VOL = False
-SAVE_REPORT = False
-REPORT_NAME = "random_biased_complete"
+
+SAVE_REPORT = True
+REPORT_NAME = (
+    f"test_heuristic_old_instances25and75"
+    f"{'_VolExceed' if VOL_BONUS else ''}"
+    f"{'_NoPowerPenalty' if not POWER_PENALTY else ''}"
+)
 DECIMAL_PLACES = 2
+COMPARE_MILP = True
 
 report_filepath = f"reports/{REPORT_NAME}.csv"
 config_filepath = f"reports/{REPORT_NAME}_config.json"
 
-report = [
-    ["instance", "no_dams", "num_trials", "exec_time_s", "min_val_eur", "max_val_eur", "avg_val_eur", "std_eur"]
+first_row = [
+    "instance", "no_dams", "greedy_val_eur",
+    "num_trials", "exec_time_s", "min_val_eur", "max_val_eur", "avg_val_eur", "std_eur"
 ]
+if COMPARE_MILP:
+    first_row += ["milp_val_eur", "milp_final_gap", "diff_milp_vs_best"]
+report = [first_row]
 
 for example, num_dams in product(EXAMPLES, NUMS_DAMS):
 
     start = perf_counter()
     obj_function_values = []
 
+    # Instance and configuration
+    instance = Instance.from_json(
+        f"../instances/instances_big/instance{example}_{num_dams}dams_1days.json"
+    )
+    config = HeuristicConfiguration(
+        volume_shortage_penalty=3,
+        volume_exceedance_bonus=0.035 if VOL_BONUS else 0.,
+        startups_penalty=50. if POWER_PENALTY else 0.,
+        limit_zones_penalty=50. if POWER_PENALTY else 0.,
+        volume_objectives={
+            dam_id: (
+                instance.get_min_vol_of_dam(dam_id) + (
+                    instance.get_max_vol_of_dam(dam_id) - instance.get_min_vol_of_dam(dam_id)
+                ) / 2
+            ) for dam_id in instance.get_ids_of_dams()
+        },
+        flow_smoothing=2,
+        mode="linear",
+        maximize_final_vol=False,
+        random_biased_flows=False,
+        prob_below_half=0.15,
+        random_biased_sorting=False,
+        common_ratio=0.6,
+    )
+
+    # Greedy solution (heuristic)
+    heuristic = Heuristic(config=config, instance=instance, greedy=True, do_tests=True)
+    heuristic.solve()
+    obj_function_greedy = heuristic.solution.get_objective_function()
+
+    # MILP solution
+    obj_function_milp = None
+    milp_final_gap = None
+    if COMPARE_MILP:
+        milp_sol = Solution.from_json(
+            f"../solutions/test_milp/instance{example}_MILP_{num_dams}dams_1days"
+            f"{'_VolExceed' if VOL_BONUS else ''}{'_NoPowerPenalty' if not POWER_PENALTY else ''}.json"
+        )
+        obj_function_milp = milp_sol.get_objective_function()
+        milp_final_gap = milp_sol.get_final_gap_value()
+
+    # RBO solutions
+    config.random_biased_sorting = RANDOM_BIASED_SORTING
+    config.random_biased_flows = RANDOM_BIASED_FLOWS
     for replication in range(NUM_REPLICATIONS):
-
-        instance = Instance.from_json(
-            f"../instances/instances_big/instance{example}_{num_dams}dams_{NUM_DAYS}days.json"
-        )
-        config = HeuristicConfiguration(
-            volume_shortage_penalty=3,
-            volume_exceedance_bonus=0,
-            startups_penalty=50,
-            limit_zones_penalty=0,
-            volume_objectives={
-                dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
-            },
-            flow_smoothing=K_PARAMETER,
-            mode="linear",
-            maximize_final_vol=MAXIMIZE_FINAL_VOL,
-            random_biased_flows=RANDOM_BIASED_FLOWS,
-            prob_below_half=PROB_BELOW_HALF,
-            random_biased_sorting=RANDOM_BIASED_SORTING,
-            common_ratio=COMMON_RATIO,
-        )
-
         heuristic = Heuristic(config=config, instance=instance, do_tests=True)
         heuristic.solve()
         obj_function_values.append(heuristic.solution.get_objective_function())
         # print(heuristic.solution.data)
-
     print(f"For instance {example} with {num_dams} dams:")
-
     exec_time = perf_counter() - start
     print(f"\tgenerated {NUM_REPLICATIONS} solutions in {exec_time}s.")
-
     min_obj_val = min(obj_function_values)
     max_obj_val = max(obj_function_values)
     num_obj_val = len(obj_function_values)
@@ -80,10 +104,23 @@ for example, num_dams in product(EXAMPLES, NUMS_DAMS):
     print(f"\t - mean: {avg_obj_val}")
     print(f"\t - standard deviation: {std_obj_val}")
 
-    report.append([
-        example, num_dams, NUM_REPLICATIONS, round(exec_time, DECIMAL_PLACES), round(min_obj_val, DECIMAL_PLACES),
+    # Fraction over MILP
+    milp_vs_best = None
+    if COMPARE_MILP:
+        rbo_best = max(obj_function_greedy, max_obj_val)
+        milp_vs_best = (obj_function_milp - rbo_best) / obj_function_milp
+
+    new_row = [
+        example, num_dams, round(obj_function_greedy, DECIMAL_PLACES),
+        NUM_REPLICATIONS, round(exec_time, DECIMAL_PLACES), round(min_obj_val, DECIMAL_PLACES),
         round(max_obj_val, DECIMAL_PLACES), round(avg_obj_val, DECIMAL_PLACES), round(std_obj_val, DECIMAL_PLACES)
-    ])
+    ]
+    if COMPARE_MILP:
+        new_row += [
+            round(obj_function_milp, DECIMAL_PLACES), round(milp_final_gap, DECIMAL_PLACES),
+            round(milp_vs_best, DECIMAL_PLACES)
+        ]
+    report.append(new_row)
 
 # Print results
 print(

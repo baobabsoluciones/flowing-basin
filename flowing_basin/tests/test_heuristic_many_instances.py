@@ -12,11 +12,11 @@ NUMS_DAMS = [2, 4, 6, 8, 10]
 VOL_BONUS = True
 POWER_PENALTY = True
 
-NUM_REPLICATIONS = 100
+NUM_REPLICATIONS = 10
 RANDOM_BIASED_FLOWS = True
 RANDOM_BIASED_SORTING = True
 
-SAVE_REPORT = True
+SAVE_REPORT = False
 REPORT_NAME = (
     f"test_heuristic_old_instances25and75"
     f"{'_VolExceed' if VOL_BONUS else ''}"

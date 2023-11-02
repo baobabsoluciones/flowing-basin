@@ -26,6 +26,9 @@ class HeuristicConfiguration(Configuration):
     random_biased_sorting: bool = False
     common_ratio: float = 0.6
 
+    # Post-process outflows to avoid limit zones
+    avoid_limit_zones: bool = False
+
     def __post_init__(self):
         valid_modes = {"linear", "nonlinear"}
         if self.mode not in valid_modes:
@@ -204,6 +207,29 @@ class HeuristicSingleDam:
             available_volumes.append(current_volume)
 
         return available_volumes
+
+    def calculate_turbined_flows(self) -> list[float]:
+
+        """
+        Obtain a list with the turbined flow (m3/s) of the dam in every time step
+        Uses the linear method
+        """
+
+        verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
+        first_lag = verification_lags[0]
+        last_lag = verification_lags[-1]
+
+        initial_lags = self.instance.get_initial_lags_of_channel(self.dam_id)[:last_lag]
+        initial_lags.reverse()
+        extended_assigned_flows = initial_lags + self.assigned_flows
+
+        turbined_flows = []
+        for time_step in self.time_steps:
+            lag_flows = extended_assigned_flows[time_step: time_step + first_lag]
+            turbined_flow = sum(lag_flows) / len(lag_flows)
+            turbined_flows.append(turbined_flow)
+
+        return turbined_flows
 
     def calculate_max_vol_buffer(self, time_step: int) -> tuple[float, int]:
 
@@ -510,6 +536,10 @@ class HeuristicSingleDam:
         # For some alternative solutions, this assert is not satisfied
         # TODO: find out why and fix it
 
+    def remove_limit_zones(self):
+
+        pass
+
     def solve(self) -> tuple[list[float], list[float]]:
 
         """
@@ -543,6 +573,8 @@ class HeuristicSingleDam:
 
         self.clean_flows_and_volumes()
         self.adapt_flows_to_obj_vol(sorted_groups)
+        if self.config.avoid_limit_zones:
+            self.remove_limit_zones(sorted_groups)
         predicted_volumes = [available_vol + self.min_vol for available_vol in self.available_volumes]
 
         return self.assigned_flows, predicted_volumes
@@ -590,6 +622,12 @@ class HeuristicSingleDam:
         )
         bonus = self.config.volume_exceedance_bonus * volume_exceedance
         dam_net_income = dam_income + bonus - penalty
+
+        if self.do_tests:
+            heuristic_turbined_flows = self.calculate_turbined_flows()
+            assert all(abs(a - b) < 1e-4 for a, b in zip(turbined_flows, heuristic_turbined_flows)), (
+                "The heuristic method to calculate turbined flow gives different results from the simulator."
+            )
 
         obj_fun_details = dict(
             total_income_eur=dam_net_income,

@@ -10,6 +10,7 @@ from random import randint
 from dataclasses import dataclass, asdict
 import json
 from typing import Callable
+from .feature_extractors.projectors import IdentityProjector
 
 
 @dataclass(kw_only=True)
@@ -26,9 +27,11 @@ class RLConfiguration(Configuration):  # noqa
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
     length_episodes: int
     update_observation_record: bool  # Whether to save observations experienced by agent
+    projector: str # type of dimensionality reduction to apply for the observations (or identity)
 
     # RL environment's action options
     action_type: str
+    feature_extractor: str = 'mlp'# Either convolutional/cnn  or mlp/perceptron or mixed
 
     # RL training configuration
     log_ep_freq: int = 5
@@ -39,6 +42,14 @@ class RLConfiguration(Configuration):  # noqa
     flow_smoothing: int = 0
     mode: str = "nonlinear"
     do_history_updates: bool = True
+
+    #ToDo his is an inelegant implementation of the "get" method of dictionaries
+    # However it could be moved to the parent or grandparent class, up to ou
+    def get(self, k, default=None):
+        if hasattr(self, k):
+            return getattr(self, k)
+        else:
+            return default
 
     def __post_init__(self):
 
@@ -199,11 +210,20 @@ class RLEnvironment(gym.Env):
         # Observation space
         if self.config.obs_box_shape:
             # Observation is an array of shape num_dams x num_features x num_steps
-            obs_shape = (
-                self.instance.get_num_dams(),
-                len(self.config.features),
-                self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]]
-            )
+            if self.config.feature_extractor not in ['cnn', 'convolutional']:
+                obs_shape = (
+                    self.instance.get_num_dams(),
+                    len(self.config.features),
+                    self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]]
+                )
+            #ToDo can you check the ordering for the convolutional output? I fell "to deep" in the rabbithole
+            # and I want to avoid
+            else: # Convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
+                obs_shape = (
+                    self.instance.get_num_dams(),
+                    self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]],
+                    len(self.config.features)
+                )
         else:
             array_length = sum(
                 self.config.num_steps_sight[feature, dam_id]
@@ -211,12 +231,18 @@ class RLEnvironment(gym.Env):
                 if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
             )
             obs_shape = (array_length, )
+
+        #ToDo are we sure that this is not truncating inputs when we train the agent? might explain the 120
         self.observation_space = gym.spaces.Box(
             low=0,
             high=1,
             shape=obs_shape,
             dtype=np.float32
         )
+
+
+        self.projector = None
+        self.initialize_projector()
 
         # Record of observations experienced by the agent
         # Array of shape num_observations x num_features (each observation will be flattened)
@@ -246,6 +272,12 @@ class RLEnvironment(gym.Env):
 
         # Initialize these variables
         self._reset_variables()
+
+    def initialize_projector(self):
+        proj_type = self.config.get("projector")
+        if proj_type == 'identity':
+            self.projector = IdentityProjector()
+            self.projector_type = 'identity'
 
     def reset(
             self, instance: Instance = None, initial_row: int | datetime = None, seed=None, options=None
@@ -531,15 +563,36 @@ class RLEnvironment(gym.Env):
 
         :return: Array of shape num_dams x num_features x num_steps with normalized values
         """
+        # ToDo several things to keep in mind:
+
+        """
+        * This should be done with torch.Tensor if we want to make efficient usage of the GPU
+        * I think the best option is to keep the information in the environment as a dataframe and then process it. 
+        * This will allow us to incorporate projectors / feature extractors more easily 
+        * And we could use the normalization as a tensor operation because it will be embedded when we define the environment. 
+        * Moreover, this makes me think, if during the PCA we center and scale, we might be masking some behaviors
+         as our features are already normalized between 0 and 1, from the historical trajectories, so if something is 
+         between 0.25 and 0.5 (e.g.), we will then center it and scale, pushing the 0.25 to 0 and the 0.5 to 1, we need
+         to double check 
+        """
 
         if self.config.obs_box_shape:
-            obs_normalized = np.array([
-                [
-                    self.get_feature_normalized(feature, dam_id)
-                    for feature in self.config.features
-                ]
-                for dam_id in self.instance.get_ids_of_dams()
-            ]).astype(np.float32)
+            if not self.config.feature_extractor in ['cnn', 'convolutional']:
+                obs_normalized = np.array([
+                    [
+                        self.get_feature_normalized(feature, dam_id)
+                        for feature in self.config.features
+                    ]
+                    for dam_id in self.instance.get_ids_of_dams()
+                ]).astype(np.float32)
+            elif self.config.feature_extractor in ['cnn', 'convolutional']:
+                obs_normalized = np.array([
+                    [
+                        self.get_feature_normalized(feature, dam_id)
+                        for feature in self.config.features
+                    ]
+                    for dam_id in self.instance.get_ids_of_dams()
+                ]).astype(np.float32)
         else:
             obs_normalized = np.concatenate([
                 np.concatenate([
@@ -549,6 +602,8 @@ class RLEnvironment(gym.Env):
                 ])
                 for dam_id in self.instance.get_ids_of_dams()
             ]).astype(np.float32)
+
+
 
         return obs_normalized
 

@@ -11,7 +11,8 @@ PATH_TRAIN_DATA = "../data/history/historical_data_clean_train.pickle"
 PATH_TEST_DATA = "../data/history/historical_data_clean_test.pickle"
 
 PLOT_TRAINING_CURVE = True
-SAVE_OBSERVATIONS = True
+SAVE_AGENT = True
+SAVE_OBSERVATIONS = False
 PATH_OBSERVATIONS = "../analyses/rl_pca/observations_data/observationsO2.npy"
 PATH_OBSERVATIONS_CONFIG = "../analyses/rl_pca/observations_data/observationsO2_config.json"
 
@@ -42,9 +43,6 @@ config = RLConfiguration(
         "other": 1
     },
     length_episodes=24 * 4 + 3,
-    log_ep_freq=5,
-    eval_ep_freq=5,
-    eval_num_episodes=10,
     do_history_updates=False,
     update_observation_record=SAVE_OBSERVATIONS,
 )
@@ -56,22 +54,32 @@ train = RLTrain(
 )
 
 train.solve(
-    num_episodes=100,
-    path_agent=filepath_agent,
-    periodic_evaluation=True
+    num_episodes=5,
+    options=dict(
+        periodic_evaluation='reward',
+        log_ep_freq=5,
+        eval_ep_freq=5,
+        eval_num_episodes=10,
+    )
 )
-train.plot_training_curve()
 
-# Store configuration used
-config.to_json(filepath_config)
-print(f"Created JSON file '{filepath_config}'.")
+if SAVE_AGENT:
 
-# Store training curve data
-train.save_training_data(filepath_training)
-print(f"Created JSON file '{filepath_training}'.")
+    # Save agent
+    train.save_model(filepath_agent)
+    print(f"Created ZIP file '{filepath_agent}'.")
+
+    # Store configuration used
+    config.to_json(filepath_config)
+    print(f"Created JSON file '{filepath_config}'.")
+
+    # Store training curve data
+    train.save_training_data(filepath_training)
+    print(f"Created JSON file '{filepath_training}'.")
 
 # Plot training curve
 if PLOT_TRAINING_CURVE:
+    train.plot_training_curve()
     plt.show()
     print(train.model.policy)
 

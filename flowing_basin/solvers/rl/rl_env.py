@@ -33,11 +33,6 @@ class RLConfiguration(Configuration):  # noqa
     action_type: str
     feature_extractor: str = 'mlp'# Either convolutional/cnn  or mlp/perceptron or mixed
 
-    # RL training configuration
-    log_ep_freq: int = 5
-    eval_ep_freq: int = 5
-    eval_num_episodes: int = 5
-
     # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"

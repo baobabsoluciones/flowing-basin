@@ -1,6 +1,7 @@
 from flowing_basin.core import Instance, Solution, Experiment
 from .rl_env import RLConfiguration, RLEnvironment
 from stable_baselines3 import SAC
+from stable_baselines3.common.policies import BaseModel
 
 
 class RLRun(Experiment):
@@ -23,17 +24,23 @@ class RLRun(Experiment):
             paths_power_models=paths_power_models,
         )
 
-    def solve(self, path_agent: str, options: dict = None) -> dict:
+    def solve(self, model: BaseModel | str, options: dict = None) -> dict:
 
         """
         Load the given model and use it to solve the instance given in the initialization.
+
+        :param model: The StableBaselines3 model, or a path to it
+        :param options: Unused parameter
         """
 
-        model = SAC.load(path_agent)
-        obs = self.env.get_observation_normalized()
+        if isinstance(model, str):
+            model = SAC.load(model)
+
+        # Reset the environment (this allows the `solve` method to be called more than once)
+        obs = self.env.reset()
         done = False
         while not done:
-            action, _states = model.predict(obs, deterministic=True)
+            action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, _, _ = self.env.step(action)
 
         clipped_flows = {

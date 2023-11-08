@@ -52,35 +52,44 @@ class RLTrain(Experiment):
         self.eval_episodes = None
         self.eval_avg_results = None
 
-    def solve(self, num_episodes: int, path_agent: str, periodic_evaluation: bool = False, options: dict = None) -> dict:  # noqa
+    def solve(self, num_episodes: int, options: dict) -> dict:  # noqa
 
         """
         Train the model and save it in the given path.
+        :param num_episodes: Nuber of episodes (days) in which to train the agent
+        :param options: Logging options
         """
 
         episode_length = self.train_env.instance.get_largest_impact_horizon()
         total_timesteps = num_episodes * episode_length
 
         # Set evaluation callback
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = None
         eval_callback = None
-        if periodic_evaluation:
+        if options['periodic_evaluation'] == 'reward':
+            temp_dir = tempfile.TemporaryDirectory()
             eval_callback = EvalCallback(
                 self.eval_env,
                 best_model_save_path=None,
                 log_path=temp_dir.name,
-                eval_freq=self.config.eval_ep_freq * episode_length,
-                n_eval_episodes=self.config.eval_num_episodes,
+                eval_freq=options['eval_ep_freq'] * episode_length,
+                n_eval_episodes=options['eval_num_episodes'],
                 deterministic=True,
                 render=False
             )
+        elif options['periodic_evaluation'] == 'income':
+            pass
+        else:
+            raise ValueError(
+                f"Invalid value for `periodic_evaluation`: '{options['periodic_evaluation']}'. "
+                f"Allowed values are None, 'reward' or 'income'."
+            )
 
-        # Train and save model
-        self.model.learn(total_timesteps=total_timesteps, log_interval=self.config.log_ep_freq, callback=eval_callback)
-        self.model.save(path_agent)
+        # Train model
+        self.model.learn(total_timesteps=total_timesteps, log_interval=options['log_ep_freq'], callback=eval_callback)
 
-        # Save evaluation data
-        if periodic_evaluation:
+        # Store evaluation data
+        if options['periodic_evaluation'] == 'reward':
             with np.load(os.path.join(temp_dir.name, "evaluations.npz")) as data:
                 # for file in data.files:
                 #     print(file, data[file])
@@ -89,6 +98,16 @@ class RLTrain(Experiment):
         temp_dir.cleanup()
 
         return dict()
+
+    def save_model(self, path_agent: str):
+
+        """
+        Save the agent's neural network parameters
+        in a .zip file (behaviour of SB3's method)
+        :param path_agent: Path where to save the agent
+        """
+
+        self.model.save(path_agent)
 
     def plot_training_curve(self) -> plt.Axes:
 

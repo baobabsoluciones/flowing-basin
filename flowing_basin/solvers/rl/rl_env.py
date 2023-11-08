@@ -30,11 +30,6 @@ class RLConfiguration(Configuration):  # noqa
     # RL environment's action options
     action_type: str
 
-    # RL training configuration
-    log_ep_freq: int = 5
-    eval_ep_freq: int = 5
-    eval_num_episodes: int = 5
-
     # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"

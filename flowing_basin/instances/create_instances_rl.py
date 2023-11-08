@@ -3,7 +3,10 @@ from cornflow_client.core.tools import load_json
 from flowing_basin.solvers.rl import RLEnvironment
 import pandas as pd
 
-EXAMPLES = ['1', '3']
+EXAMPLES = [
+    f"Percentile{percentile:02}"
+    for percentile in range(0, 110, 10)
+]
 NUM_STEPS_LOOKAHEAD = 16
 
 path_constants = "../data/constants/constants_2dams.json"

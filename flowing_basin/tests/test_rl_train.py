@@ -3,6 +3,8 @@ from cornflow_client.core.tools import load_json
 from flowing_basin.solvers.rl import RLConfiguration, RLTrain
 from datetime import datetime
 import numpy as np
+import matplotlib.pyplot as plt
+import os
 
 
 PATH_CONSTANTS = "../data/constants/constants_2dams.json"
@@ -12,6 +14,18 @@ PATH_TEST_DATA = "../data/history/historical_data_clean_test.pickle"
 current_datetime = datetime.now().strftime('%Y-%m-%d %H.%M')
 agent_folder = f"../solutions/rl_models/RL_model_{current_datetime}"
 
+EVALUATION_INSTANCES = [
+    f"../instances/instances_rl/instancePercentile{percentile:02}_expanded16steps_backforth.json"
+    for percentile in range(0, 110, 10)
+]
+OPTIONS = dict(
+    evaluation='income',
+    evaluation_instances=EVALUATION_INSTANCES,
+    log_ep_freq=5,
+    eval_ep_freq=5,
+    eval_num_episodes=10,
+    checkpoint_ep_freq=5,
+)
 PLOT_TRAINING_CURVE = True
 
 SAVE_OBSERVATIONS = False
@@ -53,13 +67,7 @@ train = RLTrain(
 
 train.solve(
     num_episodes=10,
-    options=dict(
-        periodic_evaluation='reward',
-        log_ep_freq=5,
-        eval_ep_freq=5,
-        eval_num_episodes=10,
-        checkpoint_ep_freq=5,
-    )
+    options=OPTIONS
 )
 
 # Save observation record for later PCA analysis
@@ -73,3 +81,8 @@ if SAVE_OBSERVATIONS:
 
     config.to_json(PATH_OBSERVATIONS_CONFIG)
     print(f"Created JSON file '{PATH_OBSERVATIONS_CONFIG}'.")
+
+if PLOT_TRAINING_CURVE:
+    fig, ax = plt.subplots()
+    train.plot_evaluation_data(os.path.join(agent_folder, "evaluation.json"), ax)
+    plt.show()

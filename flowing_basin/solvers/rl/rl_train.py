@@ -1,13 +1,12 @@
 from flowing_basin.core import Instance, Solution, Experiment
-from .rl_env import RLEnvironment, RLConfiguration
-from .feature_extractors.convolutional import VanillaCNN
-from .callbacks import SaveOnBestTrainingRewardCallback
+from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
+from flowing_basin.solvers.rl.feature_extractors.convolutional import VanillaCNN
+from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, IncomeEvalCallback
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
 import numpy as np
 from matplotlib import pyplot as plt
-import warnings
 import os
 import json
 
@@ -107,7 +106,7 @@ class RLTrain(Experiment):
 
         # Set evaluation callback
         #ToDo ensure correct initialization of callback functions. Are they redundant?
-        if options['periodic_evaluation'] == 'reward':
+        if options['evaluation'] == 'reward':
             eval_callback = EvalCallback(
                 self.eval_env,
                 best_model_save_path=None,
@@ -115,13 +114,19 @@ class RLTrain(Experiment):
                 eval_freq=options['eval_ep_freq'] * episode_length,
                 n_eval_episodes=options['eval_num_episodes'],
                 deterministic=True,
-                render=False
+                render=False,
+                verbose=self.verbose
             )
-        elif options['periodic_evaluation'] == 'income':
-            raise NotImplementedError()
+        elif options['evaluation'] == 'income':
+            eval_callback = IncomeEvalCallback(
+                eval_freq=options['eval_ep_freq'] * episode_length,
+                instances=options['evaluation_instances'],
+                config=self.config,
+                verbose=self.verbose
+            )
         else:
             raise ValueError(
-                f"Invalid value for `periodic_evaluation`: '{options['periodic_evaluation']}'. "
+                f"Invalid value for `evaluation`: '{options['evaluation']}'. "
                 f"Allowed values are None, 'reward' or 'income'."
             )
 
@@ -153,39 +158,33 @@ class RLTrain(Experiment):
         if self.verbose >= 1:
             print(f"Created JSON file '{filepath_config}'.")
 
-        # Save training data
-        filepath_training = os.path.join(self.path_folder, "training.json")
-        if options['periodic_evaluation'] == 'reward':
+        # Save evaluation data
+        filepath_evaluation = os.path.join(self.path_folder, "evaluation.json")
+        if options['evaluation'] == 'reward':
             with np.load(os.path.join(self.path_folder, "evaluations.npz")) as data:
                 # for file in data.files:
                 #     print(file, data[file])
-                training_data = {
+                evaluation_data = {
                     "episode": (data["timesteps"] // episode_length).tolist(),
                     "average_result": data["results"].mean(axis=1).tolist(),
                 }
-        else:
-            raise NotImplementedError()
-        with open(filepath_training, "w") as f:
-            json.dump(training_data, f, indent=4, sort_keys=True)
-        if self.verbose >= 1:
-            print(f"Created JSON file '{filepath_training}'.")
+            with open(filepath_evaluation, "w") as f:
+                json.dump(evaluation_data, f, indent=4, sort_keys=True)
+            if self.verbose >= 1:
+                print(f"Created JSON file '{filepath_evaluation}'.")
+        elif options['evaluation'] == 'income':
+            eval_callback.save_evaluation_data(filepath_evaluation)
 
         return dict()
 
-    def plot_training_curve(self) -> plt.Axes:
+    @staticmethod
+    def plot_evaluation_data(filepath: str, ax: plt.Axes):
 
-        if self.eval_episodes is None or self.eval_avg_results is None:
-            warnings.warn(
-                "No evaluation data found. Please make sure you have called the `solve` method of `RLTrain` "
-                "with `periodic_evaluation=True`."
-            )
-            return  # noqa
+        """
+        Plot the data of the evaluation JSON file
+        """
 
-        fig, ax = plt.subplots()
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Average result")
-        ax.plot(self.eval_episodes, self.eval_avg_results)
-
-        return ax
+        IncomeEvalCallback.plot_evaluation_data(filepath, ax)
+        # TODO: provide support if options['evaluation'] == 'reward' instead of 'income'
 
 

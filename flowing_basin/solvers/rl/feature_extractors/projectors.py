@@ -1,7 +1,6 @@
-import numpy as np
 
 
-class IdentityProjector;
+class IdentityProjector:
     def __init__(self):
         pass
 

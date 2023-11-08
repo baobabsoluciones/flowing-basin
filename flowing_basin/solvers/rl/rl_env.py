@@ -22,16 +22,15 @@ class RLConfiguration(Configuration):  # noqa
 
     # RL environment's observation options
     features: list[str]
-    obs_box_shape: bool
     unique_features: list[str]  # Features that should NOT be repeated for each dam
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
     length_episodes: int
     update_observation_record: bool  # Whether to save observations experienced by agent
-    projector: str # type of dimensionality reduction to apply for the observations (or identity)
+    projector: str  # type of dimensionality reduction to apply for the observations (or identity)
 
     # RL environment's action options
     action_type: str
-    feature_extractor: str = 'mlp'# Either convolutional/cnn  or mlp/perceptron or mixed
+    feature_extractor: str = 'MLP'  # Either MLP or CNN or mixed
 
     # RiverBasin simulator options
     flow_smoothing: int = 0
@@ -68,9 +67,10 @@ class RLConfiguration(Configuration):  # noqa
                 f"The features marked as unique, {self.unique_features}, "
                 f"should be a subset of the features, {self.features}"
             )
-        if self.obs_box_shape and len(self.unique_features) != 0:
+        if self.feature_extractor == 'CNN' and len(self.unique_features) != 0:
             raise ValueError(
-                f"Observation is box shaped but there are features marked as unique: {self.unique_features}"
+                f"Feature extractor is CNN (so observation must be box shaped) "
+                f"but there are features marked as unique: {self.unique_features}"
             )
 
         # Check self.num_steps_sight
@@ -86,9 +86,9 @@ class RLConfiguration(Configuration):  # noqa
                     f"have a number of time steps defined: {self.num_steps_sight} "
                     f"(suggestion: use the key 'other' as a wildcard for the remaining features)"
                 )
-            if self.obs_box_shape and len(set(self.num_steps_sight.values())) != 1:
+            if self.feature_extractor == 'CNN' and len(set(self.num_steps_sight.values())) != 1:
                 raise ValueError(
-                    f"Observation is box shaped but the number of time steps "
+                    f"Feature extractor is CNN (so observation must be box shaped) but the number of time steps "
                     f"of every feature is not the same: {self.num_steps_sight}"
                 )
 
@@ -96,6 +96,19 @@ class RLConfiguration(Configuration):  # noqa
         valid_actions = {"exiting_flows", "exiting_relvars"}
         if self.action_type not in valid_actions:
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
+
+        # Check self.projector
+        valid_projectors = {'identity', 'PCA'}
+        if self.projector not in valid_projectors:
+            raise ValueError(f"Invalid value for 'projector': {self.projector}. Allowed values are {valid_projectors}")
+
+        # Check self.feature_extractor
+        valid_extractors = {'MLP', 'CNN', 'mixed'}
+        if self.feature_extractor not in valid_extractors:
+            raise ValueError(
+                f"Invalid value for 'feature_extractor': {self.feature_extractor}. "
+                f"Allowed values are {valid_extractors}"
+            )
 
     def post_process(self, dam_ids: list[str]):
 
@@ -203,29 +216,23 @@ class RLEnvironment(gym.Env):
         )
 
         # Observation space
-        if self.config.obs_box_shape:
+        if self.config.feature_extractor == 'MLP':
             # Observation is an array of shape num_dams x num_features x num_steps
-            if self.config.feature_extractor not in ['cnn', 'convolutional']:
-                obs_shape = (
-                    self.instance.get_num_dams(),
-                    len(self.config.features),
-                    self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]]
-                )
-            #ToDo can you check the ordering for the convolutional output? I fell "to deep" in the rabbithole
-            # and I want to avoid
-            else: # Convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
-                obs_shape = (
-                    self.instance.get_num_dams(),
-                    self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]],
-                    len(self.config.features)
-                )
-        else:
             array_length = sum(
                 self.config.num_steps_sight[feature, dam_id]
                 for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
                 if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
             )
-            obs_shape = (array_length, )
+            obs_shape = (array_length,)
+        elif self.config.feature_extractor == 'CNN':
+            # Convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
+            obs_shape = (
+                self.instance.get_num_dams(),
+                self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]],
+                len(self.config.features)
+            )
+        else:
+            raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
         #ToDo are we sure that this is not truncating inputs when we train the agent? might explain the 120
         self.observation_space = gym.spaces.Box(
@@ -235,9 +242,12 @@ class RLEnvironment(gym.Env):
             dtype=np.float32
         )
 
-
-        self.projector = None
-        self.initialize_projector()
+        # Projector
+        proj_type = self.config.get("projector")
+        if proj_type == 'identity':
+            self.projector = IdentityProjector()
+        else:
+            raise NotImplementedError(f"Projector {self.config.projector} is not supported yet.")
 
         # Record of observations experienced by the agent
         # Array of shape num_observations x num_features (each observation will be flattened)
@@ -267,12 +277,6 @@ class RLEnvironment(gym.Env):
 
         # Initialize these variables
         self._reset_variables()
-
-    def initialize_projector(self):
-        proj_type = self.config.get("projector")
-        if proj_type == 'identity':
-            self.projector = IdentityProjector()
-            self.projector_type = 'identity'
 
     def reset(
             self, instance: Instance = None, initial_row: int | datetime = None, seed=None, options=None
@@ -571,24 +575,7 @@ class RLEnvironment(gym.Env):
          to double check 
         """
 
-        if self.config.obs_box_shape:
-            if not self.config.feature_extractor in ['cnn', 'convolutional']:
-                obs_normalized = np.array([
-                    [
-                        self.get_feature_normalized(feature, dam_id)
-                        for feature in self.config.features
-                    ]
-                    for dam_id in self.instance.get_ids_of_dams()
-                ]).astype(np.float32)
-            elif self.config.feature_extractor in ['cnn', 'convolutional']:
-                obs_normalized = np.array([
-                    [
-                        self.get_feature_normalized(feature, dam_id)
-                        for feature in self.config.features
-                    ]
-                    for dam_id in self.instance.get_ids_of_dams()
-                ]).astype(np.float32)
-        else:
+        if self.config.feature_extractor == 'MLP':
             obs_normalized = np.concatenate([
                 np.concatenate([
                     self.get_feature_normalized(feature, dam_id)
@@ -597,8 +584,17 @@ class RLEnvironment(gym.Env):
                 ])
                 for dam_id in self.instance.get_ids_of_dams()
             ]).astype(np.float32)
-
-
+        elif self.config.feature_extractor == 'CNN':
+            # Remember convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
+            obs_normalized = np.array([
+                [
+                    self.get_feature_normalized(feature, dam_id)
+                    for feature in self.config.features
+                ]
+                for dam_id in self.instance.get_ids_of_dams()
+            ]).reshape((self.instance.get_num_dams(), -1, len(self.config.features))).astype(np.float32)
+        else:
+            raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
         return obs_normalized
 

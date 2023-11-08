@@ -9,7 +9,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 import warnings
 import os
-import tempfile
 import json
 
 
@@ -22,17 +21,22 @@ class RLTrain(Experiment):
             path_constants: str,
             path_train_data: str,
             path_test_data: str,
+            path_folder: str = '.',
             paths_power_models: dict[str, str] = None,
             instance: Instance = None,
             solution: Solution = None,
+            verbose: int = 1,
     ):
 
         super().__init__(instance=instance, solution=solution)
         if solution is None:
             self.solution = None
 
+        self.verbose = verbose
+
         # Configuration, environment and model (RL agent)
         self.config = config
+        self.path_folder = path_folder
         self.train_env = RLEnvironment(
             config=self.config,
             path_constants=path_constants,
@@ -40,7 +44,11 @@ class RLTrain(Experiment):
             paths_power_models=paths_power_models,
             instance=instance,
         )
-        self.train_env = Monitor(self.train_env, '.')
+
+        os.makedirs(self.path_folder, exist_ok=True)
+        filepath_log = os.path.join(self.path_folder, ".")
+        self.train_env = Monitor(self.train_env, filename=filepath_log)
+
         self.model = None
         self.initialize_agent()
 
@@ -53,18 +61,20 @@ class RLTrain(Experiment):
             instance=instance,
         )
         self.eval_env = Monitor(self.eval_env)
-        self.eval_episodes = None
-        self.eval_avg_results = None
 
     def initialize_agent(self):
 
+        if self.config.feature_extractor == 'MLP':
 
-        if self.config.feature_extractor in ['mlp', 'perceptron']:
             policy_type = "MlpPolicy"
             policy_kwargs = None
-        elif self.config.feature_extractor in ['cnn', 'convolutional']:
+
+        elif self.config.feature_extractor == 'CNN':
+
             policy_type = "CnnPolicy"
             fe_variant = self.config.get("feature_extractor_variant", "vanilla")
+
+            extractor_class = None
             if fe_variant == "vanilla":
                 extractor_class = VanillaCNN
 
@@ -72,10 +82,17 @@ class RLTrain(Experiment):
                 features_extractor_class=extractor_class,
                 features_extractor_kwargs=dict(features_dim=128),
             )
-        else:
-            raise ValueError(f"Feature extractor of type {self.config.feature_extractor} is not supported. Either mlp or cnn")
 
-        self.model = SAC(policy_type, self.train_env, verbose=1, tensorboard_log=self.config.get("tensorboard_log"), policy_kwargs=policy_kwargs)
+        else:
+
+            raise NotImplementedError(
+                f"Feature extractor of type {self.config.feature_extractor} is not supported. Either MLP or CNN"
+            )
+
+        self.model = SAC(
+            policy_type, self.train_env,
+            verbose=1, tensorboard_log=self.config.get("tensorboard_log"), policy_kwargs=policy_kwargs
+        )
         
     def solve(self, num_episodes: int, options: dict) -> dict:  # noqa
 
@@ -89,22 +106,19 @@ class RLTrain(Experiment):
         total_timesteps = num_episodes * episode_length
 
         # Set evaluation callback
-        temp_dir = None
-        eval_callback = None
         #ToDo ensure correct initialization of callback functions. Are they redundant?
         if options['periodic_evaluation'] == 'reward':
-            temp_dir = tempfile.TemporaryDirectory()
             eval_callback = EvalCallback(
                 self.eval_env,
                 best_model_save_path=None,
-                log_path=temp_dir.name,
+                log_path=self.path_folder,
                 eval_freq=options['eval_ep_freq'] * episode_length,
                 n_eval_episodes=options['eval_num_episodes'],
                 deterministic=True,
                 render=False
             )
         elif options['periodic_evaluation'] == 'income':
-            pass
+            raise NotImplementedError()
         else:
             raise ValueError(
                 f"Invalid value for `periodic_evaluation`: '{options['periodic_evaluation']}'. "
@@ -112,33 +126,51 @@ class RLTrain(Experiment):
             )
 
         # Set checkpoint callback
-        checkpoint_callback = SaveOnBestTrainingRewardCallback(check_freq=self.config.eval_ep_freq * episode_length,log_dir='.', verbose=1)
+        checkpoint_callback = SaveOnBestTrainingRewardCallback(
+            check_freq=options['checkpoint_ep_freq'] * episode_length,
+            log_dir=self.path_folder,
+            verbose=self.verbose
+        )
 
         # Train model
         #ToDO I dont want to override your logic, decide where to integrate (config, arg in here? the log directory etc)
-        self.model.learn(total_timesteps=total_timesteps, log_interval=options['log_ep_freq'], callback=CallbackList([checkpoint_callback, eval_callback]),
-                         tb_log_name=self.config.get("tensorboard_log", "SAC"))
+        self.model.learn(
+            total_timesteps=total_timesteps,
+            log_interval=options['log_ep_freq'],
+            callback=CallbackList([checkpoint_callback, eval_callback]),
+            tb_log_name=self.config.get("tensorboard_log", "SAC")
+        )
 
-        # Store evaluation data
+        # Save model
+        filepath_agent = os.path.join(self.path_folder, "model.zip")
+        self.model.save(filepath_agent)
+        if self.verbose >= 1:
+            print(f"Created ZIP file '{filepath_agent}'.")
+
+        # Save configuration
+        filepath_config = os.path.join(self.path_folder, "config.json")
+        self.config.to_json(filepath_config)
+        if self.verbose >= 1:
+            print(f"Created JSON file '{filepath_config}'.")
+
+        # Save training data
+        filepath_training = os.path.join(self.path_folder, "training.json")
         if options['periodic_evaluation'] == 'reward':
-            with np.load(os.path.join(temp_dir.name, "evaluations.npz")) as data:
+            with np.load(os.path.join(self.path_folder, "evaluations.npz")) as data:
                 # for file in data.files:
                 #     print(file, data[file])
-                self.eval_episodes = data["timesteps"] // episode_length
-                self.eval_avg_results = data["results"].mean(axis=1)
-        temp_dir.cleanup()
+                training_data = {
+                    "episode": (data["timesteps"] // episode_length).tolist(),
+                    "average_result": data["results"].mean(axis=1).tolist(),
+                }
+        else:
+            raise NotImplementedError()
+        with open(filepath_training, "w") as f:
+            json.dump(training_data, f, indent=4, sort_keys=True)
+        if self.verbose >= 1:
+            print(f"Created JSON file '{filepath_training}'.")
 
         return dict()
-
-    def save_model(self, path_agent: str):
-
-        """
-        Save the agent's neural network parameters
-        in a .zip file (behaviour of SB3's method)
-        :param path_agent: Path where to save the agent
-        """
-
-        self.model.save(path_agent)
 
     def plot_training_curve(self) -> plt.Axes:
 
@@ -155,21 +187,5 @@ class RLTrain(Experiment):
         ax.plot(self.eval_episodes, self.eval_avg_results)
 
         return ax
-
-    def save_training_data(self, path: str):
-
-        if self.eval_episodes is None or self.eval_avg_results is None:
-            warnings.warn(
-                "No evaluation data found. Please make sure you have called the `solve` method of `RLTrain` "
-                "with `periodic_evaluation=True`."
-            )
-            return
-
-        training_data = {
-            "episode": self.eval_episodes.tolist(),
-            "average_result": self.eval_avg_results.tolist(),
-        }
-        with open(path, "w") as f:
-            json.dump(training_data, f, indent=4, sort_keys=True)
 
 

@@ -2,6 +2,8 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import torch
 from gymnasium import spaces
 import torch.nn as nn
+
+
 class VanillaCNN(BaseFeaturesExtractor):
     """
     :param observation_space: (gym.Space)

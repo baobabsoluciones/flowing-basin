@@ -1028,7 +1028,8 @@
     "datetime": {
         "end_decisions": "2019-12-14 23:45",
         "end_information": "2019-12-15 00:30",
-        "start": "2019-12-14 00:00"
+        "start": "2019-12-14 00:00",
+        "start_information": "2019-12-14 00:00"
     },
     "energy_prices": [
         26.75,
@@ -1233,5 +1234,6 @@
         6.2316811636825395,
         5.815330369301588
     ],
+    "instance_name": "Percentile25",
     "time_step_minutes": 15
 }

@@ -33,6 +33,7 @@ for example, num_dams, num_days in product(EXAMPLES, NUMS_DAMS, NUMS_DAYS):
         constants=load_json(path_constants),
         historical_data=historical_data,
         initial_row_decisions=start_date,
+        instance_name=example
     )
 
     inconsistencies = instance.check()

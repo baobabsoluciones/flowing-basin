@@ -1,4 +1,4 @@
-from flowing_basin.core import Instance
+from flowing_basin.core import Instance, Training
 from cornflow_client.core.tools import load_json
 from flowing_basin.solvers.rl import RLConfiguration, RLTrain
 from datetime import datetime
@@ -19,7 +19,6 @@ EVALUATION_INSTANCES = [
     for percentile in range(0, 110, 10)
 ]
 OPTIONS = dict(
-    evaluation='income',
     evaluation_instances=EVALUATION_INSTANCES,
     log_ep_freq=5,
     eval_ep_freq=5,
@@ -84,5 +83,6 @@ if SAVE_OBSERVATIONS:
 
 if PLOT_TRAINING_CURVE:
     fig, ax = plt.subplots()
-    train.plot_evaluation_data(os.path.join(agent_folder, "evaluation.json"), ax)
+    training_data = Training.from_json(os.path.join(agent_folder, "training.json"))
+    training_data.plot_training_curves(ax)
     plt.show()

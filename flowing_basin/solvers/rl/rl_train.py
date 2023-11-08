@@ -1,14 +1,11 @@
 from flowing_basin.core import Instance, Solution, Experiment
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 from flowing_basin.solvers.rl.feature_extractors.convolutional import VanillaCNN
-from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, IncomeEvalCallback
+from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, TrainingDataCallback
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
-import numpy as np
-from matplotlib import pyplot as plt
 import os
-import json
 
 
 class RLTrain(Experiment):
@@ -104,33 +101,24 @@ class RLTrain(Experiment):
         episode_length = self.train_env.instance.get_largest_impact_horizon()
         total_timesteps = num_episodes * episode_length
 
-        # Set evaluation callback
-        #ToDo ensure correct initialization of callback functions. Are they redundant?
-        if options['evaluation'] == 'reward':
-            eval_callback = EvalCallback(
-                self.eval_env,
-                best_model_save_path=None,
-                log_path=self.path_folder,
-                eval_freq=options['eval_ep_freq'] * episode_length,
-                n_eval_episodes=options['eval_num_episodes'],
-                deterministic=True,
-                render=False,
-                verbose=self.verbose
-            )
-        elif options['evaluation'] == 'income':
-            eval_callback = IncomeEvalCallback(
-                eval_freq=options['eval_ep_freq'] * episode_length,
-                instances=options['evaluation_instances'],
-                config=self.config,
-                verbose=self.verbose
-            )
-        else:
-            raise ValueError(
-                f"Invalid value for `evaluation`: '{options['evaluation']}'. "
-                f"Allowed values are None, 'reward' or 'income'."
-            )
-
-        # Set checkpoint callback
+        # Set callbacks
+        training_data_callback = TrainingDataCallback(
+            eval_freq=options['eval_ep_freq'] * episode_length,
+            instances=options['evaluation_instances'],
+            baseline_policy="random",
+            config=self.config,
+            verbose=self.verbose
+        )
+        eval_callback = EvalCallback(
+            self.eval_env,
+            best_model_save_path=None,
+            log_path=self.path_folder,
+            eval_freq=options['eval_ep_freq'] * episode_length,
+            n_eval_episodes=options['eval_num_episodes'],
+            deterministic=True,
+            render=False,
+            verbose=self.verbose
+        )
         checkpoint_callback = SaveOnBestTrainingRewardCallback(
             check_freq=options['checkpoint_ep_freq'] * episode_length,
             log_dir=self.path_folder,
@@ -138,11 +126,10 @@ class RLTrain(Experiment):
         )
 
         # Train model
-        #ToDO I dont want to override your logic, decide where to integrate (config, arg in here? the log directory etc)
         self.model.learn(
             total_timesteps=total_timesteps,
             log_interval=options['log_ep_freq'],
-            callback=CallbackList([checkpoint_callback, eval_callback]),
+            callback=CallbackList([training_data_callback, eval_callback, checkpoint_callback]),
             tb_log_name=self.config.get("tensorboard_log", "SAC")
         )
 
@@ -152,39 +139,9 @@ class RLTrain(Experiment):
         if self.verbose >= 1:
             print(f"Created ZIP file '{filepath_agent}'.")
 
-        # Save configuration
-        filepath_config = os.path.join(self.path_folder, "config.json")
-        self.config.to_json(filepath_config)
-        if self.verbose >= 1:
-            print(f"Created JSON file '{filepath_config}'.")
-
-        # Save evaluation data
-        filepath_evaluation = os.path.join(self.path_folder, "evaluation.json")
-        if options['evaluation'] == 'reward':
-            with np.load(os.path.join(self.path_folder, "evaluations.npz")) as data:
-                # for file in data.files:
-                #     print(file, data[file])
-                evaluation_data = {
-                    "episode": (data["timesteps"] // episode_length).tolist(),
-                    "average_result": data["results"].mean(axis=1).tolist(),
-                }
-            with open(filepath_evaluation, "w") as f:
-                json.dump(evaluation_data, f, indent=4, sort_keys=True)
-            if self.verbose >= 1:
-                print(f"Created JSON file '{filepath_evaluation}'.")
-        elif options['evaluation'] == 'income':
-            eval_callback.save_evaluation_data(filepath_evaluation)
+        # Save training data
+        filepath_training = os.path.join(self.path_folder, "training.json")
+        training_data_callback.training_data.to_json(filepath_training)
 
         return dict()
-
-    @staticmethod
-    def plot_evaluation_data(filepath: str, ax: plt.Axes):
-
-        """
-        Plot the data of the evaluation JSON file
-        """
-
-        IncomeEvalCallback.plot_evaluation_data(filepath, ax)
-        # TODO: provide support if options['evaluation'] == 'reward' instead of 'income'
-
 

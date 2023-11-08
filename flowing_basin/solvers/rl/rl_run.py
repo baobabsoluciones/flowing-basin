@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance, Solution, Experiment
-from .rl_env import RLConfiguration, RLEnvironment
+from flowing_basin.solvers.rl.rl_env import RLConfiguration, RLEnvironment
 from stable_baselines3 import SAC
-from stable_baselines3.common.base_class import BaseAlgorithm
+from stable_baselines3.common.policies import BasePolicy
 
 
 class RLRun(Experiment):
@@ -24,25 +24,28 @@ class RLRun(Experiment):
             paths_power_models=paths_power_models,
         )
 
-    def solve(self, model: BaseAlgorithm | str, options: dict = None) -> dict:
+    def solve(self, policy: BasePolicy | str, options: dict = None) -> dict:
 
         """
         Load the given model and use it to solve the instance given in the initialization.
 
-        :param model: The StableBaselines3 model, or a path to it
+        :param policy: A StableBaselines3 policy, or a path to a model
         :param options: Unused parameter
         :return: Dictionary with additional information
         """
 
-        if isinstance(model, str):
-            model = SAC.load(model)
+        if isinstance(policy, str) and policy != "random":
+            policy = SAC.load(policy).policy
 
         # Reset the environment (this allows the `solve` method to be called more than once)
         obs, _ = self.env.reset(self.instance)
         done = False
         rewards = []
         while not done:
-            action, _ = model.predict(obs, deterministic=True)
+            if policy != "random":
+                action, _ = policy.predict(obs, deterministic=True)
+            else:
+                action = self.env.action_space.sample()
             obs, reward, done, _, _ = self.env.step(action)
             rewards.append(reward)
 

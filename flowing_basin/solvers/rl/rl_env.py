@@ -1,5 +1,6 @@
 from flowing_basin.core import Instance, Configuration
 from flowing_basin.tools import RiverBasin
+from flowing_basin.solvers.rl.feature_extractors import IdentityProjector
 from cornflow_client.core.tools import load_json
 import numpy as np
 import gymnasium as gym
@@ -10,7 +11,6 @@ from random import randint
 from dataclasses import dataclass, asdict
 import json
 from typing import Callable
-from .feature_extractors.projectors import IdentityProjector
 
 
 @dataclass(kw_only=True)
@@ -710,6 +710,7 @@ class RLEnvironment(gym.Env):
             info_buffer_start: int = 0,
             info_buffer_end: int = 0,
             initial_row_decisions: int | datetime = None,
+            instance_name: str = None
     ) -> Instance:
 
         """
@@ -721,6 +722,7 @@ class RLEnvironment(gym.Env):
         :param info_buffer_start: Number of time steps with information before the decisions must be made
         :param info_buffer_end: Number of time steps with information after the decisions have been made
         :param initial_row_decisions: If given, starts the episode in this row or datetime
+        :param instance_name: Name of the instance
         """
 
         if isinstance(constants, dict):
@@ -768,8 +770,9 @@ class RLEnvironment(gym.Env):
         last_row_decisions = last_row_impact - impact_buffer
         last_row_info = last_row_impact + info_buffer_end
 
-        # Add time-dependent values to the data
+        data["instance_name"] = instance_name
 
+        # Add time-dependent values to the data
         data["datetime"]["start_information"] = historical_data.loc[
             initial_row_info, "datetime"
         ].strftime("%Y-%m-%d %H:%M")

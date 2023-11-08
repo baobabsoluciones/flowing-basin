@@ -17,7 +17,7 @@ run = RLRun(
 )
 
 start_time = time.perf_counter()
-run.solve(model=filepath_agent)
+run.solve(policy=filepath_agent)
 run.solution.to_json(filepath_sol)
 exec_time = time.perf_counter() - start_time
 print(f"{exec_time=}")

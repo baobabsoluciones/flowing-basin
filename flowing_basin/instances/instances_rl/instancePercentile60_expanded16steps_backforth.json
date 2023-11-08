@@ -714,5 +714,6 @@
         9.431304916349205,
         9.471176900380954
     ],
+    "instance_name": "Percentile60",
     "time_step_minutes": 15
 }

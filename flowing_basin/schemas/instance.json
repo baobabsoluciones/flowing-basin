@@ -26,6 +26,9 @@
                 "start"
             ]
         },
+        "instance_name": {
+            "type": "string"
+        },
         "dams": {
             "type": "array",
             "items": {

@@ -28,6 +28,7 @@ for example in EXAMPLES:
         info_buffer_start=NUM_STEPS_LOOKAHEAD,
         info_buffer_end=NUM_STEPS_LOOKAHEAD,
         initial_row_decisions=start_date,
+        instance_name=example
     )
 
     # Check instance

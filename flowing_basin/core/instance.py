@@ -196,6 +196,14 @@ class Instance(InstanceCore):
 
         return inconsistencies
 
+    def get_instance_name(self) -> str:
+
+        instance_name = self.data.get("instance_name")
+        if instance_name is None:
+            instance_name = 'instance' + self.data["datetime"]["start"]
+
+        return instance_name
+
     def get_start_decisions_datetime(self) -> datetime:
 
         """

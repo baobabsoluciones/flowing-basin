@@ -9,6 +9,8 @@ from datetime import datetime
 INITIAL_ROW = "2021-03-27 11:30"
 PATH_CONSTANTS = "../data/constants/constants_2dams.json"
 PATH_HISTORICAL_DATA = "../data/history/historical_data_clean.pickle"
+OBSERVATION_TYPE = "O1"
+PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}"
 
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 constants = Instance.from_dict(load_json(PATH_CONSTANTS))
@@ -24,7 +26,10 @@ config = RLConfiguration(
         "past_vols", "past_flows", "past_variations", "future_prices",
         "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped",
     ],
-    obs_box_shape=False,
+    feature_extractor="MLP",
+    projector_type="PCA",
+    projector_bound="max_min_per_component",
+    projector_explained_variance=.98,
     unique_features=["future_prices", ],
     num_steps_sight={
         ("past_flows", "dam1"): constants.get_verification_lags_of_dam("dam1")[-1] + 1,
@@ -40,6 +45,7 @@ env1 = RLEnvironment(
     config=config,
     path_constants=PATH_CONSTANTS,
     path_historical_data=PATH_HISTORICAL_DATA,
+    path_observations_folder=PATH_OBSERVATIONS,
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
 

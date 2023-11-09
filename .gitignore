@@ -142,3 +142,6 @@ dmypy.json
 /flowing_basin/data/history/historical_data_clean_test.pickle
 /flowing_basin/data/history/historical_data_clean_train.pickle
 /flowing_basin/data/history/historical_data_daily_avg_inflow.pickle
+
+# Files storing arrays
+*.npy

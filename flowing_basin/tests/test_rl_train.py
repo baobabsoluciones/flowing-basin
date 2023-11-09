@@ -27,9 +27,8 @@ OPTIONS = dict(
 )
 PLOT_TRAINING_CURVE = True
 
-SAVE_OBSERVATIONS = False
-PATH_OBSERVATIONS = "../analyses/rl_pca/observations_data/observationsO2.npy"
-PATH_OBSERVATIONS_CONFIG = "../analyses/rl_pca/observations_data/observationsO2_config.json"
+SAVE_OBSERVATIONS = True
+PATH_OBSERVATIONS = "reports/observations_data/observationsO2"
 
 constants = Instance.from_dict(load_json(PATH_CONSTANTS))
 config = RLConfiguration(
@@ -51,7 +50,10 @@ config = RLConfiguration(
         "past_variations": 2, "future_prices": 16, "future_inflows": 16,
         "other": 1
     },
-    projector='identity',
+    feature_extractor="MLP",
+    projector_type="identity",
+    projector_bound="max_min_per_component",
+    projector_explained_variance=1.,
     length_episodes=24 * 4 + 3,
     do_history_updates=False,
     update_observation_record=SAVE_OBSERVATIONS,
@@ -75,11 +77,10 @@ if SAVE_OBSERVATIONS:
     print("Observation record shape:", train.train_env.observation_record.shape)
     print("Observation record:", train.train_env.observation_record)
 
-    np.save(PATH_OBSERVATIONS, train.train_env.observation_record)
-    print(f"Created .npy file '{PATH_OBSERVATIONS}'.")
-
-    config.to_json(PATH_OBSERVATIONS_CONFIG)
-    print(f"Created JSON file '{PATH_OBSERVATIONS_CONFIG}'.")
+    os.makedirs(PATH_OBSERVATIONS)
+    np.save(os.path.join(PATH_OBSERVATIONS, 'observations.npy'), train.train_env.observation_record)
+    config.to_json(os.path.join(PATH_OBSERVATIONS, 'config.json'))
+    print(f"Created folder '{PATH_OBSERVATIONS}'.")
 
 if PLOT_TRAINING_CURVE:
     fig, ax = plt.subplots()

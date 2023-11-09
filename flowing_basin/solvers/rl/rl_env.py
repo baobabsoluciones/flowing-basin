@@ -1,6 +1,7 @@
-from flowing_basin.core import Instance, Configuration
+from flowing_basin.core import Instance
 from flowing_basin.tools import RiverBasin
-from flowing_basin.solvers.rl.feature_extractors import IdentityProjector
+from flowing_basin.solvers.rl import RLConfiguration
+from flowing_basin.solvers.rl.feature_extractors import IdentityProjector, PCAProjector
 from cornflow_client.core.tools import load_json
 import numpy as np
 import gymnasium as gym
@@ -8,155 +9,7 @@ import pandas as pd
 from datetime import datetime
 import pickle
 from random import randint
-from dataclasses import dataclass, asdict
-import json
 from typing import Callable
-
-
-@dataclass(kw_only=True)
-class RLConfiguration(Configuration):  # noqa
-
-    # Penalty for not fulfilling the flow smoothing parameter
-    flow_smoothing_penalty: int  # Penalty for not fulfilling the flow smoothing parameter
-    flow_smoothing_clip: bool  # Whether to clip the actions that do not comply with flow smoothing or not
-
-    # RL environment's observation options
-    features: list[str]
-    unique_features: list[str]  # Features that should NOT be repeated for each dam
-    num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
-    length_episodes: int
-    update_observation_record: bool  # Whether to save observations experienced by agent
-    projector: str  # type of dimensionality reduction to apply for the observations (or identity)
-
-    # RL environment's action options
-    action_type: str
-    feature_extractor: str = 'MLP'  # Either MLP or CNN or mixed
-
-    # RiverBasin simulator options
-    flow_smoothing: int = 0
-    mode: str = "nonlinear"
-    do_history_updates: bool = True
-
-    #ToDo his is an inelegant implementation of the "get" method of dictionaries
-    # However it could be moved to the parent or grandparent class, up to ou
-    def get(self, k, default=None):
-        if hasattr(self, k):
-            return getattr(self, k)
-        else:
-            return default
-
-    def __post_init__(self):
-
-        # Check self.mode
-        valid_modes = {"linear", "nonlinear"}
-        if self.mode not in valid_modes:
-            raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
-
-        # Check self.features
-        valid_features = {
-            "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
-            "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped", "past_periods"
-        }
-        for feature in self.features:
-            if feature not in valid_features:
-                raise ValueError(f"Invalid feature: {feature}. Allowed features are {valid_features}")
-
-        # Check self.unique_features
-        if not set(self.unique_features).issubset(self.features):
-            raise ValueError(
-                f"The features marked as unique, {self.unique_features}, "
-                f"should be a subset of the features, {self.features}"
-            )
-        if self.feature_extractor == 'CNN' and len(self.unique_features) != 0:
-            raise ValueError(
-                f"Feature extractor is CNN (so observation must be box shaped) "
-                f"but there are features marked as unique: {self.unique_features}"
-            )
-
-        # Check self.num_steps_sight
-        if isinstance(self.num_steps_sight, dict):
-            flattened_keys = [
-                key
-                for tup_or_key in self.num_steps_sight.keys()
-                for key in (tup_or_key if isinstance(tup_or_key, tuple) else (tup_or_key,))
-            ]
-            if not set(self.features).issubset(flattened_keys) and "other" not in flattened_keys:
-                raise ValueError(
-                    f"The features provided are {self.features}, but not all of them "
-                    f"have a number of time steps defined: {self.num_steps_sight} "
-                    f"(suggestion: use the key 'other' as a wildcard for the remaining features)"
-                )
-            if self.feature_extractor == 'CNN' and len(set(self.num_steps_sight.values())) != 1:
-                raise ValueError(
-                    f"Feature extractor is CNN (so observation must be box shaped) but the number of time steps "
-                    f"of every feature is not the same: {self.num_steps_sight}"
-                )
-
-        # Check self.action_type
-        valid_actions = {"exiting_flows", "exiting_relvars"}
-        if self.action_type not in valid_actions:
-            raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
-
-        # Check self.projector
-        valid_projectors = {'identity', 'PCA'}
-        if self.projector not in valid_projectors:
-            raise ValueError(f"Invalid value for 'projector': {self.projector}. Allowed values are {valid_projectors}")
-
-        # Check self.feature_extractor
-        valid_extractors = {'MLP', 'CNN', 'mixed'}
-        if self.feature_extractor not in valid_extractors:
-            raise ValueError(
-                f"Invalid value for 'feature_extractor': {self.feature_extractor}. "
-                f"Allowed values are {valid_extractors}"
-            )
-
-    def post_process(self, dam_ids: list[str]):
-
-        # Post-process self.num_steps_sight
-        # Turn all keys into (feature, dam_id)
-        if isinstance(self.num_steps_sight, int):
-            self.num_steps_sight = {
-                (feature, dam_id): self.num_steps_sight
-                for feature in self.features for dam_id in dam_ids
-            }
-        if "other" in self.num_steps_sight.keys():
-            self.num_steps_sight = {
-                (feature, dam_id):
-                    self.num_steps_sight[feature, dam_id] if (feature, dam_id) in self.num_steps_sight.keys() else (
-                        self.num_steps_sight[feature] if feature in self.num_steps_sight.keys() else
-                        self.num_steps_sight["other"]
-                    )
-                for feature in self.features for dam_id in dam_ids
-            }
-
-    def to_dict(self) -> dict:
-
-        """
-        Turn the dataclass into a JSON-serializable dictionary
-        """
-
-        data_json = asdict(self)
-        data_json["num_steps_sight"] = [{"key": k, "value": v} for k, v in data_json["num_steps_sight"].items()]
-
-        return data_json
-
-    def to_json(self, path: str):
-
-        with open(path, "w") as f:
-            json.dump(self.to_dict(), f, indent=4, sort_keys=True)
-
-    @classmethod
-    def from_json(cls, path: str):
-
-        with open(path, "r") as f:
-            data_json = json.load(f)
-
-        # Convert 'num_steps_sight' back into a dictionary
-        num_steps_sight_list = data_json.pop("num_steps_sight")
-        num_steps_sight_dict = {tuple(item["key"]): item["value"] for item in num_steps_sight_list}
-        data_json["num_steps_sight"] = num_steps_sight_dict
-
-        return cls(**data_json)
 
 
 class RLEnvironment(gym.Env):
@@ -176,6 +29,7 @@ class RLEnvironment(gym.Env):
         instance: Instance = None,
         initial_row: int | datetime = None,
         paths_power_models: dict[str, str] = None,
+        path_observations_folder: str = None
     ):
 
         super(RLEnvironment, self).__init__()
@@ -215,15 +69,31 @@ class RLEnvironment(gym.Env):
             do_history_updates=self.config.do_history_updates
         )
 
+        # Projector
+        proj_type = self.config.get("projector_type")
+        if proj_type == 'identity':
+            self.projector = IdentityProjector()
+        elif proj_type == 'PCA':
+            self.projector = PCAProjector(
+                bounds=self.config.projector_bound,
+                explained_variance=self.config.projector_explained_variance,
+                path_observations_folder=path_observations_folder
+            )
+        else:
+            raise NotImplementedError(f"Projector {self.config.projector_type} is not supported yet.")
+        self.projector.check_config(self.config)
+
         # Observation space
         if self.config.feature_extractor == 'MLP':
-            # Observation is an array of shape num_dams x num_features x num_steps
-            array_length = sum(
-                self.config.num_steps_sight[feature, dam_id]
-                for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
-                if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
-            )
-            obs_shape = (array_length,)
+            if self.projector.n_components is None:
+                array_length = sum(
+                    self.config.num_steps_sight[feature, dam_id]
+                    for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
+                    if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
+                )
+                obs_shape = (array_length,)
+            else:
+                obs_shape = (self.projector.n_components,)
         elif self.config.feature_extractor == 'CNN':
             # Convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
             obs_shape = (
@@ -236,18 +106,11 @@ class RLEnvironment(gym.Env):
 
         #ToDo are we sure that this is not truncating inputs when we train the agent? might explain the 120
         self.observation_space = gym.spaces.Box(
-            low=0,
-            high=1,
+            low=self.projector.low,
+            high=self.projector.high,
             shape=obs_shape,
             dtype=np.float32
         )
-
-        # Projector
-        proj_type = self.config.get("projector")
-        if proj_type == 'identity':
-            self.projector = IdentityProjector()
-        else:
-            raise NotImplementedError(f"Projector {self.config.projector} is not supported yet.")
 
         # Record of observations experienced by the agent
         # Array of shape num_observations x num_features (each observation will be flattened)
@@ -575,6 +438,7 @@ class RLEnvironment(gym.Env):
          to double check 
         """
 
+        # Get array of normalized values
         if self.config.feature_extractor == 'MLP':
             obs_normalized = np.concatenate([
                 np.concatenate([
@@ -596,7 +460,10 @@ class RLEnvironment(gym.Env):
         else:
             raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
-        return obs_normalized
+        # Apply projector to array
+        obs_projected = self.projector.project(obs_normalized)
+
+        return obs_projected
 
     def print_observation(self, dam_id: str, normalize: bool = False, decimals: int = 2, spacing: int = 16):
 

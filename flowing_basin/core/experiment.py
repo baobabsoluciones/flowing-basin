@@ -22,6 +22,13 @@ class Configuration:
     volume_shortage_penalty: float = 0.
     volume_exceedance_bonus: float = 0.
 
+    # This is an implementation of the "get" method of dictionaries
+    def get(self, k, default=None):
+        if hasattr(self, k):
+            return getattr(self, k)
+        else:
+            return default
+
 
 class Experiment(ExperimentCore):
     schema_checks = get_empty_schema()

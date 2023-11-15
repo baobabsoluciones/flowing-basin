@@ -1,6 +1,7 @@
 from flowing_basin.core import Configuration
 from dataclasses import dataclass, asdict
 import json
+import warnings
 
 
 @dataclass(kw_only=True)
@@ -10,32 +11,27 @@ class RLConfiguration(Configuration):  # noqa
     flow_smoothing_penalty: int  # Penalty for not fulfilling the flow smoothing parameter
     flow_smoothing_clip: bool  # Whether to clip the actions that do not comply with flow smoothing or not
 
-    # RL environment's observation options
+    # Required RL environment's observation options
     features: list[str]
     unique_features: list[str]  # Features that should NOT be repeated for each dam
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
     length_episodes: int
     update_observation_record: bool  # Whether to save observations experienced by agent
     projector_type: str  # type of dimensionality reduction to apply for the observations (or identity)
-    projector_bound: tuple[int, int] | str  # bounds of the projected observations
-    projector_explained_variance: float
 
     # RL environment's action options
     action_type: str
     feature_extractor: str = 'MLP'  # Either MLP or CNN or mixed
 
+    # Optional RL environment's observation options
+    projector_bound: tuple[int, int] | str = None  # bounds of the projected observations
+    projector_extrapolation: float = None  # percentage of the bounds that are allowed to be exceeded by the projector
+    projector_explained_variance: float = None
+
     # RiverBasin simulator options
     flow_smoothing: int = 0
     mode: str = "nonlinear"
     do_history_updates: bool = True
-
-    #ToDo his is an inelegant implementation of the "get" method of dictionaries
-    # However it could be moved to the parent or grandparent class, up to ou
-    def get(self, k, default=None):
-        if hasattr(self, k):
-            return getattr(self, k)
-        else:
-            return default
 
     def __post_init__(self):
 
@@ -100,6 +96,21 @@ class RLConfiguration(Configuration):  # noqa
                 f"Cannot use projector `{self.projector_type}` with the CNN feature extractor, "
                 f"since projectors flatten the observations"
             )
+
+        # Check projector options are given if required
+        projector_options_not_provided = [
+            self.projector_extrapolation is None, self.projector_bound is None, self.projector_explained_variance is None
+        ]
+        if self.projector_type == 'identity':
+            if not all(projector_options_not_provided):
+                warnings.warn(
+                    "Projector type is `identity`, but projector options where provided. These will be ignored."
+                )
+        else:
+            if any(projector_options_not_provided):
+                raise ValueError(
+                    f"Projector type is `{self.projector_type}` but not all projector options were provided."
+                )
 
         # Check self.projector_bound
         if isinstance(self.projector_bound, str):

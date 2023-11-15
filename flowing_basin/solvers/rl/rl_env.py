@@ -76,6 +76,7 @@ class RLEnvironment(gym.Env):
         elif proj_type == 'PCA':
             self.projector = PCAProjector(
                 bounds=self.config.projector_bound,
+                extrapolation=self.config.projector_extrapolation,
                 explained_variance=self.config.projector_explained_variance,
                 path_observations_folder=path_observations_folder
             )
@@ -440,6 +441,7 @@ class RLEnvironment(gym.Env):
 
         # Get array of normalized values
         if self.config.feature_extractor == 'MLP':
+            # Observation is a 1d array
             obs_normalized = np.concatenate([
                 np.concatenate([
                     self.get_feature_normalized(feature, dam_id)
@@ -450,6 +452,7 @@ class RLEnvironment(gym.Env):
             ]).astype(np.float32)
         elif self.config.feature_extractor == 'CNN':
             # Remember convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
+            # So observation is now a 3d array
             obs_normalized = np.array([
                 [
                     self.get_feature_normalized(feature, dam_id)

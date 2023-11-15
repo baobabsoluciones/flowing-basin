@@ -7,7 +7,9 @@ import os
 
 class Projector(ABC):
 
-    def __init__(self, bounds: tuple[float, float] | str = None, path_observations_folder: str = None):
+    def __init__(
+        self, bounds: tuple[float, float] | str = None, extrapolation: float = 0., path_observations_folder: str = None
+    ):
 
         """
         Initialize the projector
@@ -43,6 +45,7 @@ class Projector(ABC):
         else:
             self.low = None
             self.high = None
+        self.extrapolation = extrapolation
 
     def check_config_attribute(self, other_config: RLConfiguration, attribute: str):
 
@@ -78,7 +81,10 @@ class IdentityProjector(Projector):
 
 class PCAProjector(Projector):
 
-    def __init__(self, bounds: tuple[float, float] | str, path_observations_folder: str, explained_variance: float):
+    def __init__(
+            self, bounds: tuple[float, float] | str, extrapolation: float, path_observations_folder: str,
+            explained_variance: float
+    ):
 
         """
         Initialize the PCA projector
@@ -86,7 +92,7 @@ class PCAProjector(Projector):
         :param explained_variance: Explained variance of the resulting PCA model
         """
 
-        super(PCAProjector, self).__init__(bounds, path_observations_folder)
+        super(PCAProjector, self).__init__(bounds, extrapolation, path_observations_folder)
 
         # Fitted model
         self.model = PCA(n_components=explained_variance)
@@ -100,6 +106,11 @@ class PCAProjector(Projector):
         elif bounds == 'max_min_all':
             self.low = np.min(transformed_observations).astype(np.float32)
             self.high = np.max(transformed_observations).astype(np.float32)
+        # else, self.low and self.high should be the specified bounds, set in parent class
+
+        # Allow some degree of extrapolation
+        self.low = self.low - np.abs(self.low) * self.extrapolation
+        self.high = self.high + np.abs(self.high) * self.extrapolation
 
         # Number of components
         self.n_components = self.model.n_components_

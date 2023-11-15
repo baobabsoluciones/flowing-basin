@@ -147,9 +147,7 @@
             "value": 1
         }
     ],
-    "projector_bound": "max_min_all",
     "projector_type": "identity",
-    "projector_explained_variance": 1,
     "startups_penalty": 50,
     "unique_features": [
         "future_prices"

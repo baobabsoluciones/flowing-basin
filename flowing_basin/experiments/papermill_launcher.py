@@ -8,7 +8,9 @@ import logging
 logging.getLogger('papermill')
 logging.basicConfig(level='INFO', format="%(message)s")
 
+
 def get_arguments():
+
     """Gets arguments from the command line.
 
     Returns:
@@ -45,7 +47,6 @@ def get_arguments():
     parser.add_argument('--PLOT-TRAINING-CURVE', type = str, default = "true")
     parser.add_argument('--SAVE-OBSERVATIONS', type = str, default = "true")
 
-
     parser.add_argument('--length-episodes', type=int, default = 24 * 4 + 3)
     parser.add_argument('--log-ep-freq', type=int, default = 5)
     parser.add_argument('--eval-ep-freq', type=int, default = 5)
@@ -58,16 +59,20 @@ def get_arguments():
     args = vars(parser.parse_args())
     return args
 
+
 if __name__ == "__main__":
 
     args = get_arguments()
     args['experiment_name'] = f"{datetime.datetime.now().strftime('%Y_%m_%d_%H_%M')}_{args['feature_extractor']}_{re.sub('.ipynb','',args['template'])}"
+
+    # Cannot specify lists, so they are saved as a single str with values separated by |
     args['features'] = args['features'].split('|')
     args['unique_features'] = args['unique_features'].split('|')
+
+    # Cannot specify boolean, so they are saved as "true" or "false" strings
     for k in ['flow_smoothing_clip', 'PLOT_TRAINING_CURVE', 'SAVE_OBSERVATIONS', 'do_history_updates',
               'update_observation_record', 'eval_num_episodes', 'PLOT_TRAINING_CURVE', 'SAVE_OBSERVATIONS', 'obs_box_shape']:
         args[k] = args[k] == "true"
-
 
     msg.info("Launching template", args['template'])
     os.makedirs(f"../studies/{args['experiment_name']}", exist_ok=True)
@@ -76,7 +81,7 @@ if __name__ == "__main__":
         f"./templates/{args['template']}{'' if args.get('template').endswith('ipynb') else'.ipynb'}",
         f"../studies/{args['experiment_name']}/experiment_report.ipynb",
         args,
-        log_output=True, # This prints in the console the results as they would in the notebook cells
+        log_output=True,  # This prints in the console the results as they would in the notebook cells
         report_mode=True
     )
 

@@ -66,6 +66,29 @@ class Projector(ABC):
     def project(self, normalized_obs: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
 
+    @classmethod
+    def from_config(cls, config: RLConfiguration, path_observations_folder: str):
+
+        """
+        Select the projector based on the given configuration
+        """
+
+        proj_type = config.get("projector_type")
+        if proj_type == 'identity':
+            projector = IdentityProjector()
+        elif proj_type == 'PCA':
+            projector = PCAProjector(
+                bounds=config.projector_bound,
+                extrapolation=config.projector_extrapolation,
+                explained_variance=config.projector_explained_variance,
+                path_observations_folder=path_observations_folder
+            )
+        else:
+            raise NotImplementedError(f"Projector {config.projector_type} is not supported yet.")
+        projector.check_config(config)
+
+        return projector
+
 
 class IdentityProjector(Projector):
 

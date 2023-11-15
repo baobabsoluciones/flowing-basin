@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance
 from flowing_basin.tools import RiverBasin
 from flowing_basin.solvers.rl import RLConfiguration
-from flowing_basin.solvers.rl.feature_extractors import IdentityProjector, PCAProjector
+from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
 import numpy as np
 import gymnasium as gym
@@ -24,12 +24,12 @@ class RLEnvironment(gym.Env):
     def __init__(
         self,
         config: RLConfiguration,
+        projector: Projector,
         path_constants: str = None,
         path_historical_data: str = None,
         instance: Instance = None,
         initial_row: int | datetime = None,
         paths_power_models: dict[str, str] = None,
-        path_observations_folder: str = None
     ):
 
         super(RLEnvironment, self).__init__()
@@ -42,8 +42,8 @@ class RLEnvironment(gym.Env):
                     "in order to be able to create random instances."
                 )
 
-        # Configuration
         self.config = config
+        self.projector = projector
 
         # Set data
         self.constants = None
@@ -52,10 +52,6 @@ class RLEnvironment(gym.Env):
         self.historical_data = None
         if path_historical_data is not None:
             self.historical_data = pd.read_pickle(path_historical_data)
-
-        # Post-process configuration
-        dam_ids = self.constants.get_ids_of_dams() if self.constants is not None else instance.get_ids_of_dams()
-        self.config.post_process(dam_ids)
 
         # Create instance
         self._reset_instance(instance, initial_row)
@@ -68,21 +64,6 @@ class RLEnvironment(gym.Env):
             paths_power_models=paths_power_models,
             do_history_updates=self.config.do_history_updates
         )
-
-        # Projector
-        proj_type = self.config.get("projector_type")
-        if proj_type == 'identity':
-            self.projector = IdentityProjector()
-        elif proj_type == 'PCA':
-            self.projector = PCAProjector(
-                bounds=self.config.projector_bound,
-                extrapolation=self.config.projector_extrapolation,
-                explained_variance=self.config.projector_explained_variance,
-                path_observations_folder=path_observations_folder
-            )
-        else:
-            raise NotImplementedError(f"Projector {self.config.projector_type} is not supported yet.")
-        self.projector.check_config(self.config)
 
         # Observation space
         if self.config.feature_extractor == 'MLP':

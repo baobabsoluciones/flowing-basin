@@ -1,5 +1,6 @@
 from flowing_basin.core import Instance, Training
 from flowing_basin.solvers.rl import RLConfiguration, RLRun
+from flowing_basin.solvers.rl.feature_extractors import Projector
 import os
 import numpy as np
 from stable_baselines3.common.results_plotter import load_results, ts2xy
@@ -72,7 +73,7 @@ class TrainingDataCallback(BaseCallback):
     """
 
     def __init__(
-            self, eval_freq: int, config: RLConfiguration, instances: list[str],
+            self, eval_freq: int, config: RLConfiguration, projector: Projector, instances: list[str],
             baseline_policy: BasePolicy | str, verbose: int = 1
     ):
 
@@ -87,7 +88,7 @@ class TrainingDataCallback(BaseCallback):
             for instance in instances
         ]
         self.runs = [
-            RLRun(instance_object, self.config)
+            RLRun(instance=instance_object, config=self.config, projector=projector)
             for instance_object in instance_objects
         ]
 

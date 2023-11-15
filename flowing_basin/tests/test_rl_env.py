@@ -1,6 +1,7 @@
 from flowing_basin.core import Instance
 from cornflow_client.core.tools import load_json
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
+from flowing_basin.solvers.rl.feature_extractors import Projector
 import numpy as np
 from stable_baselines3.common.env_checker import check_env
 from datetime import datetime
@@ -16,19 +17,22 @@ PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TY
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 constants = Instance.from_dict(load_json(PATH_CONSTANTS))
 config = RLConfiguration.from_json(PATH_OBSERVATIONS_JSON)
-config.feature_extractor = "MLP"
-config.projector_type = "PCA"
-config.projector_bound = "max_min_per_component"
-config.projector_extrapolation = 0.5
-config.projector_explained_variance = .98
+config.feature_extractor = "CNN"
+config.projector_type = "identity"
+if config.projector_type != "identity":
+    config.projector_bound = "max_min_per_component"
+    config.projector_extrapolation = 0.5
+    config.projector_explained_variance = .98
 config.do_history_updates = True
 config.update_observation_record = True
+config.check()
 
+projector = Projector.from_config(config, PATH_OBSERVATIONS)
 env1 = RLEnvironment(
     config=config,
+    projector=projector,
     path_constants=PATH_CONSTANTS,
     path_historical_data=PATH_HISTORICAL_DATA,
-    path_observations_folder=PATH_OBSERVATIONS,
     initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"),
 )
 

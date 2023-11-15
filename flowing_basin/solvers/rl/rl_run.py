@@ -1,5 +1,6 @@
 from flowing_basin.core import Instance, Solution, Experiment
-from flowing_basin.solvers.rl.rl_env import RLConfiguration, RLEnvironment
+from flowing_basin.solvers.rl import RLConfiguration, RLEnvironment
+from flowing_basin.solvers.rl.feature_extractors import Projector
 from stable_baselines3 import SAC
 from stable_baselines3.common.policies import BasePolicy
 
@@ -10,6 +11,7 @@ class RLRun(Experiment):
             self,
             instance: Instance,
             config: RLConfiguration,
+            projector: Projector,
             paths_power_models: dict[str, str] = None,
             solution: Solution = None,
     ):
@@ -20,6 +22,7 @@ class RLRun(Experiment):
         self.config = config
         self.env = RLEnvironment(
             instance=self.instance,
+            projector=projector,
             config=config,
             paths_power_models=paths_power_models,
         )

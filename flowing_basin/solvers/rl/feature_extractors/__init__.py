@@ -1,2 +1,2 @@
 from .convolutional import VanillaCNN
-from .projectors import IdentityProjector, PCAProjector
+from .projectors import Projector

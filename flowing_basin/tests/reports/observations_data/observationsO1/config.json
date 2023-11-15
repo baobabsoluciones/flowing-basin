@@ -1,5 +1,9 @@
 {
     "action_type": "exiting_flows",
+    "dam_ids": [
+        "dam1",
+        "dam2"
+    ],
     "do_history_updates": false,
     "feature_extractor": "CNN",
     "features": [

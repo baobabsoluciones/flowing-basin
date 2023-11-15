@@ -1,6 +1,6 @@
 from flowing_basin.core import Instance, Solution, Experiment
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
-from flowing_basin.solvers.rl.feature_extractors.convolutional import VanillaCNN
+from flowing_basin.solvers.rl.feature_extractors import Projector, VanillaCNN
 from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, TrainingDataCallback
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
@@ -12,11 +12,11 @@ class RLTrain(Experiment):
 
     def __init__(
             self,
-            config:
-            RLConfiguration,
+            config: RLConfiguration,
             path_constants: str,
             path_train_data: str,
             path_test_data: str,
+            path_observations_folder: str,
             path_folder: str = '.',
             paths_power_models: dict[str, str] = None,
             instance: Instance = None,
@@ -32,9 +32,11 @@ class RLTrain(Experiment):
 
         # Configuration, environment and model (RL agent)
         self.config = config
+        self.projector = Projector.from_config(self.config, path_observations_folder)
         self.path_folder = path_folder
         self.train_env = RLEnvironment(
             config=self.config,
+            projector=self.projector,
             path_constants=path_constants,
             path_historical_data=path_train_data,
             paths_power_models=paths_power_models,
@@ -51,6 +53,7 @@ class RLTrain(Experiment):
         # Variables for periodic evaluation of agent during training
         self.eval_env = RLEnvironment(
             config=self.config,
+            projector=self.projector,
             path_constants=path_constants,
             path_historical_data=path_test_data,
             paths_power_models=paths_power_models,
@@ -107,6 +110,7 @@ class RLTrain(Experiment):
             instances=options['evaluation_instances'],
             baseline_policy="random",
             config=self.config,
+            projector=self.projector,
             verbose=self.verbose
         )
         eval_callback = EvalCallback(

@@ -11,6 +11,9 @@ class RLConfiguration(Configuration):  # noqa
     flow_smoothing_penalty: int  # Penalty for not fulfilling the flow smoothing parameter
     flow_smoothing_clip: bool  # Whether to clip the actions that do not comply with flow smoothing or not
 
+    # Data required to post-process config
+    dam_ids: list[str]
+
     # Required RL environment's observation options
     features: list[str]
     unique_features: list[str]  # Features that should NOT be repeated for each dam
@@ -34,6 +37,15 @@ class RLConfiguration(Configuration):  # noqa
     do_history_updates: bool = True
 
     def __post_init__(self):
+
+        self.check()
+        self.post_process()
+
+    def check(self):
+
+        """
+        Raises an error if data is not consistent
+        """
 
         # Check self.mode
         valid_modes = {"linear", "nonlinear"}
@@ -128,14 +140,19 @@ class RLConfiguration(Configuration):  # noqa
                 f"Allowed values are {valid_extractors}"
             )
 
-    def post_process(self, dam_ids: list[str]):
+    def post_process(self):
+
+        """
+        Turn all keys of self.num_steps_sight into (feature, dam_id)
+        (i.e., remove any "other" or other short-hand values)
+        """
 
         # Post-process self.num_steps_sight
         # Turn all keys into (feature, dam_id)
         if isinstance(self.num_steps_sight, int):
             self.num_steps_sight = {
                 (feature, dam_id): self.num_steps_sight
-                for feature in self.features for dam_id in dam_ids
+                for feature in self.features for dam_id in self.dam_ids
             }
         if "other" in self.num_steps_sight.keys():
             self.num_steps_sight = {
@@ -144,7 +161,7 @@ class RLConfiguration(Configuration):  # noqa
                         self.num_steps_sight[feature] if feature in self.num_steps_sight.keys() else
                         self.num_steps_sight["other"]
                     )
-                for feature in self.features for dam_id in dam_ids
+                for feature in self.features for dam_id in self.dam_ids
             }
 
     def to_dict(self) -> dict:

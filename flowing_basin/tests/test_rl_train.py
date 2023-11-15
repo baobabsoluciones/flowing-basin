@@ -10,6 +10,9 @@ import os
 PATH_CONSTANTS = "../data/constants/constants_2dams.json"
 PATH_TRAIN_DATA = "../data/history/historical_data_clean_train.pickle"
 PATH_TEST_DATA = "../data/history/historical_data_clean_test.pickle"
+OBSERVATION_TYPE = "O2"
+PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}"
+PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TYPE}/config.json"
 
 current_datetime = datetime.now().strftime('%Y-%m-%d %H.%M')
 agent_folder = f"../solutions/rl_models/RL_model_{current_datetime}"
@@ -27,47 +30,32 @@ OPTIONS = dict(
 )
 PLOT_TRAINING_CURVE = True
 
-SAVE_OBSERVATIONS = True
-PATH_OBSERVATIONS = "reports/observations_data/observationsO2"
+SAVE_OBSERVATIONS = False
+PATH_OBSERVATIONS_SAVE = "reports/observations_data/observationsO2"
 
+# Create configuration based on observations path
 constants = Instance.from_dict(load_json(PATH_CONSTANTS))
-config = RLConfiguration(
-    startups_penalty=50,
-    limit_zones_penalty=50,
-    mode="linear",
-    flow_smoothing=2,
-    flow_smoothing_penalty=25,
-    flow_smoothing_clip=False,
-    action_type="exiting_flows",
-    features=[
-        "past_vols", "past_flows", "past_variations", "future_prices",
-        "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped",
-    ],
-    unique_features=["future_prices", ],
-    num_steps_sight={
-        ("past_flows", "dam1"): constants.get_verification_lags_of_dam("dam1")[-1] + 1,
-        ("past_flows", "dam2"): constants.get_verification_lags_of_dam("dam2")[-1] + 1,
-        "past_variations": 2, "future_prices": 16, "future_inflows": 16,
-        "other": 1
-    },
-    feature_extractor="MLP",
-    projector_type="identity",
-    projector_bound="max_min_per_component",
-    projector_explained_variance=1.,
-    length_episodes=24 * 4 + 3,
-    do_history_updates=False,
-    update_observation_record=SAVE_OBSERVATIONS,
-)
+config = RLConfiguration.from_json(PATH_OBSERVATIONS_JSON)
+config.feature_extractor = "MLP"
+config.projector_type = "PCA"
+if config.projector_type != "identity":
+    config.projector_bound = "max_min_per_component"
+    config.projector_extrapolation = 0.5
+    config.projector_explained_variance = .98
+config.do_history_updates = True
+config.update_observation_record = True
+config.check()
+
 train = RLTrain(
     config=config,
     path_constants=PATH_CONSTANTS,
     path_train_data=PATH_TRAIN_DATA,
     path_test_data=PATH_TEST_DATA,
+    path_observations_folder=PATH_OBSERVATIONS,
     path_folder=agent_folder
 )
-
 train.solve(
-    num_episodes=10,
+    num_episodes=5,
     options=OPTIONS
 )
 
@@ -77,10 +65,10 @@ if SAVE_OBSERVATIONS:
     print("Observation record shape:", train.train_env.observation_record.shape)
     print("Observation record:", train.train_env.observation_record)
 
-    os.makedirs(PATH_OBSERVATIONS)
-    np.save(os.path.join(PATH_OBSERVATIONS, 'observations.npy'), train.train_env.observation_record)
-    config.to_json(os.path.join(PATH_OBSERVATIONS, 'config.json'))
-    print(f"Created folder '{PATH_OBSERVATIONS}'.")
+    os.makedirs(PATH_OBSERVATIONS_SAVE)
+    np.save(os.path.join(PATH_OBSERVATIONS_SAVE, 'observations.npy'), train.train_env.observation_record)
+    config.to_json(os.path.join(PATH_OBSERVATIONS_SAVE, 'config.json'))
+    print(f"Created folder '{PATH_OBSERVATIONS_SAVE}'.")
 
 if PLOT_TRAINING_CURVE:
     fig, ax = plt.subplots()

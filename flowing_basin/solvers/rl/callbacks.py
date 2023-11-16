@@ -74,7 +74,7 @@ class TrainingDataCallback(BaseCallback):
 
     def __init__(
             self, eval_freq: int, config: RLConfiguration, projector: Projector, instances: list[str],
-            baseline_policy: BasePolicy | str, verbose: int = 1
+            policy_id: str, baseline_policy: BasePolicy | str, verbose: int = 1
     ):
 
         super(TrainingDataCallback, self).__init__(verbose)
@@ -93,7 +93,7 @@ class TrainingDataCallback(BaseCallback):
         ]
 
         self.start_time = perf_counter()
-        self.policy_names = ["model", "random"]
+        self.policy_names = [policy_id, "random"]
         self.timesteps = []
         self.time_stamps = []
         self.values = {policy_name: [] for policy_name in self.policy_names}
@@ -103,10 +103,12 @@ class TrainingDataCallback(BaseCallback):
 
         if self.n_calls % self.eval_freq == 0:
 
+            # This needs to be put here since we don't have access to `self.model` in `__init__`...
             policies = {
-                "model": self.model.policy,
-                "random": self.baseline_policy
+                policy_name: self.model.policy if policy_name != "random" else self.baseline_policy
+                for policy_name in self.policy_names
             }
+
             for policy_name, policy in policies.items():
                 timestep_values = []
                 for run in self.runs:
@@ -130,16 +132,14 @@ class TrainingDataCallback(BaseCallback):
         """
 
         self.training_data = Training.from_dict(
-            {
-                "configuration": self.config.to_dict(),
-                "timesteps": self.timesteps,
-                "time_stamps": self.time_stamps,
-                "agents": [
-                    {
-                        "agent": policy_name,
-                        "values": self.values[policy_name]
-                    }
-                    for policy_name in self.policy_names
-                ]
-            }
+            [
+                {
+                    "id": policy_name,
+                    "values": self.values[policy_name],
+                    "timesteps": self.timesteps,
+                    "time_stamps": self.time_stamps,
+                    "configuration": self.config.to_dict()
+                }
+                for policy_name in self.policy_names
+            ]
         )

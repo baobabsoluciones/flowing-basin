@@ -55,7 +55,7 @@ train = RLTrain(
     path_folder=agent_folder
 )
 train.solve(
-    num_episodes=1000,
+    num_episodes=10,
     options=OPTIONS
 )
 

@@ -17,11 +17,10 @@ class Training(SolutionCore):
     )
 
     @classmethod
-    def from_dict(cls, data) -> "Training":
+    def from_dict(cls, data: list) -> "Training":
 
-        # Change list of agents into dictionary indexed by agent
-        data_p = dict(data)
-        data_p["agents"] = {el["agent"]: el for el in data_p["agents"]}
+        # Change list into dictionary indexed by agent name
+        data_p = {el["id"]: el for el in data}
 
         return cls(data_p)
 
@@ -30,7 +29,7 @@ class Training(SolutionCore):
         # Change dictionary of dams into list, to undo de changes of from_dict
         # Use pickle to work with a copy of the data and avoid changing the property of the class
         data_p = pickle.loads(pickle.dumps(self.data, -1))
-        data_p["agents"] = list(data_p["agents"].values())
+        data_p = list(data_p.values())
 
         return data_p
 
@@ -38,14 +37,14 @@ class Training(SolutionCore):
 
         inconsistencies = dict()
 
-        num_timesteps = len(self.get_timesteps())
-        for agent in self.get_agents():
-            num_values = len(self.data['agents'][agent]['values'])
+        for agent_id in self.get_agent_ids():
+            num_timesteps = len(self.get_timesteps(agent_id))
+            num_values = len(self.data[agent_id]['values'])
             if num_timesteps != num_values:
                 inconsistencies.update(
                     {
-                        f"The number of values for agent {agent} does snot equal the number of timesteps":
-                            f"The number of values for agent {agent} is {num_values}, "
+                        f"The number of values for agent {agent_id} does snot equal the number of timesteps":
+                            f"The number of values for agent {agent_id} is {num_values}, "
                             f"and the number of timesteps is {num_timesteps}"
                     }
                 )
@@ -63,31 +62,39 @@ class Training(SolutionCore):
 
         return inconsistencies
 
-    def get_agents(self) -> list[str]:
+    def get_agent_ids(self) -> list[str]:
 
-        return list(self.data['agents'].keys())
+        return list(self.data.keys())
 
-    def get_timesteps(self) -> list[float] | None:
+    def get_agent_name(self, agent_id: str) -> str | None:
+
+        name = self.data[agent_id].get("name")
+        if name is None:
+            name = agent_id
+
+        return name
+
+    def get_timesteps(self, agent_id: str) -> list[float] | None:
 
         """
         Get the time steps of training for each evaluation value
         """
 
-        timesteps = self.data['timesteps']
+        timesteps = self.data[agent_id]['timesteps']
 
         return timesteps
 
-    def get_time_stamps(self) -> list[float] | None:
+    def get_time_stamps(self, agent_id: str) -> list[float] | None:
 
         """
         Get the time stamps for the evaluation results
         """
 
-        time_stamps = self.data['time_stamps']
+        time_stamps = self.data[agent_id]['time_stamps']
 
         return time_stamps
 
-    def get_avg_incomes(self, agent: str, instances: list[str] = None) -> list[float]:
+    def get_avg_incomes(self, agent_id: str, instances: list[str] = None) -> list[float]:
 
         """
         Average income of given agent across all instances
@@ -98,18 +105,18 @@ class Training(SolutionCore):
             avg_incomes = [
                 sum(instance['income'] for instance in timestep) /
                 len([instance['income'] for instance in timestep])
-                for timestep in self.data['agents'][agent]['values']
+                for timestep in self.data[agent_id]['values']
             ]
         else:
             avg_incomes = [
                 sum(instance['income'] for instance in timestep if instance['instance'] in instances) /
                 len([instance['income'] for instance in timestep if instance['instance'] in instances])
-                for timestep in self.data['agents'][agent]['values']
+                for timestep in self.data[agent_id]['values']
             ]
 
         return avg_incomes
 
-    def get_avg_acc_rewards(self, agent: str, instances: list[str] = None) -> list[float]:
+    def get_avg_acc_rewards(self, agent_id: str, instances: list[str] = None) -> list[float]:
 
         """
         Average income of given agent across all instances
@@ -120,13 +127,13 @@ class Training(SolutionCore):
             avg_incomes = [
                 sum(instance['acc_reward'] for instance in timestep) /
                 len([instance['acc_reward'] for instance in timestep])
-                for timestep in self.data['agents'][agent]['values']
+                for timestep in self.data[agent_id]['values']
             ]
         else:
             avg_incomes = [
                 sum(instance['acc_reward'] for instance in timestep if instance['instance'] in instances) /
                 len([instance['acc_reward'] for instance in timestep if instance['instance'] in instances])
-                for timestep in self.data['agents'][agent]['values']
+                for timestep in self.data[agent_id]['values']
             ]
 
         return avg_incomes
@@ -140,16 +147,17 @@ class Training(SolutionCore):
         twinax = ax.twinx()
         twinax.set_ylabel("Average accumulated rewards")
 
-        timesteps = self.get_timesteps()
-        colors = [plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(self.get_agents()), endpoint=False)]
-        for agent, color in zip(self.get_agents(), colors):
-            avg_income = self.get_avg_incomes(agent, instances)
-            avg_acc_reward = self.get_avg_acc_rewards(agent, instances)
+        colors = [plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(self.get_agent_ids()), endpoint=False)]
+        for agent_id, color in zip(self.get_agent_ids(), colors):
+            name = self.get_agent_name(agent_id)
+            timesteps = self.get_timesteps(agent_id)
+            avg_income = self.get_avg_incomes(agent_id, instances)
+            avg_acc_reward = self.get_avg_acc_rewards(agent_id, instances)
             ax.plot(
-                timesteps, avg_income, color=color, linestyle='-', label=f"Average income of {agent}"
+                timesteps, avg_income, color=color, linestyle='-', label=f"Average income of {name}"
             )
             twinax.plot(
-                timesteps, avg_acc_reward, color=color, linestyle='--', label=f"Average accumulated rewards of {agent}"
+                timesteps, avg_acc_reward, color=color, linestyle='--', label=f"Average accumulated rewards of {name}"
             )
         ax_lines, ax_labels = ax.get_legend_handles_labels()
         twinax_lines, twinax_labels = twinax.get_legend_handles_labels()

@@ -34,9 +34,13 @@ class Experiment(ExperimentCore):
     schema_checks = get_empty_schema()
 
     def __init__(self, instance: Instance, solution: Solution = None) -> None:
+
         ExperimentCore.__init__(self, instance=instance, solution=solution)
+
         if solution is None:
             self.solution = Solution(SuperDict())
+
+        self.experiment_id = datetime.now().strftime('%Y-%m-%d %H.%M')
 
     @property
     def instance(self) -> Instance:

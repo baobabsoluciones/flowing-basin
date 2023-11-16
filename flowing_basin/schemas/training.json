@@ -1,91 +1,86 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "type": "object",
-    "properties": {
-        "configuration": {
-            "type": "object",
-            "properties": {
-                "startups_penalty": {
-                    "type": "number"
-                },
-                "limit_zones_penalty": {
-                    "type": "number"
-                },
-                "volume_objectives": {
-                    "type": "object"
-                },
-                "volume_shortage_penalty": {
-                    "type": "number"
-                },
-                "volume_exceedance_bonus": {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "string"
+            },
+             "name": {
+                "type": "string"
+            },
+            "values": {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "instance": {
+                                "type": "string"
+                            },
+                            "income": {
+                                "type": "number"
+                            },
+                            "acc_reward": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "instance",
+                            "income",
+                            "acc_reward"
+                        ]
+                    }
+                }
+            },
+            "timesteps": {
+               "type": "array",
+                "items": {
+                    "type": "integer"
+                }
+            },
+            "time_stamps": {
+                "type": "array",
+                "items": {
                     "type": "number"
                 }
             },
-            "required": [
-                "startups_penalty",
-                "limit_zones_penalty",
-                "volume_objectives",
-                "volume_shortage_penalty",
-                "volume_exceedance_bonus"
-            ]
-        },
-        "timesteps": {
-            "type": "array",
-            "items": {
-                "type": "integer"
-            }
-        },
-        "time_stamps": {
-            "type": "array",
-            "items": {
-                "type": "number"
-            }
-        },
-        "agents": {
-            "type": "array",
-            "items": {
+            "configuration": {
                 "type": "object",
                 "properties": {
-                    "agent": {
-                        "type": "string"
+                    "startups_penalty": {
+                        "type": "number"
                     },
-                    "values": {
-                        "type": "array",
-                        "items": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "instance": {
-                                        "type": "string"
-                                    },
-                                    "income": {
-                                        "type": "number"
-                                    },
-                                    "acc_reward": {
-                                        "type": "number"
-                                    }
-                                },
-                                "required": [
-                                    "instance",
-                                    "income",
-                                    "acc_reward"
-                                ]
-                            }
-                        }
+                    "limit_zones_penalty": {
+                        "type": "number"
+                    },
+                    "volume_objectives": {
+                        "type": "object"
+                    },
+                    "volume_shortage_penalty": {
+                        "type": "number"
+                    },
+                    "volume_exceedance_bonus": {
+                        "type": "number"
                     }
                 },
                 "required": [
-                    "agent",
-                    "values"
+                    "startups_penalty",
+                    "limit_zones_penalty",
+                    "volume_objectives",
+                    "volume_shortage_penalty",
+                    "volume_exceedance_bonus"
                 ]
             }
-        }
-    },
-    "required": [
-        "configuration",
-        "timesteps",
-        "time_stamps",
-        "agents"
-    ]
+        },
+        "required": [
+            "id",
+            "values",
+            "timesteps",
+            "time_stamps",
+            "configuration"
+        ]
+    }
 }

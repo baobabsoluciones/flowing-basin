@@ -38,16 +38,21 @@ class Training(SolutionCore):
         inconsistencies = dict()
 
         for agent_id in self.get_agent_ids():
-            num_timesteps = len(self.get_timesteps(agent_id))
-            num_values = len(self.data[agent_id]['values'])
-            if num_timesteps != num_values:
-                inconsistencies.update(
-                    {
-                        f"The number of values for agent {agent_id} does snot equal the number of timesteps":
-                            f"The number of values for agent {agent_id} is {num_values}, "
-                            f"and the number of timesteps is {num_timesteps}"
-                    }
-                )
+            for instances in ['fixed', 'random']:
+                if not self.has_agent_instances(agent_id, instances):
+                    continue
+                data = self.data[agent_id][self.get_instances_name(instances)]
+                num_timesteps = len(data['timesteps'])
+                num_values = len(data['values'])
+                if num_timesteps != num_values:
+                    inconsistencies.update(
+                        {
+                            f"The number of values for agent {agent_id} in instances {instances} "
+                            f"does not equal the number of timesteps":
+                                f"The number of values for agent {agent_id} is {num_values}, "
+                                f"and the number of timesteps is {num_timesteps}"
+                        }
+                    )
 
         return inconsistencies
 
@@ -66,6 +71,54 @@ class Training(SolutionCore):
 
         return list(self.data.keys())
 
+    def get_instances_name(self, instances: list[str] | str) -> str:
+
+        """
+        Returns 'fixed_instances' or 'random_instances'
+
+        :param: Can be 'fixed', 'random', or a list of specific fixed instances
+        """
+
+        if isinstance(instances, str):
+            valid_instances = {'fixed', 'random'}
+            if instances not in valid_instances:
+                raise ValueError(f"Invalid value for `instances`: '{instances}'. Allowed values are {valid_instances}")
+
+        instances_name = instances if isinstance(instances, str) else 'fixed'
+        instances_name = dict(fixed='fixed_instances', random='random_instances')[instances_name]
+
+        return instances_name
+
+    def has_agent_instances(self, agent_id: str, instances: list[str] | str) -> bool:
+
+        """
+        Checks whether the provided data has values stored for the given agent and instance
+        """
+
+        instances_name = self.get_instances_name(instances)
+        return self.data[agent_id].get(instances_name) is not None
+
+    def has_agent_instances_values(self, agent_id: str, instances: list[str] | str, values: str):
+
+        if not self.has_agent_instances(agent_id, instances):
+            return False
+
+        # Check if data has that value stored for the first timestep and the first instance
+        instances_name = self.get_instances_name(instances)
+        return self.data[agent_id][instances_name]['values'][0][0].get(values) is not None
+
+    def check_has_agent_instances(self, agent_id: str, instances: list[str] | str):
+
+        if not self.has_agent_instances(agent_id, instances):
+            raise ValueError(f"Provided data has no info on instances `{instances}` for agent `{agent_id}`.")
+
+    def check_has_agent_instances_values(self, agent_id: str, instances: list[str] | str, values: str):
+
+        if not self.has_agent_instances_values(agent_id, instances, values):
+            raise ValueError(
+                f"Provided data does not save the value `{values}` on instances `{instances}` for agent `{agent_id}`."
+            )
+
     def get_agent_name(self, agent_id: str) -> str | None:
 
         name = self.data[agent_id].get("name")
@@ -74,71 +127,104 @@ class Training(SolutionCore):
 
         return name
 
-    def get_timesteps(self, agent_id: str) -> list[float] | None:
+    def get_timesteps(self, agent_id: str, instances: list[str] | str) -> list[float] | None:
 
         """
         Get the time steps of training for each evaluation value
         """
 
-        timesteps = self.data[agent_id]['timesteps']
+        self.check_has_agent_instances(agent_id, instances)
+        timesteps = self.data[agent_id][self.get_instances_name(instances)]['timesteps']
 
         return timesteps
 
-    def get_time_stamps(self, agent_id: str) -> list[float] | None:
+    def get_time_stamps(self, agent_id: str, instances: list[str] | str) -> list[float] | None:
 
         """
         Get the time stamps for the evaluation results
+
+        :param agent_id:
+        :param instances:
         """
 
-        time_stamps = self.data[agent_id]['time_stamps']
+        self.check_has_agent_instances(agent_id, instances)
+        time_stamps = self.data[agent_id][self.get_instances_name(instances)]['time_stamps']
 
         return time_stamps
 
-    def get_avg_incomes(self, agent_id: str, instances: list[str] = None) -> list[float]:
+    def get_avg_values(self, agent_id: str, instances: list[str] | str, values: str) -> list[float]:
 
         """
-        Average income of given agent across all instances
+        Average values (incomes, accumulated rewards...) of given agent across all instances
         for each timestep
+
+        :param values: Can be 'income' or 'acc_reward'
+        :param agent_id:
+        :param instances:
         """
 
-        if instances is None:
-            avg_incomes = [
-                sum(instance['income'] for instance in timestep) /
-                len([instance['income'] for instance in timestep])
-                for timestep in self.data[agent_id]['values']
+        # Check values
+        valid_values = {'income', 'acc_reward'}
+        if values not in valid_values:
+            raise ValueError(f"Invalid value for `values`: {values}. Allowed values are {valid_values}")
+
+        self.check_has_agent_instances(agent_id, instances)
+        self.check_has_agent_instances_values(agent_id, instances, values)
+
+        timesteps = self.data[agent_id][self.get_instances_name(instances)]["values"]
+        if isinstance(instances, str):  # Random or fixed
+            avg_values = [
+                sum(instance[values] for instance in timestep) /
+                len([instance[values] for instance in timestep])
+                for timestep in timesteps
             ]
-        else:
-            avg_incomes = [
-                sum(instance['income'] for instance in timestep if instance['instance'] in instances) /
-                len([instance['income'] for instance in timestep if instance['instance'] in instances])
-                for timestep in self.data[agent_id]['values']
+        else:  # List of specific fixed instances
+            avg_values = [
+                sum(instance[values] for instance in timestep if instance['instance'] in instances) /
+                len([instance[values] for instance in timestep if instance['instance'] in instances])
+                for timestep in timesteps
             ]
 
-        return avg_incomes
+        return avg_values
 
-    def get_avg_acc_rewards(self, agent_id: str, instances: list[str] = None) -> list[float]:
+    def add_random_instances(self, agent_id: str, path_evaluations: str):
 
         """
-        Average income of given agent across all instances
-        for each timestep
+
+
         """
 
-        if instances is None:
-            avg_incomes = [
-                sum(instance['acc_reward'] for instance in timestep) /
-                len([instance['acc_reward'] for instance in timestep])
-                for timestep in self.data[agent_id]['values']
-            ]
-        else:
-            avg_incomes = [
-                sum(instance['acc_reward'] for instance in timestep if instance['instance'] in instances) /
-                len([instance['acc_reward'] for instance in timestep if instance['instance'] in instances])
-                for timestep in self.data[agent_id]['values']
-            ]
+        with np.load(path_evaluations) as data:
+            timesteps = data["timesteps"].tolist()
+            results = data["results"].tolist()
 
-        return avg_incomes
+        acc_rewards = [
+            [
+                {
+                    "acc_reward": reward,
+                }
+                for reward in result
+            ]
+            for result in results
+        ]
 
-    def plot_training_curves(self, ax: plt.Axes, instances: list[str] = None):
+        self.data[agent_id]["random_instances"] = {
+            "values": acc_rewards,
+            "timesteps": timesteps,
+        }
+
+    def remove_agent(self, agent_id: str):
+
+        del self.data[agent_id]
+
+    def plot_training_curves(self, ax: plt.Axes, values: list[str], instances: list[str] | str):
+
+        """
+
+        :param ax:
+        :param values: List of values to plot (e.g., ['income', 'acc_reward'])
+        :param instances: Can be 'fixed', 'random', or a list of specific fixed instances
+        """
 
         ax.set_xlabel("Timestep")
         ax.set_ylabel("Average income (€)")
@@ -148,17 +234,28 @@ class Training(SolutionCore):
         twinax.set_ylabel("Average accumulated rewards")
 
         colors = [plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(self.get_agent_ids()), endpoint=False)]
-        for agent_id, color in zip(self.get_agent_ids(), colors):
+        agent_colors = [
+            (agent_id, color)
+            for agent_id, color in zip(self.get_agent_ids(), colors)
+        ]
+        vals_linestyles_axes = [
+            ("income", '-', ax),
+            ("acc_reward", '--', twinax)
+        ]
+
+        for agent_id, color in agent_colors:
+            if not self.has_agent_instances(agent_id, instances):
+                continue
             name = self.get_agent_name(agent_id)
-            timesteps = self.get_timesteps(agent_id)
-            avg_income = self.get_avg_incomes(agent_id, instances)
-            avg_acc_reward = self.get_avg_acc_rewards(agent_id, instances)
-            ax.plot(
-                timesteps, avg_income, color=color, linestyle='-', label=f"Average income of {name}"
-            )
-            twinax.plot(
-                timesteps, avg_acc_reward, color=color, linestyle='--', label=f"Average accumulated rewards of {name}"
-            )
+            timesteps = self.get_timesteps(agent_id, instances)
+            for val, linestyle, axes in vals_linestyles_axes:
+                if val not in values or not self.has_agent_instances_values(agent_id, instances, val):
+                    continue
+                avg_values = self.get_avg_values(agent_id, instances, val)
+                axes.plot(
+                    timesteps, avg_values, color=color, linestyle=linestyle, label=f"Average {val} of {name}"
+                )
+
         ax_lines, ax_labels = ax.get_legend_handles_labels()
         twinax_lines, twinax_labels = twinax.get_legend_handles_labels()
         ax.legend(ax_lines + twinax_lines, ax_labels + twinax_labels, loc=0)

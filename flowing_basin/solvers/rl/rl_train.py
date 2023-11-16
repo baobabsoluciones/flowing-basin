@@ -61,6 +61,8 @@ class RLTrain(Experiment):
         )
         self.eval_env = Monitor(self.eval_env)
 
+        self.training_data = None
+
     def initialize_agent(self):
 
         if self.config.feature_extractor == 'MLP':
@@ -145,8 +147,9 @@ class RLTrain(Experiment):
             print(f"Created ZIP file '{filepath_agent}'.")
 
         # Save training data
+        self.training_data = training_data_callback.training_data
         filepath_training = os.path.join(self.path_folder, "training.json")
-        training_data_callback.training_data.to_json(filepath_training)
+        self.training_data.to_json(filepath_training)
 
         return dict()
 

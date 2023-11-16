@@ -10,76 +10,128 @@
              "name": {
                 "type": "string"
             },
-            "values": {
-                "type": "array",
-                "items": {
-                    "type": "array",
-                    "items": {
+            "fixed_instances": {
+                "type": "object",
+                "properties": {
+                    "values": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "instance": {
+                                        "type": "string"
+                                    },
+                                    "income": {
+                                        "type": "number"
+                                    },
+                                    "acc_reward": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "instance",
+                                    "income",
+                                    "acc_reward"
+                                ]
+                            }
+                        }
+                    },
+                    "timesteps": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "time_stamps": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "required": [
+                    "values",
+                    "timesteps",
+                    "time_stamps"
+                ]
+            },
+            "random_instances": {
+                "type": "object",
+                "properties": {
+                    "values": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "instance": {
+                                        "type": "string"
+                                    },
+                                    "income": {
+                                        "type": "number"
+                                    },
+                                    "acc_reward": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "acc_reward"
+                                ]
+                            }
+                        }
+                    },
+                    "timesteps": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "time_stamps": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "required": [
+                    "values",
+                    "timesteps"
+                ]
+            },
+            "configuration": {
                         "type": "object",
                         "properties": {
-                            "instance": {
-                                "type": "string"
-                            },
-                            "income": {
+                            "startups_penalty": {
                                 "type": "number"
                             },
-                            "acc_reward": {
+                            "limit_zones_penalty": {
+                                "type": "number"
+                            },
+                            "volume_objectives": {
+                                "type": "object"
+                            },
+                            "volume_shortage_penalty": {
+                                "type": "number"
+                            },
+                            "volume_exceedance_bonus": {
                                 "type": "number"
                             }
                         },
                         "required": [
-                            "instance",
-                            "income",
-                            "acc_reward"
+                            "startups_penalty",
+                            "limit_zones_penalty",
+                            "volume_objectives",
+                            "volume_shortage_penalty",
+                            "volume_exceedance_bonus"
                         ]
                     }
-                }
-            },
-            "timesteps": {
-               "type": "array",
-                "items": {
-                    "type": "integer"
-                }
-            },
-            "time_stamps": {
-                "type": "array",
-                "items": {
-                    "type": "number"
-                }
-            },
-            "configuration": {
-                "type": "object",
-                "properties": {
-                    "startups_penalty": {
-                        "type": "number"
-                    },
-                    "limit_zones_penalty": {
-                        "type": "number"
-                    },
-                    "volume_objectives": {
-                        "type": "object"
-                    },
-                    "volume_shortage_penalty": {
-                        "type": "number"
-                    },
-                    "volume_exceedance_bonus": {
-                        "type": "number"
-                    }
-                },
-                "required": [
-                    "startups_penalty",
-                    "limit_zones_penalty",
-                    "volume_objectives",
-                    "volume_shortage_penalty",
-                    "volume_exceedance_bonus"
-                ]
-            }
         },
         "required": [
             "id",
-            "values",
-            "timesteps",
-            "time_stamps",
+            "fixed_instances",
             "configuration"
         ]
     }

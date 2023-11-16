@@ -217,6 +217,38 @@ class Training(SolutionCore):
 
         del self.data[agent_id]
 
+    def __add__(self, other: "Training"):
+
+        """
+        Combine the data of two Training objects
+        """
+
+        if not isinstance(other, Training):
+            raise TypeError("Both objects must be an instance of Training")
+
+        self_data = [
+            self.data[agent_id]
+            for agent_id in self.get_agent_ids()
+        ]
+        other_data = [
+            other.data[agent_id]
+            for agent_id in other.get_agent_ids()
+        ]
+        merged_data = [*self_data, *other_data]
+
+        return Training.from_dict(merged_data)
+
+    def __radd__(self, other):
+
+        """
+        Allow the use of the sum() function
+        """
+
+        if other == 0:
+            return self
+        else:
+            return self.__add__(other)
+
     def plot_training_curves(self, ax: plt.Axes, values: list[str], instances: list[str] | str):
 
         """

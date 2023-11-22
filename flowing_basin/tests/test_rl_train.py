@@ -23,7 +23,7 @@ OPTIONS = dict(
     eval_num_episodes=10,
     checkpoint_ep_freq=5,
 )
-FEATURE_EXTRACTOR = "CNN"
+FEATURE_EXTRACTOR = "MLP"
 PROJECTOR_TYPE = "identity"
 
 OBSERVATION_TYPE = "O2" if FEATURE_EXTRACTOR == "MLP" else "O1"
@@ -73,5 +73,5 @@ if SAVE_OBSERVATIONS:
 if PLOT_TRAINING_CURVE:
     fig, ax = plt.subplots()
     training_data = Training.from_json(os.path.join(agent_folder, "training.json"))
-    training_data.plot_training_curves(ax)
+    training_data.plot_training_curves(ax, values=['income'], instances='fixed')
     plt.show()

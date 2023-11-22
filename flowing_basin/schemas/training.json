@@ -127,7 +127,30 @@
                             "volume_shortage_penalty",
                             "volume_exceedance_bonus"
                         ]
+                    },
+            "options": {
+                "type": "object",
+                "properties": {
+                    "eval_ep_freq": {
+                        "type": "number"
+                    },
+                    "eval_num_episodes": {
+                        "type": "number"
+                    },
+                    "checkpoint_ep_freq": {
+                        "type": "number"
+                    },
+                    "log_ep_freq": {
+                        "type": "number"
+                    },
+                    "evaluation_instances": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
+                }
+            }
         },
         "required": [
             "id",

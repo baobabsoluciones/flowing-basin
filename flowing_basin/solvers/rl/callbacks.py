@@ -135,9 +135,11 @@ class TrainingDataCallback(BaseCallback):
             [
                 {
                     "id": policy_name,
-                    "values": self.values[policy_name],
-                    "timesteps": self.timesteps,
-                    "time_stamps": self.time_stamps,
+                    "fixed_instances": {
+                        "values": self.values[policy_name],
+                        "timesteps": self.timesteps,
+                        "time_stamps": self.time_stamps,
+                    },
                     "configuration": self.config.to_dict()
                 }
                 for policy_name in self.policy_names

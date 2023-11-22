@@ -148,6 +148,7 @@ class RLTrain(Experiment):
 
         # Save training data
         self.training_data = training_data_callback.training_data
+        # TODO: add options=options in the JSON here
         filepath_training = os.path.join(self.path_folder, "training.json")
         self.training_data.to_json(filepath_training)
 

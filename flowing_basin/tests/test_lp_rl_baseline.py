@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance
 from flowing_basin.solvers import LPModel, LPConfiguration
 
-TIME_LIMIT_MINUTES = 0.5
+TIME_LIMIT_MINUTES = 15
 EXAMPLES = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
 
 for example in EXAMPLES:

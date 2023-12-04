@@ -4,7 +4,7 @@ import os
 
 OBSERVATION_TYPE = "O2"
 OBSERVATIONS_FOLDER = f"reports/observations_data/observations{OBSERVATION_TYPE}"
-MODEL_FILE = f"reports/observations_data/observations{OBSERVATION_TYPE}_model.sav"
+# MODEL_FILE = f"reports/observations_data/observations{OBSERVATION_TYPE}_model.sav"
 EXPLAINED_VARIANCE = 0.99
 
 # Input data ---- #

@@ -6,16 +6,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+FEATURE_EXTRACTOR = "MLP"
+PROJECTOR_TYPE = "identity"
 PLOT_TRAINING_CURVE = False
-SAVE_OBSERVATIONS = False
+SAVE_OBSERVATIONS = True
 PATH_CONSTANTS = "../data/constants/constants_2dams.json"
 PATH_TRAIN_DATA = "../data/history/historical_data_clean_train.pickle"
 PATH_TEST_DATA = "../data/history/historical_data_clean_test.pickle"
-PATH_OBSERVATIONS_SAVE = "reports/observations_data/observationsO2"
+OBSERVATION_TYPE = "O2" if FEATURE_EXTRACTOR == "MLP" else "O1"
+PATH_OBSERVATIONS_SAVE = f"reports/observations_data/observations{OBSERVATION_TYPE}_1000ep"
 EVALUATION_INSTANCES = [
     f"../instances/instances_rl/instancePercentile{percentile:02}_expanded16steps_backforth.json"
     for percentile in range(0, 110, 10)
 ]
+PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}"
+PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TYPE}/config.json"
 OPTIONS = dict(
     evaluation_instances=EVALUATION_INSTANCES,
     log_ep_freq=5,
@@ -23,12 +28,6 @@ OPTIONS = dict(
     eval_num_episodes=10,
     checkpoint_ep_freq=5,
 )
-FEATURE_EXTRACTOR = "MLP"
-PROJECTOR_TYPE = "identity"
-
-OBSERVATION_TYPE = "O2" if FEATURE_EXTRACTOR == "MLP" else "O1"
-PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}"
-PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TYPE}/config.json"
 
 current_datetime = datetime.now().strftime('%Y-%m-%d %H.%M')
 agent_folder = f"../solutions/rl_models/RL_model_{current_datetime}_f={FEATURE_EXTRACTOR}_p={PROJECTOR_TYPE}"
@@ -43,7 +42,7 @@ if config.projector_type != "identity":
     config.projector_extrapolation = 0.5
     config.projector_explained_variance = .98
 config.do_history_updates = False
-config.update_observation_record = False
+config.update_observation_record = SAVE_OBSERVATIONS
 config.check()
 
 train = RLTrain(
@@ -55,7 +54,7 @@ train = RLTrain(
     path_folder=agent_folder
 )
 train.solve(
-    num_episodes=10,
+    num_episodes=1000,
     options=OPTIONS
 )
 

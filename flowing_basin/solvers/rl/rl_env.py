@@ -10,6 +10,7 @@ from datetime import datetime
 import pickle
 from random import randint
 from typing import Callable
+import warnings
 
 
 class RLEnvironment(gym.Env):
@@ -430,14 +431,15 @@ class RLEnvironment(gym.Env):
             ]).astype(np.float32)
         elif self.config.feature_extractor == 'CNN':
             # Remember convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
+            # This means the axes in the array Dams x Features x Lookback should be replaced from (0, 1, 2) to (0, 2, 1)
             # So observation is now a 3d array
-            obs_normalized = np.array([
+            obs_normalized = np.transpose(np.array([
                 [
                     self.get_feature_normalized(feature, dam_id)
                     for feature in self.config.features
                 ]
                 for dam_id in self.instance.get_ids_of_dams()
-            ]).reshape((self.instance.get_num_dams(), -1, len(self.config.features))).astype(np.float32)
+            ]), (0, 2, 1)).astype(np.float32)
         else:
             raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
@@ -446,13 +448,16 @@ class RLEnvironment(gym.Env):
 
         return obs_projected
 
-    def get_observation_indices(self) -> dict[tuple[str, str, int], int | tuple[int]]:
+    def get_observation_indices(self, flattened: bool = False) -> dict[tuple[str, str, int], int | tuple[int]]:
 
         """
         Returns the index in the array for any dam, feature, and lookback value
 
         :return: Index in the array
         """
+
+        if flattened and self.config.feature_extractor != 'CNN':
+            warnings.warn(f"Setting {flattened=} has no effect when {self.config.feature_extractor=}")
 
         indices = dict()
         running_index = 0
@@ -464,7 +469,14 @@ class RLEnvironment(gym.Env):
                             indices[dam_id, feature, t] = running_index
                         elif self.config.feature_extractor == 'CNN':
                             # Remember the convolutional feature extractor considers (Dams x Lookback x Features)
-                            indices[dam_id, feature, t] = (d, t, f)
+                            if not flattened:
+                                indices[dam_id, feature, t] = (d, t, f)
+                            else:
+                                indices[dam_id, feature, t] = np.ravel_multi_index(
+                                    (d, t, f),
+                                    dims=(self.instance.get_num_dams(), self.config.num_steps_sight[feature, dam_id],
+                                          len(self.config.features))
+                                )
                         else:
                             raise NotImplementedError(
                                 f"Feature extractor {self.config.feature_extractor} is not supported yet."

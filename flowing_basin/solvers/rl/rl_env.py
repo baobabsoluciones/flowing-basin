@@ -411,9 +411,6 @@ class RLEnvironment(gym.Env):
 
         """
         * This should be done with torch.Tensor if we want to make efficient usage of the GPU
-        * I think the best option is to keep the information in the environment as a dataframe and then process it. 
-        * This will allow us to incorporate projectors / feature extractors more easily 
-        * And we could use the normalization as a tensor operation because it will be embedded when we define the environment. 
         * Moreover, this makes me think, if during the PCA we center and scale, we might be masking some behaviors
          as our features are already normalized between 0 and 1, from the historical trajectories, so if something is 
          between 0.25 and 0.5 (e.g.), we will then center it and scale, pushing the 0.25 to 0 and the 0.5 to 1, we need
@@ -448,6 +445,33 @@ class RLEnvironment(gym.Env):
         obs_projected = self.projector.project(obs_normalized)
 
         return obs_projected
+
+    def get_observation_indices(self) -> dict[tuple[str, str, int], int | tuple[int]]:
+
+        """
+        Returns the index in the array for any dam, feature, and lookback value
+
+        :return: Index in the array
+        """
+
+        indices = dict()
+        running_index = 0
+        for d, dam_id in enumerate(self.instance.get_ids_of_dams()):
+            for f, feature in enumerate(self.config.features):
+                if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features:
+                    for t in range(self.config.num_steps_sight[feature, dam_id]):
+                        if self.config.feature_extractor == 'MLP':
+                            indices[dam_id, feature, t] = running_index
+                        elif self.config.feature_extractor == 'CNN':
+                            # Remember the convolutional feature extractor considers (Dams x Lookback x Features)
+                            indices[dam_id, feature, t] = (d, t, f)
+                        else:
+                            raise NotImplementedError(
+                                f"Feature extractor {self.config.feature_extractor} is not supported yet."
+                            )
+                        running_index += 1
+
+        return indices
 
     def print_observation(self, dam_id: str, normalize: bool = False, decimals: int = 2, spacing: int = 16):
 

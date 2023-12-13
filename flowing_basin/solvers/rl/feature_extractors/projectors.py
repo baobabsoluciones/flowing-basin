@@ -83,6 +83,10 @@ class Projector(ABC):
                 explained_variance=config.projector_explained_variance,
                 path_observations_folder=path_observations_folder
             )
+        elif proj_type == 'qcut':
+            projector = QuantilePseudoDiscretizer(
+                path_observations_folder=path_observations_folder
+            )
         else:
             raise NotImplementedError(f"Projector {config.projector_type} is not supported yet.")
         projector.check_config(config)
@@ -142,3 +146,23 @@ class PCAProjector(Projector):
         transformed_obs = self.model.transform(normalized_obs.reshape(1, -1)).reshape(-1)
         clipped_obs = np.clip(transformed_obs, self.low, self.high, dtype=np.float32)
         return clipped_obs
+
+
+class QuantilePseudoDiscretizer(Projector):
+
+    def __init__(self, path_observations_folder: str):
+
+        """
+        Initialize the quantile-based pseudo-discretizer
+        """
+
+        super(QuantilePseudoDiscretizer, self).__init__(
+            bounds=(0., 1.),
+            path_observations_folder=path_observations_folder
+        )
+        print(self.observations)
+        print(self.observations.shape)
+
+    def project(self, normalized_obs: np.ndarray) -> np.ndarray:
+        transformed_obs = np.nan
+        return transformed_obs

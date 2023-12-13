@@ -61,11 +61,11 @@ train.solve(
 # Save observation record for later PCA analysis
 if SAVE_OBSERVATIONS:
 
-    print("Observation record shape:", train.train_env.observation_record.shape)
-    print("Observation record:", train.train_env.observation_record)
+    print("Observation record shape:", train.train_env.record_normalized_obs.shape)
+    print("Observation record:", train.train_env.record_normalized_obs)
 
     os.makedirs(PATH_OBSERVATIONS_SAVE)
-    np.save(os.path.join(PATH_OBSERVATIONS_SAVE, 'observations.npy'), train.train_env.observation_record)
+    np.save(os.path.join(PATH_OBSERVATIONS_SAVE, 'observations.npy'), train.train_env.record_normalized_obs)
     config.to_json(os.path.join(PATH_OBSERVATIONS_SAVE, 'config.json'))
     print(f"Created folder '{PATH_OBSERVATIONS_SAVE}'.")
 

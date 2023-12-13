@@ -37,7 +37,7 @@ if PLOT_HISTOGRAMS_OBSERVATIONS:
         path_historical_data=HISTORICAL_DATA,
     )
     averages = np.mean(X, axis=0)
-    indices = env.get_observation_indices(flattened=True)
+    indices = env.get_obs_indices(flattened=True)
     print(indices)
     for dam_id in constants.get_ids_of_dams():
         max_sight = max(config.num_steps_sight[feature, dam_id] for feature in config.features)

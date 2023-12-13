@@ -10,15 +10,16 @@ from datetime import datetime
 INITIAL_ROW = "2021-03-27 11:30"
 PATH_CONSTANTS = "../data/constants/constants_2dams.json"
 PATH_HISTORICAL_DATA = "../data/history/historical_data_clean.pickle"
-OBSERVATION_TYPE = "O1"
-PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}"
-PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TYPE}/config.json"
+OBSERVATION_TYPE = "O2"
+FIXED = '_fixed' if OBSERVATION_TYPE == 'O1' else ''
+PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}{FIXED}_1000ep_"
+PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TYPE}{FIXED}_1000ep_/config.json"
 
 # ENVIRONMENT 1 (WITH INSTANCE 1)
 constants = Instance.from_dict(load_json(PATH_CONSTANTS))
 config = RLConfiguration.from_json(PATH_OBSERVATIONS_JSON)
-config.feature_extractor = "CNN"
-config.projector_type = "identity"
+config.feature_extractor = "MLP"
+config.projector_type = "PCA"
 if config.projector_type != "identity":
     config.projector_bound = "max_min_per_component"
     config.projector_extrapolation = 0.5
@@ -50,8 +51,17 @@ print("high:", env1.get_features_max_values())
 # ENVIRONMENT 1 INITIAL OBSERVATION
 print("---- initial observation ----")
 for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
-    env1.print_observation(dam_id)
-    env1.print_observation(dam_id, normalize=True)
+    print("initial raw observation:")
+    obs = env1.get_obs_array()
+    env1.print_obs(obs)
+
+    print("initial normalized observation:")
+    normalized_obs = env1.normalize(obs)
+    env1.print_obs(normalized_obs)
+
+    print("initial projected observation:")
+    projected_obs = env1.project(normalized_obs)
+    env1.print_obs(projected_obs)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS I
 print("---- hardcoded actions I ----")
@@ -63,48 +73,54 @@ actions = np.array([
 ])
 for i, action in enumerate(actions):
     print(f">>>> decision {i}")
-    next_obs, reward, done, _, _ = env1.step(action)
+    next_obs, reward, done, _, info = env1.step(action)
     print("reward details:", env1.get_reward_details())
     print("reward (not normalized):", reward * env1.instance.get_largest_price())
     print("reward:", reward)
-    for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
-        env1.print_observation(dam_id)
-        env1.print_observation(dam_id, normalize=True)
+    print("raw observation:")
+    env1.print_obs(info['raw_obs'])
+    print("normalized observation:")
+    env1.print_obs(info['normalized_obs'])
+    print("projected observation:")
+    env1.print_obs(next_obs)
     print("done:", done)
 print(">>>> history:")
 print(env1.river_basin.history.to_string())
-print(">>>> observation record:")
-print(env1.observation_record)
+print(">>>> normalized observation record:")
+print(env1.record_normalized_obs)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS II (FULL SOLUTION)
-# print("---- hardcoded actions II (full solution) ----")
-# env1.reset(initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"))
-# decisionsVA = np.array(
-#     [
-#         [0.5, 0.5],
-#         [-0.25, -0.25],
-#         [-0.25, -0.25],
-#     ]
-# )
-# padding = np.array(
-#     [
-#         [0, 0]
-#         for _ in range(env1.instance.get_largest_impact_horizon() - decisionsVA.shape[0])
-#     ]
-# )
-# decisionsVA = np.concatenate([decisionsVA, padding])
-# for i, decision in enumerate(decisionsVA):
-#     print(f">>>> decision {i}")
-#     next_obs, reward, done, _, _ = env1.step(decision)
-#     print("reward details:", env1.get_reward_details())
-#     print("reward (not normalized):", reward * env1.instance.get_largest_price())
-#     print("reward:", reward)
-#     for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
-#         env1.print_observation(dam_id)
-#         env1.print_observation(dam_id, normalize=True)
-#     print("done:", done)
-# print(">>>> history:")
-# print(env1.river_basin.history.to_string())
+print("---- hardcoded actions II (full solution) ----")
+env1.reset(initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"))
+decisionsVA = np.array(
+    [
+        [0.5, 0.5],
+        [-0.25, -0.25],
+        [-0.25, -0.25],
+    ]
+)
+padding = np.array(
+    [
+        [0, 0]
+        for _ in range(env1.instance.get_largest_impact_horizon() - decisionsVA.shape[0])
+    ]
+)
+decisionsVA = np.concatenate([decisionsVA, padding])
+for i, decision in enumerate(decisionsVA):
+    print(f">>>> decision {i}")
+    next_obs, reward, done, _, info = env1.step(decision)
+    print("reward details:", env1.get_reward_details())
+    print("reward (not normalized):", reward * env1.instance.get_largest_price())
+    print("reward:", reward)
+    # print("raw observation:")
+    # env1.print_obs(info['raw_obs'])
+    print("normalized observation:")
+    env1.print_obs(info['normalized_obs'])
+    print("projected observation:")
+    env1.print_obs(next_obs)
+    print("done:", done)
+print(">>>> history:")
+print(env1.river_basin.history.to_string())
 
 # CHECK ENV1
 # This must be done after the hardcoded actions because random actions are performed during the check

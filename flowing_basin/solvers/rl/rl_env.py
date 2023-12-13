@@ -14,7 +14,6 @@ import warnings
 
 
 class RLEnvironment(gym.Env):
-
     """
     Class representing the environment for the RL agent
     The class acts as a wrapper of the river basin:
@@ -23,14 +22,14 @@ class RLEnvironment(gym.Env):
     """
 
     def __init__(
-        self,
-        config: RLConfiguration,
-        projector: Projector,
-        path_constants: str = None,
-        path_historical_data: str = None,
-        instance: Instance = None,
-        initial_row: int | datetime = None,
-        paths_power_models: dict[str, str] = None,
+            self,
+            config: RLConfiguration,
+            projector: Projector,
+            path_constants: str = None,
+            path_historical_data: str = None,
+            instance: Instance = None,
+            initial_row: int | datetime = None,
+            paths_power_models: dict[str, str] = None,
     ):
 
         super(RLEnvironment, self).__init__()
@@ -68,37 +67,53 @@ class RLEnvironment(gym.Env):
 
         # Observation space
         if self.config.feature_extractor == 'MLP':
+
+            # Raw or normalized observation shape
+            array_length = sum(
+                self.config.num_steps_sight[feature, dam_id]
+                for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
+                if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
+            )
+            self.obs_shape = (array_length,)
+
+            # Projected observation shape
             if self.projector.n_components is None:
-                array_length = sum(
-                    self.config.num_steps_sight[feature, dam_id]
-                    for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
-                    if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
-                )
-                obs_shape = (array_length,)
+                self.projected_obs_shape = self.obs_shape
             else:
-                obs_shape = (self.projector.n_components,)
+                self.projected_obs_shape = (self.projector.n_components,)
+
         elif self.config.feature_extractor == 'CNN':
+
             # Convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
-            obs_shape = (
+            # Raw/normalized and projected observation shape must be the same
+            self.obs_shape = (
                 self.instance.get_num_dams(),
                 self.config.num_steps_sight[self.config.features[0], self.instance.get_ids_of_dams()[0]],
                 len(self.config.features)
             )
+            self.projected_obs_shape = self.obs_shape
+
         else:
             raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
-        #ToDo are we sure that this is not truncating inputs when we train the agent? might explain the 120
+        # ToDo are we sure that this is not truncating inputs when we train the agent? might explain the 120
         self.observation_space = gym.spaces.Box(
             low=self.projector.low,
             high=self.projector.high,
-            shape=obs_shape,
+            shape=self.projected_obs_shape,
             dtype=np.float32
         )
 
         # Record of observations experienced by the agent
         # Array of shape num_observations x num_features (each observation will be flattened)
-        self.observation_record = np.array([]).reshape(
-            (0, np.prod(obs_shape))
+        self.record_raw_obs = np.array([]).reshape(
+            (0, np.prod(self.obs_shape))
+        )
+        self.record_normalized_obs = np.array([]).reshape(
+            (0, np.prod(self.obs_shape))
+        )
+        self.record_projected_obs = np.array([]).reshape(
+            (0, np.prod(self.projected_obs_shape))
         )
 
         # Action space
@@ -106,7 +121,7 @@ class RLEnvironment(gym.Env):
         self.action_space = gym.spaces.Box(
             low=-1,
             high=1,
-            shape=(self.instance.get_num_dams(), ),
+            shape=(self.instance.get_num_dams(),),
             dtype=np.float32
         )
         # The action space should be bounded between -1 and 1
@@ -116,9 +131,12 @@ class RLEnvironment(gym.Env):
         # Functions to calculate features
         self.features_functions = self.get_features_functions()
 
+        # Observation indeces
+        self.obs_indeces = self.get_obs_indices()
+
         # Variables that depend on the instance
-        self.features_min_values = None
-        self.features_max_values = None
+        self.obs_min = None
+        self.obs_max = None
         self.max_flows = None
 
         # Initialize these variables
@@ -140,11 +158,11 @@ class RLEnvironment(gym.Env):
         # info_horizon = self.instance.get_information_horizon()
         # print(f"New episode's information horizon: {info_horizon}")
 
-        obs = self.get_observation_normalized()
-        if self.config.update_observation_record:
-            self.observation_record = np.vstack((self.observation_record, [obs.flatten()]))
+        raw_obs = self.get_obs_array()
+        normalized_obs = self.normalize(raw_obs)
+        projected_obs = self.project(normalized_obs)
 
-        return obs, dict()
+        return projected_obs, dict(raw_obs=raw_obs, normalized_obs=normalized_obs)
 
     def _reset_instance(self, instance: Instance = None, initial_row: int | datetime = None):
 
@@ -190,9 +208,9 @@ class RLEnvironment(gym.Env):
         Reset variables according to the current instance
         """
 
-        # Min and max values used to normalize observation
-        self.features_min_values = self.get_features_min_values()
-        self.features_max_values = self.get_features_max_values()
+        # Min and max observation arrays (for normalization)
+        self.obs_min = self.get_obs_array(values='min')
+        self.obs_max = self.get_obs_array(values='max')
 
         self.max_flows = np.array([
             self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
@@ -274,12 +292,12 @@ class RLEnvironment(gym.Env):
 
         assigned_flows = np.flip(
             self.river_basin.all_past_flows.squeeze()[
-                -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
+            -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
             ]
         )
         actual_flows = np.flip(
             self.river_basin.all_past_clipped_flows.squeeze()[
-                -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
+            -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
             ]
         )
         flow_clipping = assigned_flows - actual_flows
@@ -302,81 +320,87 @@ class RLEnvironment(gym.Env):
 
             "past_vols": lambda dam_id: np.flip(
                 self.river_basin.all_past_volumes[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_vols", dam_id]:
+                -self.config.num_steps_sight["past_vols", dam_id]:
                 ]
             ),
 
             "past_flows": lambda dam_id: np.flip(
                 self.river_basin.all_past_clipped_flows.squeeze()[
-                    -self.config.num_steps_sight["past_flows", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
+                -self.config.num_steps_sight["past_flows", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
                 ]
             ),
 
             "past_variations": lambda dam_id: np.flip(
                 self.river_basin.dams[self.instance.get_order_of_dam(dam_id) - 1].all_previous_variations.squeeze()[
-                    -self.config.num_steps_sight["past_variations", dam_id]:
+                -self.config.num_steps_sight["past_variations", dam_id]:
                 ]
             ),
 
             "past_prices": lambda dam_id: np.flip(
                 self.instance.get_all_prices()[
-                    self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_prices", dam_id]:
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset()
+                self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight[
+                    "past_prices", dam_id]:
+                self.river_basin.time + 1 + self.instance.get_start_information_offset()
                 ]
             ),
 
             "future_prices": lambda dam_id: np.array(
                 self.instance.get_all_prices()[
-                    self.river_basin.time + 1 + self.instance.get_start_information_offset():
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_prices", dam_id]
+                self.river_basin.time + 1 + self.instance.get_start_information_offset():
+                self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight[
+                    "future_prices", dam_id]
                 ]
             ),
 
             "past_inflows": lambda dam_id: np.flip(
                 self.instance.get_all_unregulated_flows_of_dam(dam_id)[
-                    self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_inflows", dam_id]:
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset()
+                self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight[
+                    "past_inflows", dam_id]:
+                self.river_basin.time + 1 + self.instance.get_start_information_offset()
                 ]
             ) + (
-                np.flip(
-                    self.instance.get_all_incoming_flows()[
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset() - self.config.num_steps_sight["past_inflows", dam_id]:
-                            self.river_basin.time + 1 + self.instance.get_start_information_offset()
-                    ]
-                ) if self.instance.get_order_of_dam(dam_id) == 1
-                else 0.
-            ),
+               np.flip(
+                   self.instance.get_all_incoming_flows()[
+                   self.river_basin.time + 1 + self.instance.get_start_information_offset() -
+                   self.config.num_steps_sight["past_inflows", dam_id]:
+                   self.river_basin.time + 1 + self.instance.get_start_information_offset()
+                   ]
+               ) if self.instance.get_order_of_dam(dam_id) == 1
+               else 0.
+           ),
 
             "future_inflows": lambda dam_id: np.array(
                 self.instance.get_all_unregulated_flows_of_dam(dam_id)[
-                    self.river_basin.time + 1 + self.instance.get_start_information_offset():
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_inflows", dam_id]
+                self.river_basin.time + 1 + self.instance.get_start_information_offset():
+                self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight[
+                    "future_inflows", dam_id]
                 ]
             ) + (
-                np.array(
-                    self.instance.get_all_incoming_flows()[
-                        self.river_basin.time + 1 + self.instance.get_start_information_offset():
-                            self.river_basin.time + 1 + self.instance.get_start_information_offset() + self.config.num_steps_sight["future_inflows", dam_id]
-                    ]
-                ) if self.instance.get_order_of_dam(dam_id) == 1
-                else 0.
-            ),
+                                                 np.array(
+                                                     self.instance.get_all_incoming_flows()[
+                                                     self.river_basin.time + 1 + self.instance.get_start_information_offset():
+                                                     self.river_basin.time + 1 + self.instance.get_start_information_offset() +
+                                                     self.config.num_steps_sight["future_inflows", dam_id]
+                                                     ]
+                                                 ) if self.instance.get_order_of_dam(dam_id) == 1
+                                                 else 0.
+                                             ),
 
             "past_turbined": lambda dam_id: np.flip(
                 self.river_basin.all_past_turbined[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_turbined", dam_id]:
+                -self.config.num_steps_sight["past_turbined", dam_id]:
                 ]
             ),
 
             "past_groups": lambda dam_id: np.flip(
                 self.river_basin.all_past_groups[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_groups", dam_id]:
+                -self.config.num_steps_sight["past_groups", dam_id]:
                 ]
             ),
 
             "past_powers": lambda dam_id: np.flip(
                 self.river_basin.all_past_powers[dam_id].squeeze()[
-                    -self.config.num_steps_sight["past_powers", dam_id]:
+                -self.config.num_steps_sight["past_powers", dam_id]:
                 ]
             ),
 
@@ -390,40 +414,34 @@ class RLEnvironment(gym.Env):
 
         return features_functions
 
-    def get_feature_normalized(self, feature: str, dam_id: str) -> np.array:
+    def get_obs_array(self, values: str = None) -> np.array:
 
         """
-        Normalize the feature, so it lies on the range [0, 1]
+        Returns the observation array of the agent for the current state of the river basin
+
+        :param values: Indicates which values to obtain -
+            'max' for max values, 'min' for min values, and None for current values
+        :return: Raw observation array
         """
 
-        max_val = self.features_max_values[dam_id][feature]
-        min_val = self.features_min_values[dam_id][feature]
-        val = self.features_functions[feature](dam_id)
-        return (val - min_val) / (max_val - min_val)
+        if values == 'min':
+            features_min_values = self.get_features_min_values()
+            get_value = lambda feature, dam_id: np.repeat(
+                features_min_values[dam_id][feature], self.config.num_steps_sight[feature, dam_id]
+            )
+        elif values == 'max':
+            features_max_values = self.get_features_max_values()
+            get_value = lambda feature, dam_id: np.repeat(
+                features_max_values[dam_id][feature], self.config.num_steps_sight[feature, dam_id]
+            )
+        else:
+            get_value = lambda feature, dam_id: self.features_functions[feature](dam_id)
 
-    def get_observation_normalized(self) -> np.array:
-
-        """
-        Returns the normalized observation of the agent for the current state of the river basin
-
-        :return: Array of shape num_dams x num_features x num_steps with normalized values
-        """
-        # ToDo several things to keep in mind:
-
-        """
-        * This should be done with torch.Tensor if we want to make efficient usage of the GPU
-        * Moreover, this makes me think, if during the PCA we center and scale, we might be masking some behaviors
-         as our features are already normalized between 0 and 1, from the historical trajectories, so if something is 
-         between 0.25 and 0.5 (e.g.), we will then center it and scale, pushing the 0.25 to 0 and the 0.5 to 1, we need
-         to double check 
-        """
-
-        # Get array of normalized values
         if self.config.feature_extractor == 'MLP':
             # Observation is a 1d array
-            obs_normalized = np.concatenate([
+            raw_obs = np.concatenate([
                 np.concatenate([
-                    self.get_feature_normalized(feature, dam_id)
+                    get_value(feature, dam_id)
                     for feature in self.config.features
                     if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
                 ])
@@ -433,9 +451,9 @@ class RLEnvironment(gym.Env):
             # Remember convolutional feature extractors need (Channels x Height x Width) -> (Dams x Lookback x Features)
             # This means the axes in the array Dams x Features x Lookback should be replaced from (0, 1, 2) to (0, 2, 1)
             # So observation is now a 3d array
-            obs_normalized = np.transpose(np.array([
+            raw_obs = np.transpose(np.array([
                 [
-                    self.get_feature_normalized(feature, dam_id)
+                    get_value(feature, dam_id)
                     for feature in self.config.features
                 ]
                 for dam_id in self.instance.get_ids_of_dams()
@@ -443,15 +461,15 @@ class RLEnvironment(gym.Env):
         else:
             raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
-        # Apply projector to array
-        obs_projected = self.projector.project(obs_normalized)
+        if values is None and self.config.update_observation_record:
+            self.record_raw_obs = np.vstack((self.record_raw_obs, [raw_obs.flatten()]))
 
-        return obs_projected
+        return raw_obs
 
-    def get_observation_indices(self, flattened: bool = False) -> dict[tuple[str, str, int], int | tuple[int]]:
+    def get_obs_indices(self, flattened: bool = False) -> dict[tuple[str, str, int], int | tuple[int]]:
 
         """
-        Returns the index in the array for any dam, feature, and lookback value
+        Returns the index in the raw or normalized observation array for any dam, feature, and lookback value
 
         :return: Index in the array
         """
@@ -485,38 +503,72 @@ class RLEnvironment(gym.Env):
 
         return indices
 
-    def print_observation(self, dam_id: str, normalize: bool = False, decimals: int = 2, spacing: int = 16):
+    def normalize(self, raw_obs: np.array) -> np.array:
 
         """
-        Prints the observation of the agent for the current state of the river basin
+        Returns the normalization of the given observation of the agent
+
+        :return: Normalized observation array
         """
 
-        # Get observation array of shape num_features x max_sight
-        features = [
-            feature for feature in self.config.features
-            if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
-        ]
-        max_sight = max(self.config.num_steps_sight.values())
-        obs = np.array([]).reshape(0, max_sight)
-        for feature in features:
-            if not normalize:
-                feature_array = self.features_functions[feature](dam_id)
-            else:
-                feature_array = self.get_feature_normalized(feature, dam_id)
-            padding = max_sight - feature_array.shape[0]
-            padded_feature_array = np.pad(feature_array, (0, padding), mode='constant', constant_values=None)
-            obs = np.vstack((obs, padded_feature_array))
+        normalized_obs = (raw_obs - self.obs_min) / (self.obs_max - self.obs_min)
+        if self.config.update_observation_record:
+            self.record_normalized_obs = np.vstack((self.record_normalized_obs, [normalized_obs.flatten()]))
 
-        # Header
-        print(f"Observation for {dam_id}{' (normalized)' if normalize else ''}")
-        print(''.join([f"{feature:^{spacing}}" for feature in features]))
+        return normalized_obs
 
-        # Rows
-        for time_step in range(max_sight):
-            print(''.join([
-                f"{obs[feature_index, time_step]:^{spacing}.{decimals}f}"
-                for feature_index, feature in enumerate(features)
-            ]))
+    def project(self, normalized_obs: np.array) -> np.array:
+
+        """
+        Returns the projection of the given normalized observation of the agent
+
+        :return: Projected observation array
+        """
+
+        projected_obs = self.projector.project(normalized_obs)
+        if self.config.update_observation_record:
+            self.record_projected_obs = np.vstack((self.record_projected_obs, [projected_obs.flatten()]))
+
+        return projected_obs
+
+    def print_obs(self, obs: np.array, decimals: int = 2, spacing: int = 16):
+
+        """
+        Print the given raw, normalized, or projected observation
+        """
+
+        # Raw or normalized observation
+        if obs.shape == self.obs_shape:
+            max_sight = max(self.config.num_steps_sight.values())
+            for dam_id in self.instance.get_ids_of_dams():
+                # Header
+                print(f"Observation for {dam_id}:")
+                print(''.join([f"{feature:^{spacing}}" for feature in self.config.features]))
+                # Rows
+                for time_step in range(max_sight):
+                    print(''.join([
+                        f"{obs[self.obs_indeces[dam_id, feature, time_step]]:^{spacing}.{decimals}f}"
+                        if self.config.num_steps_sight[feature, dam_id] > time_step and (
+                            self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
+                        )
+                        else f"{'-':^{spacing}}"
+                        for feature in self.config.features
+                    ]))
+
+        # Projected observation
+        elif obs.shape == self.projected_obs_shape:
+            # Header
+            print(f"Projected observation:")
+            print(''.join([f"{f'Feature{i}':^{spacing}}" for i in range(self.projector.n_components)]))
+            # Rows
+            print(''.join([f"{obs[i]:^{spacing}.{decimals}f}" for i in range(self.projector.n_components)]))
+
+        else:
+            raise ValueError(
+                f"The given observation array shape, {obs.shape}, does not match"
+                f"the raw/normalized shape {self.obs_shape} nor the projected shape {self.projected_obs_shape}."
+            )
+
         print()
 
     def get_reward_details(self, epsilon: float = 1e-4) -> dict[str, float]:
@@ -532,7 +584,8 @@ class RLEnvironment(gym.Env):
 
         # Calculate flow smoothing penalty
         flow_smoothing_uncompliance = np.any([
-            dam.all_previous_variations[-self.config.flow_smoothing-1: -1] * dam.all_previous_variations[-1] < - epsilon
+            dam.all_previous_variations[-self.config.flow_smoothing - 1: -1] * dam.all_previous_variations[
+                -1] < - epsilon
             for dam in self.river_basin.dams
         ])
         flow_smoothing_penalty = flow_smoothing_uncompliance * self.config.flow_smoothing_penalty
@@ -580,14 +633,18 @@ class RLEnvironment(gym.Env):
 
         self.river_basin.update(new_flows.reshape(-1, 1))
 
-        next_obs = self.get_observation_normalized()
-        if self.config.update_observation_record:
-            self.observation_record = np.vstack((self.observation_record, [next_obs.flatten()]))
+        next_raw_obs = self.get_obs_array()
+        next_normalized_obs = self.normalize(next_raw_obs)
+        next_projected_obs = self.project(next_normalized_obs)
 
         reward = self.get_reward()
         done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
-        return next_obs, reward, done, False, dict(flow=new_flows)
+        return next_projected_obs, reward, done, False, dict(
+            flow=new_flows,
+            raw_obs=next_raw_obs,
+            normalized_obs=next_normalized_obs,
+        )
 
     @staticmethod
     def create_instance(
@@ -642,7 +699,7 @@ class RLEnvironment(gym.Env):
         if isinstance(initial_row_decisions, datetime):
             initial_row_decisions = historical_data.index[
                 historical_data["datetime"] == initial_row_decisions
-            ].tolist()[0]
+                ].tolist()[0]
         if initial_row_decisions is None:
             initial_row_decisions = randint(min_row, max_row)
         assert initial_row_decisions in range(
@@ -674,11 +731,11 @@ class RLEnvironment(gym.Env):
         ].strftime("%Y-%m-%d %H:%M")
 
         data["incoming_flows"] = historical_data.loc[
-            initial_row_info: last_row_info, "incoming_flow"
-        ].values.tolist()
+                                 initial_row_info: last_row_info, "incoming_flow"
+                                 ].values.tolist()
         data["energy_prices"] = historical_data.loc[
-            initial_row_info: last_row_info, "price"
-        ].values.tolist()
+                                initial_row_info: last_row_info, "price"
+                                ].values.tolist()
 
         for order, dam_id in enumerate(dam_ids):
 
@@ -695,15 +752,15 @@ class RLEnvironment(gym.Env):
             ]
 
             initial_lags = historical_data.loc[
-                initial_row_info - channel_last_lags[dam_id]: initial_row_info - 1, dam_id + "_flow"
-            ].values.tolist()
+                           initial_row_info - channel_last_lags[dam_id]: initial_row_info - 1, dam_id + "_flow"
+                           ].values.tolist()
             initial_lags.reverse()
             data["dams"][order]["initial_lags"] = initial_lags
 
             if initial_row_info != initial_row_decisions:
                 starting_flows = historical_data.loc[
-                    initial_row_info: initial_row_decisions - 1, dam_id + "_flow"
-                ].values.tolist()
+                                 initial_row_info: initial_row_decisions - 1, dam_id + "_flow"
+                                 ].values.tolist()
                 starting_flows.reverse()
                 data["dams"][order]["starting_flows"] = starting_flows
 
@@ -712,8 +769,8 @@ class RLEnvironment(gym.Env):
             # and not of the artificially created extra dams
             if original_dam_id in ["dam1", "dam2"]:
                 data["dams"][order]["unregulated_flows"] = historical_data.loc[
-                    initial_row_info: last_row_info, dam_id + "_unreg_flow"
-                ].values.tolist()
+                                                           initial_row_info: last_row_info, dam_id + "_unreg_flow"
+                                                           ].values.tolist()
             else:
                 data["dams"][order]["unregulated_flows"] = [0 for _ in range(initial_row_info, last_row_info + 1)]
 

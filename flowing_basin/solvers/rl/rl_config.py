@@ -99,10 +99,12 @@ class RLConfiguration(Configuration):  # noqa
 
         # Check self.projector_type
         valid_projectors = {'identity', 'PCA', 'QuantilePseudoDiscretizer'}
-        if self.projector_type not in valid_projectors:
-            raise ValueError(
-                f"Invalid value for 'projector_type': {self.projector_type}. Allowed values are {valid_projectors}"
-            )
+        projector_types = self.projector_type if isinstance(self.projector_type, list) else [self.projector_type]
+        for projector_type in projector_types:
+            if projector_type not in valid_projectors:
+                raise ValueError(
+                    f"Invalid value for 'projector_type': {projector_type}. Allowed values are {valid_projectors}"
+                )
         if self.projector_type != 'identity' and self.feature_extractor == 'CNN':
             raise ValueError(
                 f"Cannot use projector `{self.projector_type}` with the CNN feature extractor, "

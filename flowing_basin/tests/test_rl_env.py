@@ -5,6 +5,7 @@ from flowing_basin.solvers.rl.feature_extractors import Projector
 import numpy as np
 from stable_baselines3.common.env_checker import check_env
 from datetime import datetime
+import os
 
 
 INITIAL_ROW = "2021-03-27 11:30"
@@ -19,7 +20,7 @@ PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TY
 constants = Instance.from_dict(load_json(PATH_CONSTANTS))
 config = RLConfiguration.from_json(PATH_OBSERVATIONS_JSON)
 config.feature_extractor = "MLP"
-config.projector_type = "QuantilePseudoDiscretizer"
+config.projector_type = ["QuantilePseudoDiscretizer", "PCA"]
 if config.projector_type != "identity":
     config.projector_bound = "max_min_per_component"
     config.projector_extrapolation = 0.5
@@ -28,7 +29,9 @@ config.do_history_updates = True
 config.update_observation_record = True
 config.check()
 
-projector = Projector.from_config(config, PATH_OBSERVATIONS)
+observations = np.load(os.path.join(PATH_OBSERVATIONS, 'observations.npy'))
+obs_config = RLConfiguration.from_json(os.path.join(PATH_OBSERVATIONS, 'config.json'))
+projector = Projector.create_projector(config, observations, obs_config)
 env1 = RLEnvironment(
     config=config,
     projector=projector,
@@ -87,37 +90,37 @@ print(">>>> normalized observation record:")
 print(env1.record_normalized_obs)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS II (FULL SOLUTION)
-print("---- hardcoded actions II (full solution) ----")
-env1.reset(initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"))
-decisionsVA = np.array(
-    [
-        [0.5, 0.5],
-        [-0.25, -0.25],
-        [-0.25, -0.25],
-    ]
-)
-padding = np.array(
-    [
-        [0, 0]
-        for _ in range(env1.instance.get_largest_impact_horizon() - decisionsVA.shape[0])
-    ]
-)
-decisionsVA = np.concatenate([decisionsVA, padding])
-for i, decision in enumerate(decisionsVA):
-    print(f">>>> decision {i}")
-    next_obs, reward, done, _, info = env1.step(decision)
-    print("reward details:", env1.get_reward_details())
-    print("reward (not normalized):", reward * env1.instance.get_largest_price())
-    print("reward:", reward)
-    # print("raw observation:")
-    # env1.print_obs(info['raw_obs'])
-    print("normalized observation:")
-    env1.print_obs(info['normalized_obs'])
-    print("projected observation:")
-    env1.print_obs(next_obs)
-    print("done:", done)
-print(">>>> history:")
-print(env1.river_basin.history.to_string())
+# print("---- hardcoded actions II (full solution) ----")
+# env1.reset(initial_row=datetime.strptime(INITIAL_ROW, "%Y-%m-%d %H:%M"))
+# decisionsVA = np.array(
+#     [
+#         [0.5, 0.5],
+#         [-0.25, -0.25],
+#         [-0.25, -0.25],
+#     ]
+# )
+# padding = np.array(
+#     [
+#         [0, 0]
+#         for _ in range(env1.instance.get_largest_impact_horizon() - decisionsVA.shape[0])
+#     ]
+# )
+# decisionsVA = np.concatenate([decisionsVA, padding])
+# for i, decision in enumerate(decisionsVA):
+#     print(f">>>> decision {i}")
+#     next_obs, reward, done, _, info = env1.step(decision)
+#     print("reward details:", env1.get_reward_details())
+#     print("reward (not normalized):", reward * env1.instance.get_largest_price())
+#     print("reward:", reward)
+#     # print("raw observation:")
+#     # env1.print_obs(info['raw_obs'])
+#     print("normalized observation:")
+#     env1.print_obs(info['normalized_obs'])
+#     print("projected observation:")
+#     env1.print_obs(next_obs)
+#     print("done:", done)
+# print(">>>> history:")
+# print(env1.river_basin.history.to_string())
 
 # CHECK ENV1
 # This must be done after the hardcoded actions because random actions are performed during the check

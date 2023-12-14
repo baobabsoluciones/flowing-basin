@@ -144,7 +144,7 @@ class RLEnvironment(gym.Env):
 
     def reset(
             self, instance: Instance = None, initial_row: int | datetime = None, seed=None, options=None
-    ) -> tuple[np.array, dict]:
+    ) -> tuple[np.ndarray, dict]:
 
         super().reset(seed=seed)
 
@@ -531,7 +531,7 @@ class RLEnvironment(gym.Env):
 
         return projected_obs
 
-    def print_obs(self, obs: np.array, decimals: int = 2, spacing: int = 16):
+    def print_obs(self, obs: np.ndarray, decimals: int = 2, spacing: int = 16):
 
         """
         Print the given raw, normalized, or projected observation
@@ -614,7 +614,7 @@ class RLEnvironment(gym.Env):
 
         return reward
 
-    def step(self, action: np.array) -> tuple[np.array, float, bool, bool, dict]:
+    def step(self, action: np.array) -> tuple[np.ndarray, float, bool, bool, dict]:
 
         """
         Updates the river basin with the given action

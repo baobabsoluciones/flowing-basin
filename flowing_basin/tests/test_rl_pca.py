@@ -29,7 +29,9 @@ print("Observation record:", X)
 if PLOT_HISTOGRAMS_OBSERVATIONS:
     constants = Instance.from_json(CONSTANTS)
     config = RLConfiguration.from_json(OBSERVATIONS_JSON)
-    projector = Projector.from_config(config, OBSERVATIONS_FOLDER)
+    observations = np.load(os.path.join(OBSERVATIONS_FOLDER, 'observations.npy'))
+    obs_config = RLConfiguration.from_json(os.path.join(OBSERVATIONS_FOLDER, 'config.json'))
+    projector = Projector.create_projector(config, observations, obs_config)
     env = RLEnvironment(
         config=config,
         projector=projector,

@@ -5,6 +5,7 @@ from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback,
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
+import numpy as np
 import os
 
 
@@ -32,7 +33,9 @@ class RLTrain(Experiment):
 
         # Configuration, environment and model (RL agent)
         self.config = config
-        self.projector = Projector.from_config(self.config, path_observations_folder)
+        observations = np.load(os.path.join(path_observations_folder, 'observations.npy'))
+        obs_config = RLConfiguration.from_json(os.path.join(path_observations_folder, 'config.json'))
+        self.projector = Projector.create_projector(self.config, observations, obs_config)
         self.path_folder = path_folder
         self.train_env = RLEnvironment(
             config=self.config,

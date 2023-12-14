@@ -98,7 +98,7 @@ class RLConfiguration(Configuration):  # noqa
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
 
         # Check self.projector_type
-        valid_projectors = {'identity', 'PCA', 'qcut'}
+        valid_projectors = {'identity', 'PCA', 'QuantilePseudoDiscretizer'}
         if self.projector_type not in valid_projectors:
             raise ValueError(
                 f"Invalid value for 'projector_type': {self.projector_type}. Allowed values are {valid_projectors}"

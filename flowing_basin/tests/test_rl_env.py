@@ -19,7 +19,7 @@ PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TY
 constants = Instance.from_dict(load_json(PATH_CONSTANTS))
 config = RLConfiguration.from_json(PATH_OBSERVATIONS_JSON)
 config.feature_extractor = "MLP"
-config.projector_type = "PCA"
+config.projector_type = "QuantilePseudoDiscretizer"
 if config.projector_type != "identity":
     config.projector_bound = "max_min_per_component"
     config.projector_extrapolation = 0.5
@@ -50,18 +50,15 @@ print("high:", env1.get_features_max_values())
 
 # ENVIRONMENT 1 INITIAL OBSERVATION
 print("---- initial observation ----")
-for dam_index, dam_id in enumerate(env1.instance.get_ids_of_dams()):
-    print("initial raw observation:")
-    obs = env1.get_obs_array()
-    env1.print_obs(obs)
-
-    print("initial normalized observation:")
-    normalized_obs = env1.normalize(obs)
-    env1.print_obs(normalized_obs)
-
-    print("initial projected observation:")
-    projected_obs = env1.project(normalized_obs)
-    env1.print_obs(projected_obs)
+print("initial raw observation:")
+obs = env1.get_obs_array()
+env1.print_obs(obs)
+print("initial normalized observation:")
+normalized_obs = env1.normalize(obs)
+env1.print_obs(normalized_obs)
+print("initial projected observation:")
+projected_obs = env1.project(normalized_obs)
+env1.print_obs(projected_obs)
 
 # ENVIRONMENT 1 | HARDCODED ACTIONS I
 print("---- hardcoded actions I ----")

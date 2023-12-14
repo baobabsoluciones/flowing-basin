@@ -30,6 +30,7 @@ class Projector(ABC):
             self.observations = None
             self.obs_config = None
         self.n_components = None
+        self.transformed_observations = None
 
         # Check the bounds can be inferred from data if required
         if self.observations is None and not isinstance(bounds, tuple):
@@ -83,7 +84,7 @@ class Projector(ABC):
                 explained_variance=config.projector_explained_variance,
                 path_observations_folder=path_observations_folder
             )
-        elif proj_type == 'qcut':
+        elif proj_type == 'QuantilePseudoDiscretizer':
             projector = QuantilePseudoDiscretizer(
                 path_observations_folder=path_observations_folder
             )
@@ -150,7 +151,7 @@ class PCAProjector(Projector):
 
 class QuantilePseudoDiscretizer(Projector):
 
-    def __init__(self, path_observations_folder: str):
+    def __init__(self, path_observations_folder: str, num_quantiles: int = 100):
 
         """
         Initialize the quantile-based pseudo-discretizer
@@ -160,9 +161,31 @@ class QuantilePseudoDiscretizer(Projector):
             bounds=(0., 1.),
             path_observations_folder=path_observations_folder
         )
-        print(self.observations)
-        print(self.observations.shape)
+
+        # Compute the quantiles
+        self.num_quantiles = num_quantiles
+        self.quantiles = np.quantile(self.observations, q=np.linspace(0, 1, self.num_quantiles), axis=0)
+
+        # Compute the transformed observations
+        self.transformed_observations = np.empty(self.observations.shape)
+        num_features = self.observations.shape[1]
+        for f in range(num_features):
+            self.transformed_observations[:, f] = np.digitize(self.observations[:, f], bins=self.quantiles[:, f])
+        self.transformed_observations = self.transformed_observations / self.num_quantiles
 
     def project(self, normalized_obs: np.ndarray) -> np.ndarray:
-        transformed_obs = np.nan
-        return transformed_obs
+
+        """
+        Use the quantiles to pseudo-discretize the observation
+        """
+
+        # Get the quantile of each value
+        digitalized_obs = np.array([
+            np.digitize(feature_value, bins=self.quantiles[:, feature_index])
+            for feature_index, feature_value in enumerate(normalized_obs)
+        ], dtype=np.float32)
+
+        # Bring back to the range [0, 1]
+        digitalized_obs = digitalized_obs / self.num_quantiles
+
+        return digitalized_obs

@@ -28,8 +28,15 @@ for baseline in BASELINES:
     training += sol_object
 print(training.data)
 
-fig, axs = plt.subplots(1, 2)
-training.plot_training_curves(axs[0], ['income', 'acc_reward'], 'fixed')
-# training.plot_training_curves(axs[0], ['income'], 'fixed')
-training.plot_training_curves(axs[1], ['acc_reward'], 'random')
+fig1, ax = plt.subplots()
+training.plot_training_curves(ax, ['income', 'acc_reward'], 'fixed')
 plt.show()
+
+fig2, ax = plt.subplots()
+training.plot_training_curves(ax, ['income', 'acc_reward'], ['Percentile50'])
+plt.show()
+
+# fig3, ax = plt.subplots()
+# training.plot_training_curves(ax, ['acc_reward'], ['random'])
+# plt.show()
+# TODO: fix the ZeroDivisionError here

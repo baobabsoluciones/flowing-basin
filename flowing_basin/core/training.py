@@ -73,6 +73,23 @@ class Training(SolutionCore):
 
         return [key for key in self.data.keys() if key != "baselines"]
 
+    def get_instances_ids(self, instances: list[str] | str) -> list[str]:
+
+        """
+        Get the names or IDs of the instances
+        :param: Can be 'fixed', 'random', or a list of specific fixed instances
+        """
+
+        if isinstance(instances, list):
+            return instances
+        elif instances == 'fixed':
+            # Fixed instances that appear in the first timestep of the first agent
+            values_first_timestep = self.data[self.get_agent_ids()[0]][self.get_instances_name('fixed')]['values'][0]
+            fixed_instances = [value['instance'] for value in values_first_timestep]
+            return fixed_instances
+        else:
+            return []
+
     def get_instances_name(self, instances: list[str] | str) -> str:
 
         """
@@ -189,6 +206,26 @@ class Training(SolutionCore):
 
         return avg_values
 
+    def get_baseline_values(self, instances: list[str] | str, values: str) -> dict[str, float]:
+
+        """
+        Average values (final incomes) of each solver across all given instances
+
+        :param values: Can be 'income' or 'acc_reward'
+        :param instances:
+        """
+
+        if self.data.get("baselines") is None or instances == 'random' or values != 'income':
+            return dict()
+
+        instances_ids = self.get_instances_ids(instances)
+        baseline_objectives = dict()
+        for solver, instance_objective in self.data["baselines"].items():
+            if set(instances_ids).issubset(instance_objective.keys()):
+                objectives = [obj for instance, obj in instance_objective.items() if instance in instances_ids]
+                baseline_objectives[solver] = sum(objectives) / len(objectives)
+        return baseline_objectives
+
     def add_random_instances(self, agent_id: str, path_evaluations: str):
 
         """
@@ -238,13 +275,13 @@ class Training(SolutionCore):
             merged_data = [*self_data, *other_data]
             return Training.from_dict(merged_data)
         elif isinstance(other, Solution):
-            # Create or update the baselines inside the data
-            new_baseline = dict(
-                solver=other.get_solver(),
-                instance=other.get_instance_name(),
-                value=other.get_objective_function()
-            )
-            self.data.setdefault("baselines", []).append(new_baseline)
+            solver = other.get_solver()
+            instance_name = other.get_instance_name()
+            if self.data.get("baselines") is None:
+                self.data["baselines"] = dict()
+            if self.data["baselines"].get(solver) is None:
+                self.data["baselines"][solver] = dict()
+            self.data["baselines"][solver][instance_name] = other.get_objective_function()
             return self
         else:
             raise TypeError(
@@ -288,6 +325,7 @@ class Training(SolutionCore):
             ("acc_reward", '--', twinax)
         ]
 
+        # Plot learning curve of agents
         for agent_id, color in agent_colors:
             if not self.has_agent_instances(agent_id, instances):
                 continue
@@ -300,6 +338,13 @@ class Training(SolutionCore):
                 axes.plot(
                     timesteps, avg_values, color=color, linestyle=linestyle, label=f"Average {val} of {name}"
                 )
+
+        # Plot baselines as horizontal lines
+        for val in values:
+            baseline_values = self.get_baseline_values(instances, val)
+            baseline_colors = [plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(baseline_values), endpoint=False)]
+            for (solver, value), color in zip(baseline_values.items(), baseline_colors):
+                ax.axhline(y=value, color='gray', linestyle='-', label=solver)
 
         ax_lines, ax_labels = ax.get_legend_handles_labels()
         twinax_lines, twinax_labels = twinax.get_legend_handles_labels()

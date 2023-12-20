@@ -214,6 +214,14 @@ class Solution(SolutionCore):
 
         return compliance
 
+    def get_instance_name(self) -> str:
+
+        instance_name = self.data.get("instance_name")
+        if instance_name is None:
+            instance_name = 'instance' + self.data["datetime"]["start"]
+
+        return instance_name
+
     def get_time_step_seconds(self) -> float | None:
 
         time_step_min = self.data.get("time_step_minutes")

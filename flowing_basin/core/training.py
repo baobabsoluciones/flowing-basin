@@ -1,9 +1,11 @@
 from cornflow_client.core import SolutionCore
 from cornflow_client.core.tools import load_json
+from flowing_basin.core import Solution
 import os
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import Union
 
 
 class Training(SolutionCore):
@@ -69,7 +71,7 @@ class Training(SolutionCore):
 
     def get_agent_ids(self) -> list[str]:
 
-        return list(self.data.keys())
+        return [key for key in self.data.keys() if key != "baselines"]
 
     def get_instances_name(self, instances: list[str] | str) -> str:
 
@@ -217,26 +219,37 @@ class Training(SolutionCore):
 
         del self.data[agent_id]
 
-    def __add__(self, other: "Training"):
+    def __add__(self, other: Union["Training", Solution]):
 
         """
-        Combine the data of two Training objects
+        Add the data of another Training object or a Solution (baseline)
         """
 
-        if not isinstance(other, Training):
-            raise TypeError("Both objects must be an instance of Training")
-
-        self_data = [
-            self.data[agent_id]
-            for agent_id in self.get_agent_ids()
-        ]
-        other_data = [
-            other.data[agent_id]
-            for agent_id in other.get_agent_ids()
-        ]
-        merged_data = [*self_data, *other_data]
-
-        return Training.from_dict(merged_data)
+        if isinstance(other, Training):
+            # Combine the data of two agents
+            self_data = [
+                self.data[agent_id]
+                for agent_id in self.get_agent_ids()
+            ]
+            other_data = [
+                other.data[agent_id]
+                for agent_id in other.get_agent_ids()
+            ]
+            merged_data = [*self_data, *other_data]
+            return Training.from_dict(merged_data)
+        elif isinstance(other, Solution):
+            # Create or update the baselines inside the data
+            new_baseline = dict(
+                solver=other.get_solver(),
+                instance=other.get_instance_name(),
+                value=other.get_objective_function()
+            )
+            self.data.setdefault("baselines", []).append(new_baseline)
+            return self
+        else:
+            raise TypeError(
+                "The object added to the Training instance must be another Training instance or a Solution instance"
+            )
 
     def __radd__(self, other):
 

@@ -9,7 +9,7 @@ import os
 FEATURE_EXTRACTOR = "MLP"
 PROJECTOR_TYPE = "identity"
 PLOT_TRAINING_CURVE = False
-SAVE_OBSERVATIONS = True
+SAVE_OBSERVATIONS = False
 PATH_CONSTANTS = "../data/constants/constants_2dams.json"
 PATH_TRAIN_DATA = "../data/history/historical_data_clean_train.pickle"
 PATH_TEST_DATA = "../data/history/historical_data_clean_test.pickle"
@@ -54,7 +54,7 @@ train = RLTrain(
     path_folder=agent_folder
 )
 train.solve(
-    num_episodes=1000,
+    num_episodes=5,
     options=OPTIONS
 )
 

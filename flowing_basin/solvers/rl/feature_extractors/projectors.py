@@ -11,7 +11,8 @@ class Projector(ABC):
         """
         Abstract class for the projector
 
-        :param observations: The observation NumPy arrays which will be used to train the projector
+        :param observations: Array of shape num_observations x flattened_observation_size
+            with the observations that will be used to train the projector
         :param obs_config: The configuration used when generating the observations
             (which must match the current configuration in some fields)
         """
@@ -66,20 +67,19 @@ class Projector(ABC):
         """
 
         proj_constructor = cls._get_projector_constructor(proj_type)
+        kwargs = dict()
+        if proj_type != 'identity':
+            kwargs.update(dict(
+                observations=observations,
+                obs_config=obs_config,
+            ))
         if proj_type == 'PCA':
-            kwargs = dict(
+            kwargs.update(dict(
                 bounds=proj_config.projector_bound,
                 extrapolation=proj_config.projector_extrapolation,
                 explained_variance=proj_config.projector_explained_variance,
-            )
-        else:
-            kwargs = dict()
-
-        projector = proj_constructor(
-            observations=observations,
-            obs_config=obs_config,
-            **kwargs
-        )
+            ))
+        projector = proj_constructor(**kwargs)
 
         # Check the configuration and the observation's configuration matches in the required fields
         projector.check_config(proj_config)

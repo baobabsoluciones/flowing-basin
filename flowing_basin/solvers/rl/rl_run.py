@@ -32,7 +32,7 @@ class RLRun(Experiment):
         """
         Load the given model and use it to solve the instance given in the initialization.
 
-        :param policy: A StableBaselines3 policy, or a path to a model
+        :param policy: A StableBaselines3 policy, a path to a model, or "random"
         :param options: Unused parameter
         :return: Dictionary with additional information
         """

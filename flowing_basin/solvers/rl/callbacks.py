@@ -68,19 +68,17 @@ class TrainingDataCallback(BaseCallback):
     :param eval_freq:
     :param config: Configuration for the RLEnvironment
     :param instances: Paths to the instances to solve periodically
-    :param baseline_policy: Policy with which to compare the actual model (can be "random")
     :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
     """
 
     def __init__(
             self, eval_freq: int, config: RLConfiguration, projector: Projector, instances: list[str],
-            policy_id: str, baseline_policy: BasePolicy | str, verbose: int = 1
+            policy_id: str, verbose: int = 1
     ):
 
         super(TrainingDataCallback, self).__init__(verbose)
 
         self.eval_freq = eval_freq
-        self.baseline_policy = baseline_policy
         self.config = config
 
         instance_objects = [
@@ -92,34 +90,26 @@ class TrainingDataCallback(BaseCallback):
             for instance_object in instance_objects
         ]
 
-        self.start_time = perf_counter()
-        self.policy_names = [policy_id, "random"]
+        self.policy_id = policy_id
+        self.values = []
         self.timesteps = []
         self.time_stamps = []
-        self.values = {policy_name: [] for policy_name in self.policy_names}
+        self.start_time = perf_counter()
         self.training_data = None
 
     def _on_step(self) -> bool:
 
         if self.n_calls % self.eval_freq == 0:
 
-            # This needs to be put here since we don't have access to `self.model` in `__init__`...
-            policies = {
-                policy_name: self.model.policy if policy_name != "random" else self.baseline_policy
-                for policy_name in self.policy_names
-            }
-
-            for policy_name, policy in policies.items():
-                timestep_values = []
-                for run in self.runs:
-                    info = run.solve(policy)
-                    income = run.solution.get_objective_function()
-                    acc_reward = sum(info['rewards'])
-                    timestep_values.append(
-                        {"instance": run.env.instance.get_instance_name(), "income": income, "acc_reward": acc_reward}
-                    )
-                self.values[policy_name].append(timestep_values)
-
+            timestep_values = []
+            for run in self.runs:
+                info = run.solve(self.model.policy)
+                income = run.solution.get_objective_function()
+                acc_reward = sum(info['rewards'])
+                timestep_values.append(
+                    {"instance": run.env.instance.get_instance_name(), "income": income, "acc_reward": acc_reward}
+                )
+            self.values.append(timestep_values)
             self.timesteps.append(self.n_calls)
             self.time_stamps.append(perf_counter() - self.start_time)
 
@@ -134,14 +124,13 @@ class TrainingDataCallback(BaseCallback):
         self.training_data = Training.from_dict(
             [
                 {
-                    "id": policy_name,
+                    "id": self.policy_id,
                     "fixed_instances": {
-                        "values": self.values[policy_name],
+                        "values": self.values,
                         "timesteps": self.timesteps,
                         "time_stamps": self.time_stamps,
                     },
                     "configuration": self.config.to_dict()
                 }
-                for policy_name in self.policy_names
             ]
         )

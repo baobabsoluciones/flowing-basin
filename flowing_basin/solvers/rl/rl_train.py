@@ -114,7 +114,6 @@ class RLTrain(Experiment):
             eval_freq=options['eval_ep_freq'] * episode_length,
             instances=options['evaluation_instances'],
             policy_id=self.experiment_id,
-            baseline_policy="random",
             config=self.config,
             projector=self.projector,
             verbose=self.verbose

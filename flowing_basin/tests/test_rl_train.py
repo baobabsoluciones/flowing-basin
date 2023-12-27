@@ -21,13 +21,6 @@ EVALUATION_INSTANCES = [
 ]
 PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}"
 PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TYPE}/config.json"
-OPTIONS = dict(
-    evaluation_instances=EVALUATION_INSTANCES,
-    log_ep_freq=5,
-    eval_ep_freq=5,
-    eval_num_episodes=10,
-    checkpoint_ep_freq=5,
-)
 
 current_datetime = datetime.now().strftime('%Y-%m-%d %H.%M')
 agent_folder = f"../solutions/rl_models/RL_model_{current_datetime}_f={FEATURE_EXTRACTOR}_p={PROJECTOR_TYPE}"
@@ -43,6 +36,15 @@ if config.projector_type != "identity":
     config.projector_explained_variance = .98
 config.do_history_updates = False
 config.update_observation_record = SAVE_OBSERVATIONS
+config.num_timesteps = 5 * 99
+config.training_data_callback = True
+config.training_data_instances = EVALUATION_INSTANCES
+config.training_data_timesteps_freq = 5 * 99
+config.evaluation_callback = True
+config.evaluation_timesteps_freq = 5 * 99
+config.evaluation_num_episodes = 10
+config.checkpoint_callback = True
+config.checkpoint_timesteps_freq = 5 * 99
 config.check()
 
 train = RLTrain(
@@ -53,10 +55,7 @@ train = RLTrain(
     path_observations_folder=PATH_OBSERVATIONS,
     path_folder=agent_folder
 )
-train.solve(
-    num_episodes=5,
-    options=OPTIONS
-)
+train.solve()
 
 # Save observation record for later PCA analysis
 if SAVE_OBSERVATIONS:

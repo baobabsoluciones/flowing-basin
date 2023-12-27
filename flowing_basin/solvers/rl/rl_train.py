@@ -98,47 +98,50 @@ class RLTrain(Experiment):
             verbose=1, tensorboard_log=self.config.get("tensorboard_log"), policy_kwargs=policy_kwargs
         )
         
-    def solve(self, num_episodes: int, options: dict) -> dict:  # noqa
+    def solve(self, options: dict = None) -> dict:  # noqa
 
         """
         Train the model and save it in the given path.
-        :param num_episodes: Nuber of episodes (days) in which to train the agent
-        :param options: Logging options
+        :param options: Unused argument
         """
 
-        episode_length = self.train_env.instance.get_largest_impact_horizon()
-        total_timesteps = num_episodes * episode_length
-
         # Set callbacks
-        training_data_callback = TrainingDataCallback(
-            eval_freq=options['eval_ep_freq'] * episode_length,
-            instances=options['evaluation_instances'],
-            policy_id=self.experiment_id,
-            config=self.config,
-            projector=self.projector,
-            verbose=self.verbose
-        )
-        eval_callback = EvalCallback(
-            self.eval_env,
-            best_model_save_path=None,
-            log_path=self.path_folder,
-            eval_freq=options['eval_ep_freq'] * episode_length,
-            n_eval_episodes=options['eval_num_episodes'],
-            deterministic=True,
-            render=False,
-            verbose=self.verbose
-        )
-        checkpoint_callback = SaveOnBestTrainingRewardCallback(
-            check_freq=options['checkpoint_ep_freq'] * episode_length,
-            log_dir=self.path_folder,
-            verbose=self.verbose
-        )
+        callbacks = []
+        if self.config.training_data_callback:
+            training_data_callback = TrainingDataCallback(
+                eval_freq=self.config.training_data_timesteps_freq,
+                instances=self.config.training_data_instances,
+                policy_id=self.experiment_id,
+                config=self.config,
+                projector=self.projector,
+                verbose=self.verbose
+            )
+            callbacks.append(training_data_callback)
+        if self.config.evaluation_callback:
+            eval_callback = EvalCallback(
+                self.eval_env,
+                best_model_save_path=None,
+                log_path=self.path_folder,
+                eval_freq=self.config.evaluation_timesteps_freq,
+                n_eval_episodes=self.config.evaluation_num_episodes,
+                deterministic=True,
+                render=False,
+                verbose=self.verbose
+            )
+            callbacks.append(eval_callback)
+        if self.config.checkpoint_callback:
+            checkpoint_callback = SaveOnBestTrainingRewardCallback(
+                check_freq=self.config.checkpoint_timesteps_freq,
+                log_dir=self.path_folder,
+                verbose=self.verbose
+            )
+            callbacks.append(checkpoint_callback)
 
         # Train model
         self.model.learn(
-            total_timesteps=total_timesteps,
-            log_interval=options['log_ep_freq'],
-            callback=CallbackList([training_data_callback, eval_callback, checkpoint_callback]),
+            total_timesteps=self.config.num_timesteps,
+            log_interval=self.config.log_episode_freq,
+            callback=CallbackList(callbacks),
             tb_log_name=self.config.get("tensorboard_log", "SAC")
         )
 
@@ -149,10 +152,10 @@ class RLTrain(Experiment):
             print(f"Created ZIP file '{filepath_agent}'.")
 
         # Save training data
-        self.training_data = training_data_callback.training_data
-        # TODO: add options=options in the JSON here
-        filepath_training = os.path.join(self.path_folder, "training.json")
-        self.training_data.to_json(filepath_training)
+        if self.config.training_data_callback:
+            self.training_data = training_data_callback.training_data  # noqa
+            filepath_training = os.path.join(self.path_folder, "training.json")
+            self.training_data.to_json(filepath_training)
 
         return dict()
 

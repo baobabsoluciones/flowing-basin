@@ -14,6 +14,9 @@ class Instance(InstanceCore):
     )
     schema_checks = get_empty_schema()
 
+    instances_folder = os.path.join(os.path.dirname(__file__), "../instances/instances_rl")
+    instances_filenames = "instance{INSTANCE_NAME}_expanded16steps_backforth.json"
+
     @classmethod
     def from_dict(cls, data) -> "Instance":
 
@@ -32,6 +35,12 @@ class Instance(InstanceCore):
         data_p["dams"] = list(data_p["dams"].values())
 
         return data_p
+
+    @classmethod
+    def from_name(cls, instance_name: str) -> "Instance":
+
+        instance_filename = Instance.instances_filenames.format(INSTANCE_NAME=instance_name)
+        return Instance.from_json(os.path.join(Instance.instances_folder, instance_filename))
 
     def check_inconsistencies(self) -> dict:
 

@@ -15,10 +15,7 @@ PATH_TRAIN_DATA = "../data/history/historical_data_clean_train.pickle"
 PATH_TEST_DATA = "../data/history/historical_data_clean_test.pickle"
 OBSERVATION_TYPE = "O2" if FEATURE_EXTRACTOR == "MLP" else "O1"
 PATH_OBSERVATIONS_SAVE = f"reports/observations_data/observations{OBSERVATION_TYPE}_1000ep"
-EVALUATION_INSTANCES = [
-    f"../instances/instances_rl/instancePercentile{percentile:02}_expanded16steps_backforth.json"
-    for percentile in range(0, 110, 10)
-]
+EVALUATION_INSTANCES = [f"Percentile{percentile:02}"for percentile in range(0, 110, 10)]
 PATH_OBSERVATIONS = f"reports/observations_data/observations{OBSERVATION_TYPE}"
 PATH_OBSERVATIONS_JSON = f"reports/observations_data/observations{OBSERVATION_TYPE}/config.json"
 

@@ -74,6 +74,7 @@ class RLRun(Experiment):
 
         self.solution = Solution.from_dict(
             dict(
+                instance_name=self.instance.get_instance_name(),
                 instance_datetimes=dict(
                     start=start_decisions,
                     end_decisions=end_decisions,

@@ -1,11 +1,10 @@
-from flowing_basin.core import Instance, Training
+from flowing_basin.core import Instance, TrainingData
 from flowing_basin.solvers.rl import RLConfiguration, RLRun
 from flowing_basin.solvers.rl.feature_extractors import Projector
 import os
 import numpy as np
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.policies import BasePolicy
 from time import perf_counter
 
 
@@ -118,7 +117,7 @@ class TrainingDataCallback(BaseCallback):
         Fill the training data attribute
         """
 
-        self.training_data = Training.from_dict(
+        self.training_data = TrainingData.from_dict(
             [
                 {
                     "id": self.policy_id,

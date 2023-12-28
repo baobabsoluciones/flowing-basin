@@ -48,6 +48,7 @@ class Projector(ABC):
 
     @staticmethod
     def _get_projector_constructor(proj_type: str):
+
         if proj_type == 'identity':
             return IdentityProjector
         elif proj_type == 'PCA':
@@ -222,6 +223,7 @@ class QuantilePseudoDiscretizer(Projector):
         for f in range(num_features):
             self.transformed_observations[:, f] = np.digitize(self.observations[:, f], bins=self.quantiles[:, f])
         self.transformed_observations = self.transformed_observations / self.num_quantiles
+        self.n_components = num_features
 
     def project(self, normalized_obs: np.ndarray) -> np.ndarray:
 

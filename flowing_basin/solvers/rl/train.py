@@ -17,9 +17,10 @@ class RLTrain(Experiment):
             path_constants: str,
             path_train_data: str,
             path_test_data: str,
-            path_observations_folder: str,
+            path_observations_folder: str = None,
             path_folder: str = '.',
             paths_power_models: dict[str, str] = None,
+            update_observation_record: bool = False,
             instance: Instance = None,
             solution: Solution = None,
             verbose: int = 1,
@@ -31,25 +32,34 @@ class RLTrain(Experiment):
 
         self.verbose = verbose
 
-        # Configuration, environment and model (RL agent)
+        # Configuration
         self.config = config
-        observations = np.load(os.path.join(path_observations_folder, 'observations.npy'))
-        obs_config = RLConfiguration.from_json(os.path.join(path_observations_folder, 'config.json'))
+
+        # Projector
+        if path_observations_folder is not None:
+            observations = np.load(os.path.join(path_observations_folder, 'observations.npy'))
+            obs_config = RLConfiguration.from_json(os.path.join(path_observations_folder, 'config.json'))
+        else:
+            observations = None
+            obs_config = None
         self.projector = Projector.create_projector(self.config, observations, obs_config)
-        self.path_folder = path_folder
+
+        # Train environment
         self.train_env = RLEnvironment(
             config=self.config,
             projector=self.projector,
+            update_observation_record=update_observation_record,
             path_constants=path_constants,
             path_historical_data=path_train_data,
             paths_power_models=paths_power_models,
             instance=instance,
         )
-
+        self.path_folder = path_folder
         os.makedirs(self.path_folder, exist_ok=True)
         filepath_log = os.path.join(self.path_folder, ".")
         self.train_env = Monitor(self.train_env, filename=filepath_log)
 
+        # Model (RL agent)
         self.model = None
         self.initialize_agent()
 
@@ -57,13 +67,13 @@ class RLTrain(Experiment):
         self.eval_env = RLEnvironment(
             config=self.config,
             projector=self.projector,
+            update_observation_record=update_observation_record,
             path_constants=path_constants,
             path_historical_data=path_test_data,
             paths_power_models=paths_power_models,
             instance=instance,
         )
         self.eval_env = Monitor(self.eval_env)
-
         self.training_data = None
 
     def initialize_agent(self):

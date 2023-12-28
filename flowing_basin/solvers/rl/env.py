@@ -25,6 +25,7 @@ class RLEnvironment(gym.Env):
             self,
             config: RLConfiguration,
             projector: Projector,
+            update_observation_record: bool = False,
             path_constants: str = None,
             path_historical_data: str = None,
             instance: Instance = None,
@@ -44,6 +45,7 @@ class RLEnvironment(gym.Env):
 
         self.config = config
         self.projector = projector
+        self.update_observation_record = update_observation_record
 
         # Set data
         self.constants = None
@@ -461,7 +463,7 @@ class RLEnvironment(gym.Env):
         else:
             raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
-        if values is None and self.config.update_observation_record:
+        if values is None and self.update_observation_record:
             self.record_raw_obs = np.vstack((self.record_raw_obs, [raw_obs.flatten()]))
 
         return raw_obs
@@ -512,7 +514,7 @@ class RLEnvironment(gym.Env):
         """
 
         normalized_obs = (raw_obs - self.obs_min) / (self.obs_max - self.obs_min)
-        if self.config.update_observation_record:
+        if self.update_observation_record:
             self.record_normalized_obs = np.vstack((self.record_normalized_obs, [normalized_obs.flatten()]))
 
         return normalized_obs
@@ -526,7 +528,7 @@ class RLEnvironment(gym.Env):
         """
 
         projected_obs = self.projector.project(normalized_obs)
-        if self.config.update_observation_record:
+        if self.update_observation_record:
             self.record_projected_obs = np.vstack((self.record_projected_obs, [projected_obs.flatten()]))
 
         return projected_obs

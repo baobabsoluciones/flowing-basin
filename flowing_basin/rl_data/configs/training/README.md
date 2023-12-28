@@ -1,0 +1,2 @@
+- T0: training a SAC agent with Nx256x256xM networks for 1000 episodes.
+- T01: same as T0, but for only 5 episodes (for testing).

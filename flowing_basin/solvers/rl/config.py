@@ -29,7 +29,7 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
     features: list[str]  # Features included in the observation
     unique_features: list[str]  # Features that should NOT be repeated for each dam
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
-    projector_type: str  # Type of dimensionality reduction to apply for the observations (or identity)
+    projector_type: str | list[str]  # Type of dimensionality reduction to apply for the observations (or identity)
     feature_extractor: str  # Either MLP or CNN or mixed
 
     # Data required to post-process config
@@ -203,7 +203,7 @@ class ActionConfiguration(BaseConfiguration):  # noqa
 @dataclass(kw_only=True)
 class RewardConfiguration(BaseConfiguration):  # noqa
 
-    flow_smoothing_penalty: int  # Penalty for not fulfilling the flow smoothing parameter
+    flow_smoothing_penalty: float  # Penalty for not fulfilling the flow smoothing parameter
 
 
 @dataclass(kw_only=True)
@@ -211,7 +211,6 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
 
     length_episodes: int
     num_timesteps: int = None  # Nuber of time steps in which to train the agent
-    update_observation_record: bool = None  # Whether to save observations experienced by agent
     log_episode_freq: int = None
 
     training_data_callback: bool = None
@@ -275,6 +274,15 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
 
 @dataclass(kw_only=True)
 class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConfiguration, RewardConfiguration, TrainingConfiguration):  # noqa
+
+    @classmethod
+    def from_components(cls, configs: list[BaseConfiguration]):
+
+        config_dicts = [asdict(config) for config in configs]
+        result_dict = {}
+        for config_dict in config_dicts:
+            result_dict.update(config_dict)
+        return cls(**result_dict)
 
     def check(self):
 

@@ -1,0 +1,2 @@
+- A0: the agent gives relative variations of flow.
+- A1: the agent gives the exiting flows directly.

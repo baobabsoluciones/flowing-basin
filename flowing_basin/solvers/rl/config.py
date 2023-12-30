@@ -2,6 +2,7 @@ from flowing_basin.core import BaseConfiguration, Configuration
 from dataclasses import dataclass, asdict
 import json
 import warnings
+import numpy as np
 
 
 @dataclass(kw_only=True)
@@ -295,3 +296,40 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         ActionConfiguration.check(self)
         RewardConfiguration.check(self)
         TrainingConfiguration.check(self)
+        
+    def get_obs_indices(self, flattened: bool = False) -> dict[tuple[str, str, int], int | tuple[int]]:
+
+        """
+        Returns the index in the raw or normalized observation array for any dam, feature, and lookback value
+
+        :return: Index in the array
+        """
+
+        if flattened and self.feature_extractor != 'CNN':
+            warnings.warn(f"Setting {flattened=} has no effect when {self.feature_extractor=}")
+
+        indices = dict()
+        running_index = 0
+        for d, dam_id in enumerate(self.dam_ids):
+            for f, feature in enumerate(self.features):
+                if d == 0 or feature not in self.unique_features:
+                    for t in range(self.num_steps_sight[feature, dam_id]):
+                        if self.feature_extractor == 'MLP':
+                            indices[dam_id, feature, t] = running_index
+                        elif self.feature_extractor == 'CNN':
+                            # Remember the convolutional feature extractor considers (Dams x Lookback x Features)
+                            if not flattened:
+                                indices[dam_id, feature, t] = (d, t, f)
+                            else:
+                                indices[dam_id, feature, t] = np.ravel_multi_index(
+                                    (d, t, f),
+                                    dims=(len(self.dam_ids), self.num_steps_sight[feature, dam_id],
+                                          len(self.features))
+                                )
+                        else:
+                            raise NotImplementedError(
+                                f"Feature extractor {self.feature_extractor} is not supported yet."
+                            )
+                        running_index += 1
+
+        return indices

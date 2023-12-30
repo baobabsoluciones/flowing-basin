@@ -1,9 +1,13 @@
+from flowing_basin.core import Instance
 from flowing_basin.solvers.rl import (
     GeneralConfiguration, ObservationConfiguration, ActionConfiguration, RewardConfiguration, TrainingConfiguration,
     RLConfiguration, RLTrain, RLEnvironment
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
+from cornflow_client.core.tools import load_json
 import numpy as np
+import math
+from matplotlib import pyplot as plt
 import os
 import re
 import warnings
@@ -39,6 +43,7 @@ class ReinforcementLearning:
         self.agent_path = os.path.join(
             ReinforcementLearning.models_folder, f"rl-{''.join(self.config_full_name)}"
         )
+        self.constants = Instance.from_dict(load_json(ReinforcementLearning.constants_path))
 
         # The first two digits in the observation name (e.g., "O211" -> "O21")
         # indicate the type of observations that should be used for the projector
@@ -49,7 +54,7 @@ class ReinforcementLearning:
     def train(self) -> RLTrain | None:
 
         """
-        Train agent
+        Train an agent with the given configuration.
         """
 
         if os.path.exists(self.agent_path):
@@ -59,10 +64,10 @@ class ReinforcementLearning:
         train = RLTrain(
             config=self.config,
             update_observation_record=False,
+            projector=self.get_projector(),
             path_constants=ReinforcementLearning.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
-            path_observations_folder=self.obs_records_path if os.path.exists(self.obs_records_path) else None,
             path_folder=self.agent_path,
             verbose=self.verbose
         )
@@ -99,12 +104,12 @@ class ReinforcementLearning:
             )
             train = RLTrain(
                 config=reduced_config,
-                update_observation_record=True,
+                projector=Projector.create_projector(reduced_config),
                 path_constants=ReinforcementLearning.constants_path,
                 path_train_data=ReinforcementLearning.train_data_path,
                 path_test_data=ReinforcementLearning.test_data_path,
-                path_observations_folder=None,
                 path_folder=reduced_agent_path,
+                update_observation_record=True,
                 verbose=self.verbose
             )
             train.solve()
@@ -113,15 +118,12 @@ class ReinforcementLearning:
         elif collection_method == 'random':
             if self.verbose >= 1:
                 print("Collecting observations with random agent...")
-            projector = Projector.create_projector(reduced_config)
             env = RLEnvironment(
                 config=reduced_config,
-                projector=projector,
-                update_observation_record=True,
+                projector=Projector.create_projector(reduced_config),
                 path_constants=ReinforcementLearning.constants_path,
                 path_historical_data=ReinforcementLearning.train_data_path,
-                paths_power_models=None,
-                instance=None,
+                update_observation_record=True
             )
             num_timesteps = 0
             while num_timesteps < reduced_config.num_timesteps:
@@ -144,6 +146,112 @@ class ReinforcementLearning:
             print(f"Created folder '{self.obs_records_path}'.")
 
         return env
+
+    def get_projector(self) -> Projector:
+
+        """
+        Get the projector corresponding to the given configuration,
+        assuming the required observations folder exists.
+        """
+
+        if os.path.exists(self.obs_records_path):
+            observations = np.load(os.path.join(self.obs_records_path, 'observations.npy'))
+            obs_config = RLConfiguration.from_json(os.path.join(self.obs_records_path, 'config.json'))
+            if self.verbose >= 1:
+                print(f"Using observations from '{self.obs_records_path}' for projector.")
+        else:
+            if self.config.projector_type != "identity":
+                raise FileNotFoundError(
+                    f"Cannot build projector because the projector type is not 'identity' "
+                    f"and the observations folder '{self.obs_records_path}' does not exist."
+                )
+            observations = None
+            obs_config = None
+        projector = Projector.create_projector(self.config, observations, obs_config)
+        return projector
+
+    def plot_histogram(self, obs: np.ndarray, projected: bool, title: str):
+
+        """
+
+        :param obs: Array of shape num_observations x num_features with the flattened observations
+        :param projected: Indicates if the observations are projected observations or raw/normalized observations
+        :param title: Title of the histogram
+        """
+
+        # Raw or normalized flattened observation
+        if not projected:
+            indices = self.config.get_obs_indices(flattened=True)
+            for dam_id in self.constants.get_ids_of_dams():
+                max_sight = max(self.config.num_steps_sight[feature, dam_id] for feature in self.config.features)
+                num_features = len(self.config.features)
+                fig, axs = plt.subplots(max_sight, num_features)
+                fig.suptitle(f"Histograms of {title} for {dam_id}")
+                for feature_index, feature in enumerate(self.config.features):
+                    for lookback in range(self.config.num_steps_sight[feature, dam_id]):
+                        ax = axs[lookback, feature_index]
+                        if self.constants.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features:
+                            index = indices[dam_id, feature, lookback]
+                            ax.hist(obs[:, index], bins='auto')
+                        ax.set_yticklabels([])  # Hide y-axis tick labels
+                        ax.yaxis.set_ticks_position('none')  # Hide y-axis tick marks
+                        if lookback == 0:
+                            ax.set_title(feature)
+                plt.tight_layout()
+                plt.show()
+
+        # Projected observation
+        else:
+            n_components = obs.shape[1]
+            num_cols = math.ceil(math.sqrt(n_components))
+            # We want to guarantee that
+            # num_rows * num_cols > n_components ==> num_rows = math.ceil(n_components / num_cols)
+            num_rows = math.ceil(n_components / num_cols)
+            fig, axs = plt.subplots(num_rows, num_cols)
+            fig.suptitle(f"Histograms of {title}")
+            component = 0
+            for row in range(num_rows):
+                for col in range(num_cols):
+                    if component < n_components:
+                        ax = axs[row, col]
+                        ax.hist(obs[:, component], bins='auto')
+                        ax.set_yticklabels([])  # Hide y-axis tick labels
+                        ax.yaxis.set_ticks_position('none')  # Hide y-axis tick marks
+                        ax.set_title(f"Component {component}")
+                    component += 1
+            plt.tight_layout()
+            plt.show()
+
+    def plot_histograms_projector(self):
+
+        projector = self.get_projector()
+        obs_type = self.config_names['O'][0:3]
+
+        def indicate_variance(proj_type: str):
+            if proj_type not in {'identity', 'QuantilePseudoDiscretizer'}:
+                return f"({self.config.projector_explained_variance * 100:.0f}%)"
+            else:
+                return ""
+
+        self.plot_histogram(projector.observations, projected=False, title=f"Original observations {obs_type}")
+        if isinstance(self.config.projector_type, list):
+            proj_types = []
+            for proj, proj_type in zip(projector.projectors, self.config.projector_type):  # noqa
+                proj_types.append(proj_type)
+                projected = proj_type not in {'identity', 'QuantilePseudoDiscretizer'}
+                self.plot_histogram(
+                    proj.transformed_observations,
+                    projected=projected,
+                    title=f"Observations {obs_type} after applying {', '.join(proj_types)} {indicate_variance(proj_type)}"
+                )
+        else:
+            projected = self.config.projector_type not in {'identity', 'QuantilePseudoDiscretizer'}
+            self.plot_histogram(
+                projector.transformed_observations,
+                projected=projected,
+                title=f"Observations {obs_type} after applying {self.config.projector_type} "
+                      f"{indicate_variance(self.config.projector_type)}"
+            )
 
     @staticmethod
     def extract_substrings(input_string: str) -> dict[str, str]:

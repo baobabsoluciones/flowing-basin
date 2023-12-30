@@ -10,7 +10,6 @@ from datetime import datetime
 import pickle
 from random import randint
 from typing import Callable
-import warnings
 
 
 class RLEnvironment(gym.Env):
@@ -134,7 +133,7 @@ class RLEnvironment(gym.Env):
         self.features_functions = self.get_features_functions()
 
         # Observation indeces
-        self.obs_indeces = self.get_obs_indices()
+        self.obs_indeces = self.config.get_obs_indices()
 
         # Variables that depend on the instance
         self.obs_min = None
@@ -467,43 +466,6 @@ class RLEnvironment(gym.Env):
             self.record_raw_obs = np.vstack((self.record_raw_obs, [raw_obs.flatten()]))
 
         return raw_obs
-
-    def get_obs_indices(self, flattened: bool = False) -> dict[tuple[str, str, int], int | tuple[int]]:
-
-        """
-        Returns the index in the raw or normalized observation array for any dam, feature, and lookback value
-
-        :return: Index in the array
-        """
-
-        if flattened and self.config.feature_extractor != 'CNN':
-            warnings.warn(f"Setting {flattened=} has no effect when {self.config.feature_extractor=}")
-
-        indices = dict()
-        running_index = 0
-        for d, dam_id in enumerate(self.instance.get_ids_of_dams()):
-            for f, feature in enumerate(self.config.features):
-                if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features:
-                    for t in range(self.config.num_steps_sight[feature, dam_id]):
-                        if self.config.feature_extractor == 'MLP':
-                            indices[dam_id, feature, t] = running_index
-                        elif self.config.feature_extractor == 'CNN':
-                            # Remember the convolutional feature extractor considers (Dams x Lookback x Features)
-                            if not flattened:
-                                indices[dam_id, feature, t] = (d, t, f)
-                            else:
-                                indices[dam_id, feature, t] = np.ravel_multi_index(
-                                    (d, t, f),
-                                    dims=(self.instance.get_num_dams(), self.config.num_steps_sight[feature, dam_id],
-                                          len(self.config.features))
-                                )
-                        else:
-                            raise NotImplementedError(
-                                f"Feature extractor {self.config.feature_extractor} is not supported yet."
-                            )
-                        running_index += 1
-
-        return indices
 
     def normalize(self, raw_obs: np.array) -> np.array:
 

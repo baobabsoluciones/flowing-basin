@@ -5,7 +5,6 @@ from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback,
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
-import numpy as np
 import os
 
 
@@ -14,10 +13,10 @@ class RLTrain(Experiment):
     def __init__(
             self,
             config: RLConfiguration,
+            projector: Projector,
             path_constants: str,
             path_train_data: str,
             path_test_data: str,
-            path_observations_folder: str = None,
             path_folder: str = '.',
             paths_power_models: dict[str, str] = None,
             update_observation_record: bool = False,
@@ -31,20 +30,8 @@ class RLTrain(Experiment):
             self.solution = None
 
         self.verbose = verbose
-
-        # Configuration
         self.config = config
-
-        # Projector
-        if path_observations_folder is not None:
-            observations = np.load(os.path.join(path_observations_folder, 'observations.npy'))
-            obs_config = RLConfiguration.from_json(os.path.join(path_observations_folder, 'config.json'))
-            if self.verbose >= 1:
-                print(f"Using observations '{observations}' for projector.")
-        else:
-            observations = None
-            obs_config = None
-        self.projector = Projector.create_projector(self.config, observations, obs_config)
+        self.projector = projector
 
         # Train environment
         self.train_env = RLEnvironment(

@@ -1,3 +1,5 @@
 from flowing_basin.solvers.rl import ReinforcementLearning
 
-ReinforcementLearning("G0O211A1R1T01")
+rl = ReinforcementLearning("G0O221A1R1T01")
+rl.collect_obs()
+rl.train()

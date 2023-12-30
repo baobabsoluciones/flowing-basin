@@ -39,6 +39,8 @@ class RLTrain(Experiment):
         if path_observations_folder is not None:
             observations = np.load(os.path.join(path_observations_folder, 'observations.npy'))
             obs_config = RLConfiguration.from_json(os.path.join(path_observations_folder, 'config.json'))
+            if self.verbose >= 1:
+                print(f"Using observations '{observations}' for projector.")
         else:
             observations = None
             obs_config = None

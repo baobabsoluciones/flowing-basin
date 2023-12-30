@@ -60,12 +60,19 @@ class Projector(ABC):
 
     @classmethod
     def create_projector_single(
-            cls, proj_type: str, proj_config: RLConfiguration, observations: np.ndarray, obs_config: RLConfiguration
+            cls, proj_type: str,
+            proj_config: RLConfiguration = None, observations: np.ndarray = None, obs_config: RLConfiguration = None
     ):
 
         """
         Select the projector based on the given configuration
         """
+
+        if proj_type != 'identity' and any([proj_config is None, observations is None, obs_config is None]):
+            raise ValueError(
+                "The parameters `proj_config`, `observations`, and `obs_config` "
+                "can only be None when the projector is of type 'identity'."
+            )
 
         proj_constructor = cls._get_projector_constructor(proj_type)
         kwargs = dict()
@@ -88,11 +95,19 @@ class Projector(ABC):
         return projector
 
     @classmethod
-    def create_projector(cls, proj_config: RLConfiguration, observations: np.ndarray, obs_config: RLConfiguration):
+    def create_projector(
+            cls, proj_config: RLConfiguration, observations: np.ndarray = None, obs_config: RLConfiguration = None
+    ):
 
         """
         Select the projector based on the given configuration
         """
+
+        if proj_config.projector_type != 'identity' and any([observations is None, obs_config is None]):
+            raise ValueError(
+                "The parameters `observations` and `obs_config` "
+                "can only be None when the projector is of type 'identity'."
+            )
 
         if isinstance(proj_config.projector_type, list):
             projector = ProjectorList(proj_config, observations, obs_config)

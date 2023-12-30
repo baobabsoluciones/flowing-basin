@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 import os
 import re
 import warnings
+from time import perf_counter
 
 
 class ReinforcementLearning:
@@ -34,7 +35,7 @@ class ReinforcementLearning:
 
     def __init__(self, config_name: str, verbose: int = 1):
 
-        self.verbose =  verbose
+        self.verbose = verbose
         config_name = config_name
         self.config_names = self.extract_substrings(config_name)
         self.config_full_name = ''.join(self.config_names.values())  # Identical to `config_name`, but in alphabetical order
@@ -71,7 +72,12 @@ class ReinforcementLearning:
             path_folder=self.agent_path,
             verbose=self.verbose
         )
+        if self.verbose >= 1:
+            print(f"Training agent with {''.join(self.config_names.values())} for {self.config.num_timesteps} timesteps...")
+        start = perf_counter()
         train.solve()
+        if self.verbose >= 1:
+            print(f"Trained for {self.config.num_timesteps} timesteps in {perf_counter() - start}s.")
         return train
 
     def collect_obs(self) -> RLEnvironment | None:
@@ -98,9 +104,9 @@ class ReinforcementLearning:
 
         if collection_method == 'training':
             if self.verbose >= 1:
-                print("Collecting observations while training agent...")
+                print(f"Collecting observations for {reduced_config.num_timesteps} timesteps while training agent...")
             reduced_agent_path = os.path.join(
-                ReinforcementLearning.models_folder, f"rl-{''.join(reduced_config_names)}"
+                ReinforcementLearning.models_folder, f"rl-{''.join(reduced_config_names.values())}"
             )
             train = RLTrain(
                 config=reduced_config,
@@ -112,12 +118,15 @@ class ReinforcementLearning:
                 update_observation_record=True,
                 verbose=self.verbose
             )
+            start = perf_counter()
             train.solve()
+            if self.verbose >= 1:
+                print(f"Collected for {reduced_config.num_timesteps} timesteps in {perf_counter() - start}s.")
             env = train.train_env
 
         elif collection_method == 'random':
             if self.verbose >= 1:
-                print("Collecting observations with random agent...")
+                print(f"Collecting observations for {reduced_config.num_timesteps} timesteps with random agent...")
             env = RLEnvironment(
                 config=reduced_config,
                 projector=Projector.create_projector(reduced_config),
@@ -125,6 +134,7 @@ class ReinforcementLearning:
                 path_historical_data=ReinforcementLearning.train_data_path,
                 update_observation_record=True
             )
+            start = perf_counter()
             num_timesteps = 0
             while num_timesteps < reduced_config.num_timesteps:
                 env.reset()
@@ -133,14 +143,23 @@ class ReinforcementLearning:
                     action = env.action_space.sample()
                     _, _, done, _, _ = env.step(action)
                     num_timesteps += 1
+                    if self.verbose >= 2 and num_timesteps % 495 == 0:
+                        print(
+                            f"Collected {num_timesteps} / {reduced_config.num_timesteps} "
+                            f"({num_timesteps / reduced_config.num_timesteps * 100:.1f}%) observations "
+                            f"in {perf_counter() - start}s so far"
+                        )
+            if self.verbose >= 1:
+                print(f"Collected for {reduced_config.num_timesteps} timesteps in {perf_counter() - start}s.")
 
         else:
             raise ValueError(f"Invalid value for `collection_method`: {collection_method}.")
 
+        normalized_obs = np.array(env.record_normalized_obs)
         if self.verbose >= 1:
-            print("Observations collected, (num_observations, num_features):", env.record_normalized_obs.shape)
+            print("Observations collected, (num_observations, num_features):", normalized_obs.shape)
         os.makedirs(self.obs_records_path)
-        np.save(os.path.join(self.obs_records_path, 'observations.npy'), env.record_normalized_obs)
+        np.save(os.path.join(self.obs_records_path, 'observations.npy'), normalized_obs)
         reduced_config.to_json(os.path.join(self.obs_records_path, 'config.json'))
         if self.verbose >= 1:
             print(f"Created folder '{self.obs_records_path}'.")

@@ -107,15 +107,9 @@ class RLEnvironment(gym.Env):
 
         # Record of observations experienced by the agent
         # Array of shape num_observations x num_features (each observation will be flattened)
-        self.record_raw_obs = np.array([]).reshape(
-            (0, np.prod(self.obs_shape))
-        )
-        self.record_normalized_obs = np.array([]).reshape(
-            (0, np.prod(self.obs_shape))
-        )
-        self.record_projected_obs = np.array([]).reshape(
-            (0, np.prod(self.projected_obs_shape))
-        )
+        self.record_raw_obs = []
+        self.record_normalized_obs = []
+        self.record_projected_obs = []
 
         # Action space
         # Action is an array of shape num_dams
@@ -463,7 +457,7 @@ class RLEnvironment(gym.Env):
             raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
         if values is None and self.update_observation_record:
-            self.record_raw_obs = np.vstack((self.record_raw_obs, [raw_obs.flatten()]))
+            self.record_raw_obs.append(raw_obs.flatten())
 
         return raw_obs
 
@@ -477,7 +471,7 @@ class RLEnvironment(gym.Env):
 
         normalized_obs = (raw_obs - self.obs_min) / (self.obs_max - self.obs_min)
         if self.update_observation_record:
-            self.record_normalized_obs = np.vstack((self.record_normalized_obs, [normalized_obs.flatten()]))
+            self.record_normalized_obs.append(normalized_obs.flatten())
 
         return normalized_obs
 
@@ -491,7 +485,7 @@ class RLEnvironment(gym.Env):
 
         projected_obs = self.projector.project(normalized_obs)
         if self.update_observation_record:
-            self.record_projected_obs = np.vstack((self.record_projected_obs, [projected_obs.flatten()]))
+            self.record_projected_obs.append(projected_obs.flatten())
 
         return projected_obs
 

@@ -32,10 +32,12 @@ class ReinforcementLearning:
     test_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_test.pickle")
 
     models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
+    observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
 
-    def __init__(self, config_name: str, verbose: int = 1):
+    def __init__(self, config_name: str, verbose: int = 1, save_obs: bool = True):
 
         self.verbose = verbose
+        self.save_obs = save_obs
         config_name = config_name
         self.config_names = self.extract_substrings(config_name)
         self.config_full_name = ''.join(self.config_names.values())  # Identical to `config_name`, but in alphabetical order
@@ -64,7 +66,7 @@ class ReinforcementLearning:
 
         train = RLTrain(
             config=self.config,
-            update_observation_record=False,
+            update_observation_record=self.save_obs,
             projector=self.get_projector(),
             path_constants=ReinforcementLearning.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
@@ -78,6 +80,12 @@ class ReinforcementLearning:
         train.solve()
         if self.verbose >= 1:
             print(f"Trained for {self.config.num_timesteps} timesteps in {perf_counter() - start}s.")
+        if self.save_obs:
+            for obs_record in ReinforcementLearning.observation_records:
+                obs_record_path = os.path.join(self.agent_path, f'{obs_record}.npy')
+                obs = np.array(getattr(train.train_env, obs_record))
+                np.save(obs_record_path, obs)
+                print(f"Saved {obs_record} with {obs.shape} observations in file '{obs_record_path}'.")
         return train
 
     def collect_obs(self) -> RLEnvironment | None:
@@ -243,6 +251,11 @@ class ReinforcementLearning:
 
     def plot_histograms_projector(self):
 
+        """
+        Plot the histograms of the observations used to train the projector,
+        as well as these observations after being transformed by this projector.
+        """
+
         projector = self.get_projector()
         obs_type = self.config_names['O'][0:3]
 
@@ -271,6 +284,26 @@ class ReinforcementLearning:
                 title=f"Observations {obs_type} after applying {self.config.projector_type} "
                       f"{indicate_variance(self.config.projector_type)}"
             )
+
+    def plot_histograms_observations(self):
+
+        """
+        Plot the histogram of the record of raw, normalized and projected observations experienced by the agent
+        """
+
+        for obs_record in ReinforcementLearning.observation_records:
+            obs_folder = os.path.join(self.agent_path, f'{obs_record}.npy')
+            try:
+                obs = np.load(obs_folder)
+            except FileNotFoundError:
+                warnings.warn(f"Histograms of {obs_record} not plotted. File '{obs_folder}' does not exist.")
+                continue
+            if obs_record != "record_projected_obs":
+                self.plot_histogram(obs, projected=False, title=obs_record)
+            else:
+                proj_type = self.config.projector_type
+                proj_type = proj_type if not isinstance(proj_type, list) else ', '.join(proj_type)
+                self.plot_histogram(obs, projected=True, title=f"{obs_record} ({proj_type})")
 
     @staticmethod
     def extract_substrings(input_string: str) -> dict[str, str]:

@@ -18,6 +18,7 @@ class RLTrain(Experiment):
             path_train_data: str,
             path_test_data: str,
             path_folder: str = '.',
+            path_tensorboard: str = None,
             paths_power_models: dict[str, str] = None,
             update_observation_record: bool = False,
             instance: Instance = None,
@@ -33,6 +34,7 @@ class RLTrain(Experiment):
         self.verbose = verbose
         self.config = config
         self.projector = projector
+        self.path_tensorboard = path_tensorboard
 
         # Train environment
         self.train_env = RLEnvironment(
@@ -95,7 +97,7 @@ class RLTrain(Experiment):
 
         self.model = SAC(
             policy_type, self.train_env,
-            verbose=1, tensorboard_log=self.config.get("tensorboard_log"), policy_kwargs=policy_kwargs
+            verbose=1, tensorboard_log=self.path_tensorboard, policy_kwargs=policy_kwargs
         )
         
     def solve(self, options: dict = None) -> dict:  # noqa
@@ -142,7 +144,7 @@ class RLTrain(Experiment):
             total_timesteps=self.config.num_timesteps,
             log_interval=self.config.log_episode_freq,
             callback=CallbackList(callbacks),
-            tb_log_name=self.config.get("tensorboard_log", "SAC")
+            tb_log_name=self.experiment_id
         )
 
         # Save model

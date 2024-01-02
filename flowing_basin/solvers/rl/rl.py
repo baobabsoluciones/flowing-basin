@@ -33,6 +33,7 @@ class ReinforcementLearning:
 
     models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
     baselines_folder = os.path.join(os.path.dirname(__file__), "../../solutions/rl_baselines")
+    tensorboard_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/tensorboard_logs")
 
     observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
     static_projectors = ["identity", "QuantilePseudoDiscretizer"]
@@ -74,6 +75,7 @@ class ReinforcementLearning:
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
             path_folder=self.agent_path,
+            path_tensorboard=ReinforcementLearning.tensorboard_folder,
             experiment_id=self.agent_name,
             verbose=self.verbose
         )
@@ -132,6 +134,7 @@ class ReinforcementLearning:
                 path_train_data=ReinforcementLearning.train_data_path,
                 path_test_data=ReinforcementLearning.test_data_path,
                 path_folder=reduced_agent_path,
+                path_tensorboard=ReinforcementLearning.tensorboard_folder,
                 experiment_id=reduced_agent_name,
                 update_observation_record=True,
                 verbose=self.verbose

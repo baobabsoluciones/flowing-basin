@@ -7,18 +7,23 @@ from stable_baselines3.common.policies import BasePolicy
 
 class RLRun(Experiment):
 
+    named_policies = ["random", "greedy"]
+
     def __init__(
             self,
             instance: Instance,
             config: RLConfiguration,
             projector: Projector,
+            solver_name: str = "rl",
             paths_power_models: dict[str, str] = None,
             solution: Solution = None,
+            experiment_id: str = None
     ):
-        super().__init__(instance=instance, solution=solution)
+        super().__init__(instance=instance, solution=solution, experiment_id=experiment_id)
         if solution is None:
             self.solution = None
 
+        self.solver_name = solver_name
         self.config = config
         self.env = RLEnvironment(
             instance=self.instance,
@@ -32,12 +37,12 @@ class RLRun(Experiment):
         """
         Load the given model and use it to solve the instance given in the initialization.
 
-        :param policy: A StableBaselines3 policy, a path to a model, or "random"
+        :param policy: A StableBaselines3 policy, a path to a model, or one of the named policies ("random" or "greedy")
         :param options: Unused parameter
         :return: Dictionary with additional information
         """
 
-        if isinstance(policy, str) and policy != "random":
+        if isinstance(policy, str) and policy not in RLRun.named_policies:
             policy = SAC.load(policy).policy
 
         # Reset the environment (this allows the `solve` method to be called more than once)
@@ -45,10 +50,12 @@ class RLRun(Experiment):
         done = False
         rewards = []
         while not done:
-            if policy != "random":
-                action, _ = policy.predict(obs, deterministic=True)
-            else:
+            if policy == "random":
                 action = self.env.action_space.sample()
+            elif policy == "greedy":
+                action = self.env.action_space.high  # noqa
+            else:
+                action, _ = policy.predict(obs, deterministic=True)
             obs, reward, done, _, _ = self.env.step(action)
             rewards.append(reward)
 
@@ -83,7 +90,7 @@ class RLRun(Experiment):
                     end_information=end_info,
                 ),
                 solution_datetime=solution_datetime,
-                solver="RL",
+                solver=self.solver_name,
                 time_step_minutes=self.instance.get_time_step_seconds() // 60,
                 configuration=self.config.to_dict(),
                 objective_function=obj_fun.item(),

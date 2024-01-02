@@ -1,7 +1,7 @@
 from flowing_basin.core import Instance, Solution, TrainingData
 from flowing_basin.solvers.rl import (
     GeneralConfiguration, ObservationConfiguration, ActionConfiguration, RewardConfiguration, TrainingConfiguration,
-    RLConfiguration, RLTrain, RLEnvironment
+    RLConfiguration, RLEnvironment, RLTrain, RLRun
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
@@ -359,7 +359,7 @@ class ReinforcementLearning:
 
         training_objects = []
 
-        for agent in {self.agent_name, *agents}:
+        for agent in [self.agent_name, *agents]:
 
             agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
             training_data_path = os.path.join(agent_folder, "training_data.json")
@@ -384,8 +384,48 @@ class ReinforcementLearning:
         training.plot_training_curves(ax, values=values, instances=instances)
         plt.show()
 
+    def run_agent(self, instance: Instance) -> Solution:
+
+        """
+        Solve the given instance with the current agent
+        """
+
+        run = RLRun(
+            config=self.config,
+            instance=instance,
+            projector=self.get_projector(),
+            solver_name=self.agent_name
+        )
+        model_path = os.path.join(self.agent_path, "model.zip")
+        run.solve(model_path)
+        return run.solution
+
+    def run_named_policy(self, policy_name: str, instance: Instance) -> Solution:
+
+        """
+        Solve the given instance with a special policy ("random" or "greedy")
+        """
+
+        if policy_name not in RLRun.named_policies:
+            raise ValueError(
+                f"Invalid value for `policy_name`: {policy_name}. Allowed values are {RLRun.named_policies}."
+            )
+
+        run = RLRun(
+            config=self.config,
+            instance=instance,
+            projector=self.get_projector(),
+            solver_name=f"rl-{policy_name}"
+        )
+        run.solve(policy_name)
+        return run.solution
+
     @staticmethod
     def scan_baselines() -> list[Solution]:
+
+        """
+        Scan the folder with solutions that act as baselines for the RL agents
+        """
 
         sols = []
         for file in os.listdir(ReinforcementLearning.baselines_folder):

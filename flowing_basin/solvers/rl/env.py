@@ -97,7 +97,6 @@ class RLEnvironment(gym.Env):
         else:
             raise NotImplementedError(f"Feature extractor {self.config.feature_extractor} is not supported yet.")
 
-        # ToDo are we sure that this is not truncating inputs when we train the agent? might explain the 120
         self.observation_space = gym.spaces.Box(
             low=self.projector.low,
             high=self.projector.high,

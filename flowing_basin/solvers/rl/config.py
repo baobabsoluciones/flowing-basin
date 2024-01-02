@@ -211,13 +211,12 @@ class RewardConfiguration(BaseConfiguration):  # noqa
 class TrainingConfiguration(BaseConfiguration):  # noqa
 
     length_episodes: int
-    num_timesteps: int = None  # Nuber of time steps in which to train the agent
-    log_episode_freq: int = None
+    num_timesteps: int  # Nuber of time steps in which to train the agent
+    log_episode_freq: int
 
-    training_data_callback: bool = None
-    evaluation_callback: bool = None
-    checkpoint_callback: bool = None
-    # TODO: once all have been cleaned, make all arguments above this comment mandatory (i.e., without `= None`)
+    training_data_callback: bool
+    evaluation_callback: bool
+    checkpoint_callback: bool
 
     # Training data: periodic evaluation in fixed instances
     training_data_timesteps_freq: int = None  # Frequency for evaluating the agent (every X timesteps)

@@ -33,6 +33,7 @@ class ReinforcementLearning:
 
     models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
     observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
+    static_projectors = ["identity", "QuantilePseudoDiscretizer"]
 
     def __init__(self, config_name: str, verbose: int = 1, save_obs: bool = True):
 
@@ -260,7 +261,7 @@ class ReinforcementLearning:
         obs_type = self.config_names['O'][0:3]
 
         def indicate_variance(proj_type: str):
-            if proj_type not in {'identity', 'QuantilePseudoDiscretizer'}:
+            if proj_type not in ReinforcementLearning.static_projectors:
                 return f"({self.config.projector_explained_variance * 100:.0f}%)"
             else:
                 return ""
@@ -270,14 +271,14 @@ class ReinforcementLearning:
             proj_types = []
             for proj, proj_type in zip(projector.projectors, self.config.projector_type):  # noqa
                 proj_types.append(proj_type)
-                projected = proj_type not in {'identity', 'QuantilePseudoDiscretizer'}
+                projected = proj_type not in ReinforcementLearning.static_projectors
                 self.plot_histogram(
                     proj.transformed_observations,
                     projected=projected,
                     title=f"Observations {obs_type} after applying {', '.join(proj_types)} {indicate_variance(proj_type)}"
                 )
         else:
-            projected = self.config.projector_type not in {'identity', 'QuantilePseudoDiscretizer'}
+            projected = self.config.projector_type not in ReinforcementLearning.static_projectors
             self.plot_histogram(
                 projector.transformed_observations,
                 projected=projected,
@@ -303,7 +304,8 @@ class ReinforcementLearning:
             else:
                 proj_type = self.config.projector_type
                 proj_type = proj_type if not isinstance(proj_type, list) else ', '.join(proj_type)
-                self.plot_histogram(obs, projected=True, title=f"{obs_record} ({proj_type})")
+                projected = proj_type not in ReinforcementLearning.static_projectors
+                self.plot_histogram(obs, projected=projected, title=f"{obs_record} ({proj_type})")
 
     @staticmethod
     def extract_substrings(input_string: str) -> dict[str, str]:

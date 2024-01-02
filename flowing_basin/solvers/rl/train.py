@@ -22,10 +22,11 @@ class RLTrain(Experiment):
             update_observation_record: bool = False,
             instance: Instance = None,
             solution: Solution = None,
+            experiment_id: str = None,
             verbose: int = 1,
     ):
 
-        super().__init__(instance=instance, solution=solution)
+        super().__init__(instance=instance, solution=solution, experiment_id=experiment_id)
         if solution is None:
             self.solution = None
 

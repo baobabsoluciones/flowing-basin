@@ -72,14 +72,16 @@ class Configuration(BaseConfiguration):
 class Experiment(ExperimentCore):
     schema_checks = get_empty_schema()
 
-    def __init__(self, instance: Instance, solution: Solution = None) -> None:
+    def __init__(self, instance: Instance, solution: Solution = None, experiment_id: str = None) -> None:
 
         ExperimentCore.__init__(self, instance=instance, solution=solution)
 
         if solution is None:
             self.solution = Solution(SuperDict())
 
-        self.experiment_id = datetime.now().strftime('%Y-%m-%d %H.%M')
+        self.experiment_id = experiment_id
+        if self.experiment_id is None:
+            self.experiment_id = datetime.now().strftime('%Y-%m-%d %H.%M')
 
     @property
     def instance(self) -> Instance:

@@ -1,4 +1,4 @@
-from flowing_basin.core import Instance
+from flowing_basin.core import Instance, Solution, TrainingData
 from flowing_basin.solvers.rl import (
     GeneralConfiguration, ObservationConfiguration, ActionConfiguration, RewardConfiguration, TrainingConfiguration,
     RLConfiguration, RLTrain, RLEnvironment
@@ -32,6 +32,8 @@ class ReinforcementLearning:
     test_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_test.pickle")
 
     models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
+    baselines_folder = os.path.join(os.path.dirname(__file__), "../../solutions/rl_baselines")
+
     observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
     static_projectors = ["identity", "QuantilePseudoDiscretizer"]
 
@@ -44,9 +46,8 @@ class ReinforcementLearning:
         self.config_full_name = ''.join(self.config_names.values())  # Identical to `config_name`, but in alphabetical order
 
         self.config = self.get_config(self.config_names)
-        self.agent_path = os.path.join(
-            ReinforcementLearning.models_folder, f"rl-{''.join(self.config_full_name)}"
-        )
+        self.agent_name = f"rl-{self.config_full_name}"
+        self.agent_path = os.path.join(ReinforcementLearning.models_folder, self.agent_name)
         self.constants = Instance.from_dict(load_json(ReinforcementLearning.constants_path))
 
         # The first two digits in the observation name (e.g., "O211" -> "O21")
@@ -73,6 +74,7 @@ class ReinforcementLearning:
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
             path_folder=self.agent_path,
+            experiment_id=self.agent_name,
             verbose=self.verbose
         )
         if self.verbose >= 1:
@@ -99,24 +101,30 @@ class ReinforcementLearning:
             warnings.warn(f"Observation collection aborted. Folder '{self.obs_records_path}' already exists.")
             return
 
+        if len(self.config_names["O"]) < 3:
+            warnings.warn(
+                f"Observation collection aborted. "
+                f"The observation config name does not indicate the collection method (no second digit)."
+            )
+            return
+
         # The agent must be executed using no projector
         # This is done taking only the first 2 values of the observation config name (e.g., "O211" -> "O2")
         reduced_config_names = self.config_names.copy()
         reduced_config_names["O"] = reduced_config_names["O"][0:2]
         reduced_config = self.get_config(reduced_config_names)
+        reduced_agent_name = f"rl-{''.join(reduced_config_names.values())}"
 
         # Get the collection method, indicated by the second digit in the observation name (e.g., "O211" -> "1")
         collection_method = {
             "1": "training",
             "2": "random"
-        }[self.config_names["O"][1]]
+        }[self.config_names["O"][2]]
 
         if collection_method == 'training':
             if self.verbose >= 1:
                 print(f"Collecting observations for {reduced_config.num_timesteps} timesteps while training agent...")
-            reduced_agent_path = os.path.join(
-                ReinforcementLearning.models_folder, f"rl-{''.join(reduced_config_names.values())}"
-            )
+            reduced_agent_path = os.path.join(ReinforcementLearning.models_folder, reduced_agent_name)
             train = RLTrain(
                 config=reduced_config,
                 projector=Projector.create_projector(reduced_config),
@@ -124,6 +132,7 @@ class ReinforcementLearning:
                 path_train_data=ReinforcementLearning.train_data_path,
                 path_test_data=ReinforcementLearning.test_data_path,
                 path_folder=reduced_agent_path,
+                experiment_id=reduced_agent_name,
                 update_observation_record=True,
                 verbose=self.verbose
             )
@@ -207,6 +216,13 @@ class ReinforcementLearning:
         :param title: Title of the histogram
         """
 
+        # Method 'auto' raises an error for giving almost 0 width bins
+        # when input array is small and the array has extreme outliers.
+        # (This was observed with the feature past_clipped when having 1001 observations.)
+        # This is avoided by forcing the usage of the Sturges method for bin width estimation,
+        # which is better for small datasets.
+        bins_method = 'sturges' if obs.shape[0] < 50_000 else 'auto'
+
         # Raw or normalized flattened observation
         if not projected:
             indices = self.config.get_obs_indices(flattened=True)
@@ -220,7 +236,7 @@ class ReinforcementLearning:
                         ax = axs[lookback, feature_index]
                         if self.constants.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features:
                             index = indices[dam_id, feature, lookback]
-                            ax.hist(obs[:, index], bins='auto')
+                            ax.hist(obs[:, index], bins=bins_method)
                         ax.set_yticklabels([])  # Hide y-axis tick labels
                         ax.yaxis.set_ticks_position('none')  # Hide y-axis tick marks
                         if lookback == 0:
@@ -306,6 +322,78 @@ class ReinforcementLearning:
                 proj_type = proj_type if not isinstance(proj_type, list) else ', '.join(proj_type)
                 projected = proj_type not in ReinforcementLearning.static_projectors
                 self.plot_histogram(obs, projected=projected, title=f"{obs_record} ({proj_type})")
+
+    def plot_training_curve(self, values: list[str] = None, instances: str | list[str] = 'fixed'):
+
+        """
+        Plot the training curve of the agent
+        """
+
+        if values is None:
+            values = ['income']
+
+        training_data_path = os.path.join(self.agent_path, "training_data.json")
+        training_data = TrainingData.from_json(training_data_path)
+        training_check = training_data.check()
+        if training_check:
+            raise ValueError(f"Problems with the data: {training_check}")
+
+        _, ax = plt.subplots()
+        training_data.plot_training_curves(ax, values=values, instances=instances)
+        plt.show()
+
+    def plot_training_curves_compare(
+            self, agents: list[str], baselines: list[str], values: list[str] = None, instances: str | list[str] = 'fixed'
+    ):
+
+        """
+        Compare the training curves of the given agents
+        and the values of the given baseline solvers
+
+        :param agents: List of agent IDs in rl_data/models (e.g., ["rl-A1G0O22R1T0", "rl-A1G0O221R1T0"]).
+        :param baselines: List of solvers in solutions/rl_baselines (e.g., ["MILP", "rl-random", "rl-greedy"]).
+        """
+
+        if values is None:
+            values = ['income']
+
+        training_objects = []
+
+        for agent in {self.agent_name, *agents}:
+
+            agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
+            training_data_path = os.path.join(agent_folder, "training_data.json")
+            training_object = TrainingData.from_json(training_data_path)
+
+            evaluation_data_path = os.path.join(agent_folder, "evaluations.npz")
+            training_object.add_random_instances(agent, evaluation_data_path)
+
+            training_check = training_object.check()
+            if training_check:
+                raise ValueError(f"Problems with the data: {training_check}")
+            training_objects.append(training_object)
+
+        training = sum(training_objects)
+
+        # Add baselines
+        for baseline in ReinforcementLearning.scan_baselines():
+            if baseline.get_solver() in baselines:
+                training += baseline
+
+        _, ax = plt.subplots()
+        training.plot_training_curves(ax, values=values, instances=instances)
+        plt.show()
+
+    @staticmethod
+    def scan_baselines() -> list[Solution]:
+
+        sols = []
+        for file in os.listdir(ReinforcementLearning.baselines_folder):
+            full_path = os.path.join(ReinforcementLearning.baselines_folder, file)
+            if file.endswith('.json'):
+                sol = Solution.from_json(full_path)
+                sols.append(sol)
+        return sols
 
     @staticmethod
     def extract_substrings(input_string: str) -> dict[str, str]:

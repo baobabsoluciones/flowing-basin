@@ -1,2 +1,2 @@
-- R0: income minus startup or limit zone penalties, divided by the episode's maximum price.
-- R1: like R0, but with a penalty for not fulfilling the flow smoothing parameter.
+- `R0`: income minus startup or limit zone penalties, divided by the episode's maximum price.
+- `R1`: like R0, but with a penalty for not fulfilling the flow smoothing parameter.

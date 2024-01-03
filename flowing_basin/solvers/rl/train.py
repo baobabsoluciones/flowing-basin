@@ -96,7 +96,7 @@ class RLTrain(Experiment):
             )
 
         self.model = SAC(
-            policy_type, self.train_env,
+            policy_type, self.train_env, learning_rate=self.config.learning_rate,
             verbose=1, tensorboard_log=self.path_tensorboard, policy_kwargs=policy_kwargs
         )
         
@@ -122,7 +122,7 @@ class RLTrain(Experiment):
         if self.config.evaluation_callback:
             eval_callback = EvalCallback(
                 self.eval_env,
-                best_model_save_path=None,
+                best_model_save_path=self.path_folder if self.config.evaluation_save_best else None,
                 log_path=self.path_folder,
                 eval_freq=self.config.evaluation_timesteps_freq,
                 n_eval_episodes=self.config.evaluation_num_episodes,

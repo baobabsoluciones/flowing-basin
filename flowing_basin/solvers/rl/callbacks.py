@@ -26,7 +26,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
         self.check_freq = check_freq
         self.log_dir = log_dir
-        self.save_path = os.path.join(log_dir, "model_best.zip")
+        self.save_path = os.path.join(log_dir, "best_model_checkpoint.zip")
         self.best_mean_reward = -np.inf
 
     def _on_step(self) -> bool:

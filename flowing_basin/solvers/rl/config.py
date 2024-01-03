@@ -207,26 +207,30 @@ class RewardConfiguration(BaseConfiguration):  # noqa
     flow_smoothing_penalty: float  # Penalty for not fulfilling the flow smoothing parameter
 
 
+# noinspection PyDataclass
 @dataclass(kw_only=True)
 class TrainingConfiguration(BaseConfiguration):  # noqa
 
     length_episodes: int
     num_timesteps: int  # Nuber of time steps in which to train the agent
+    learning_rate: float = 3e-4
+
+    # Monitor logging: reward of episodes seen during training
     log_episode_freq: int
 
+    # Training data callback: periodic evaluation in fixed instances
     training_data_callback: bool
-    evaluation_callback: bool
-    checkpoint_callback: bool
-
-    # Training data: periodic evaluation in fixed instances
     training_data_timesteps_freq: int = None  # Frequency for evaluating the agent (every X timesteps)
     training_data_instances: list[str] = None  # Names of the instances solved every time
 
-    # Periodic evaluation in random episodes
+    # Evaluation callback: periodic evaluation in random episodes
+    evaluation_callback: bool
     evaluation_timesteps_freq: int = None  # Frequency for evaluating the agent (every X timesteps)
     evaluation_num_episodes: int = None  # Number of episodes run every time
+    evaluation_save_best: bool = False  # Whether to save the model with the highest mean reward
 
-    # Checking if there is a new best agent
+    # Checking callback: checking if there is a new best agent
+    checkpoint_callback: bool
     checkpoint_timesteps_freq: int = None  # Frequency for checking if there is a new best agent (every X timesteps)
 
     def check(self):

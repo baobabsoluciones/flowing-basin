@@ -387,7 +387,7 @@ class ReinforcementLearning:
         training.plot_training_curves(ax, values=values, instances=instances)
         plt.show()
 
-    def run_agent(self, instance: Instance) -> Solution:
+    def run_agent(self, instance: Instance, model: str = "best_model") -> Solution:
 
         """
         Solve the given instance with the current agent
@@ -399,7 +399,7 @@ class ReinforcementLearning:
             projector=self.get_projector(),
             solver_name=self.agent_name
         )
-        model_path = os.path.join(self.agent_path, "model.zip")
+        model_path = os.path.join(self.agent_path, f"{model}.zip")
         run.solve(model_path)
         return run.solution
 

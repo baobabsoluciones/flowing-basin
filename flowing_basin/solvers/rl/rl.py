@@ -364,10 +364,12 @@ class ReinforcementLearning:
 
         for agent in [self.agent_name, *agents]:
 
+            # Create TrainingData object from "training_data.json"
             agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
             training_data_path = os.path.join(agent_folder, "training_data.json")
             training_object = TrainingData.from_json(training_data_path)
 
+            # Add "evaluations.npz" from the EvalCallback to the TrainingData object
             evaluation_data_path = os.path.join(agent_folder, "evaluations.npz")
             training_object.add_random_instances(agent, evaluation_data_path)
 

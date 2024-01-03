@@ -98,6 +98,8 @@ class TrainingDataCallback(BaseCallback):
         if self.n_calls % self.eval_freq == 0:
 
             timestep_values = []
+            incomes = []
+            acc_rewards = []
             for run in self.runs:
                 info = run.solve(self.model.policy)
                 income = run.solution.get_objective_function()
@@ -105,9 +107,17 @@ class TrainingDataCallback(BaseCallback):
                 timestep_values.append(
                     {"instance": run.env.instance.get_instance_name(), "income": income, "acc_reward": acc_reward}
                 )
+                incomes.append(income)
+                acc_rewards.append(acc_reward)
+
+            # Add to training data
             self.values.append(timestep_values)
             self.timesteps.append(self.n_calls)
             self.time_stamps.append(perf_counter() - self.start_time)
+
+            # Add to tensorboard
+            self.logger.record("training_data/income", sum(incomes) / len(incomes))
+            self.logger.record("training_data/acc_reward", sum(acc_rewards) / len(acc_rewards))
 
         return True
 

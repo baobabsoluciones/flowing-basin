@@ -13,8 +13,6 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 # rl.plot_training_curve()
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 
-rl = ReinforcementLearning("A1G1O221R1T2", verbose=2)
-print(rl.config.learning_rate)
+rl = ReinforcementLearning("A1G0O12R1T2", verbose=2)
 rl.collect_obs()
-rl.train()
-rl.plot_training_curves_compare(["rl-A1G1O22R1T12"], ["MILP"], values=["income", "acc_reward"])
+

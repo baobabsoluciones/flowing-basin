@@ -1,3 +1,9 @@
+"""
+RL Experiment 1
+This script trains agents with different observation configurations
+in both the normal and simplified environments.
+"""
+
 from flowing_basin.solvers.rl import ReinforcementLearning
 from itertools import product
 

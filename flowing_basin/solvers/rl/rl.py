@@ -482,7 +482,7 @@ class ReinforcementLearning:
         """
 
         if baselines is None:
-            baselines = ['MILP']
+            baselines = ['MILP', 'rl-random', 'rl-greedy']
         if values is None:
             values = ['income']
 

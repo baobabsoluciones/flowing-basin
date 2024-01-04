@@ -206,16 +206,15 @@ class TrainingData(SolutionCore):
 
         return avg_values
 
-    def get_baseline_values(self, instances: list[str] | str, values: str) -> dict[str, float]:
+    def get_baseline_values(self, instances: list[str] | str) -> dict[str, float]:
 
         """
         Average values (final incomes) of each solver across all given instances
 
-        :param values: Can be 'income' or 'acc_reward'
         :param instances:
         """
 
-        if self.data.get("baselines") is None or instances == 'random' or values != 'income':
+        if self.data.get("baselines") is None or instances == 'random':
             return dict()
 
         instances_ids = self.get_instances_ids(instances)
@@ -313,7 +312,9 @@ class TrainingData(SolutionCore):
         ax.set_ylabel("Average income (€)")
         ax.set_title(f"Evaluation")
 
+        plot_baselines = 'income' in values
         plot_twinax = 'acc_reward' in values
+
         if plot_twinax:
             twinax = ax.twinx()
             twinax.set_ylabel("Average accumulated rewards")
@@ -342,11 +343,14 @@ class TrainingData(SolutionCore):
                 )
 
         # Plot baselines as horizontal lines
-        for val in values:
-            baseline_values = self.get_baseline_values(instances, val)
-            baseline_colors = [plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(baseline_values), endpoint=False)]
+        # Use different shades of grey
+        if plot_baselines:
+            baseline_values = self.get_baseline_values(instances)
+            baseline_colors = [
+                plt.get_cmap('gray')(color) for color in np.linspace(0, 1, len(baseline_values), endpoint=False)
+            ]
             for (solver, value), color in zip(baseline_values.items(), baseline_colors):
-                ax.axhline(y=value, color='gray', linestyle='-', label=solver)
+                ax.axhline(y=value, color=color, linestyle='-', label=solver)
 
         ax_lines, ax_labels = ax.get_legend_handles_labels()
         if plot_twinax:

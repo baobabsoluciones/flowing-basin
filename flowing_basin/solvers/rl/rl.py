@@ -527,6 +527,50 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
+    def barchart_training_times(agents_regex_filter: str = '.*'):
+
+        """
+        Show the training time of all agents matching the given regex in a barchart
+        """
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        training_times = ReinforcementLearning.get_training_times(agents)
+
+        plt.bar(agents, training_times)
+        plt.xticks(rotation='vertical')  # Put the agent IDs vertically
+        plt.xlabel('Agents')
+        plt.ylabel('Training time (min)')
+        plt.title('Training time of agents')
+        plt.tight_layout()  # Avoid the agent IDs being cut down at the bottom of the figure
+        plt.show()
+
+    @staticmethod
+    def get_avg_training_time(agents_regex_filter: str = '.*'):
+
+        """
+        Get the average training time of all agents matching the given regex
+        """
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        training_times = ReinforcementLearning.get_training_times(agents)
+
+        return sum(training_times) / len(training_times)
+
+    @staticmethod
+    def get_training_times(agents: list[str]) -> list[float]:
+
+        """
+        Get the training times of the given agents in minutes
+        """
+
+        training_times = []
+        for agent in agents:
+            agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
+            training_data = TrainingData.from_json(os.path.join(agent_folder, "training_data.json"))
+            training_times.append(training_data.get_training_time())
+        return training_times
+
+    @staticmethod
     def get_all_agents(regex_filter: str = '.*') -> list[str]:
 
         """

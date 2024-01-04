@@ -171,6 +171,27 @@ class TrainingData(SolutionCore):
 
         return time_stamps
 
+    def get_training_time(self, agent_id: str = None):
+
+        """
+        Get the training time for the agent in minutes
+        """
+
+        if agent_id is None:
+            agent_ids = self.get_agent_ids()
+            if len(agent_ids) != 1:
+                raise ValueError(
+                    "Cannot get the training time from a TrainingData object with more than one agent "
+                    "if no agent_id is specified."
+                )
+            else:
+                agent_id = agent_ids.pop()
+
+        # Assume the training time is equal to the last time stamp for "fixed" instances
+        time_stamps = self.get_time_stamps(agent_id, instances="fixed")
+        training_time = time_stamps[-1] / 60
+        return training_time
+
     def get_avg_values(self, agent_id: str, instances: list[str] | str, values: str) -> list[float]:
 
         """

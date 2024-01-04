@@ -5,8 +5,8 @@ ACTION = ["A1"]
 GENERAL = ["G0", "G1"]
 OBSERVATION = ["O1", "O12", "O121", "O2", "O22", "O221"]
 REWARD = ["R1"]
-# TRAINING = ["T1", "T2"]
-TRAINING = ["T12", "T22"]
+TRAINING = ["T1", "T2"]
+# TRAINING = ["T12", "T22"]
 
 for action, general, obs, reward, training in product(ACTION, GENERAL, OBSERVATION, REWARD, TRAINING):
     rl = ReinforcementLearning(f"{action}{general}{obs}{reward}{training}", verbose=2)

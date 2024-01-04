@@ -42,8 +42,25 @@ class Projector(ABC):
             for attribute in observation_attributes:
                 self.check_config_attribute(other_config, attribute)
 
-    @abstractmethod
     def project(self, normalized_obs: np.ndarray) -> np.ndarray:
+
+        """
+        Apply the projector to a single observation
+        :param normalized_obs: Array of shape (num_features,)
+        :return: Array of shape (num_components,)
+        """
+
+        return self.transform(normalized_obs.reshape(1, -1)).reshape(-1)
+
+    @abstractmethod
+    def transform(self, normalized_obs: np.ndarray) -> np.ndarray:
+
+        """
+        Apply the projector to many observations
+        :param normalized_obs: Array of shape (num_observations, num_features)
+        :return: Array of shape (num_observations, num_components)
+        """
+
         raise NotImplementedError()
 
     @staticmethod
@@ -142,11 +159,16 @@ class ProjectorList(Projector):
         self.low = last_projector.low
         self.high = last_projector.high
 
-    def project(self, normalized_obs: np.ndarray) -> np.ndarray:
+    def transform(self, normalized_obs: np.ndarray) -> np.ndarray:
+
+        """
+        Apply the projectors sequentially to many observations
+        :param normalized_obs: Array of shape (num_observations, num_features)
+        """
 
         transformed_obs = normalized_obs.copy()
         for projector in self.projectors:
-            transformed_obs = projector.project(transformed_obs)
+            transformed_obs = projector.transform(transformed_obs)
 
         return transformed_obs
 
@@ -159,7 +181,7 @@ class IdentityProjector(Projector):
         # the lower and higher bounds are just the original 0 and 1
         super(IdentityProjector, self).__init__()
 
-    def project(self, normalized_obs: np.ndarray) -> np.ndarray:
+    def transform(self, normalized_obs: np.ndarray) -> np.ndarray:
         return normalized_obs
 
 
@@ -210,8 +232,14 @@ class PCAProjector(Projector):
         # Number of components
         self.n_components = self.model.n_components_
 
-    def project(self, normalized_obs: np.ndarray) -> np.ndarray:
-        transformed_obs = self.model.transform(normalized_obs.reshape(1, -1)).reshape(-1)
+    def transform(self, normalized_obs: np.ndarray) -> np.ndarray:
+
+        """
+        Apply the PCA to many observations
+        :param normalized_obs: Array of shape (num_observations, num_features)
+        """
+
+        transformed_obs = self.model.transform(normalized_obs)
         clipped_obs = np.clip(transformed_obs, self.low, self.high, dtype=np.float32)
         return clipped_obs
 
@@ -232,27 +260,24 @@ class QuantilePseudoDiscretizer(Projector):
         self.num_quantiles = num_quantiles
         self.quantiles = np.quantile(self.observations, q=np.linspace(0, 1, self.num_quantiles), axis=0)
 
-        # Compute the transformed observations
-        self.transformed_observations = np.empty(self.observations.shape)
-        num_features = self.observations.shape[1]
-        for f in range(num_features):
-            self.transformed_observations[:, f] = np.digitize(self.observations[:, f], bins=self.quantiles[:, f])
-        self.transformed_observations = self.transformed_observations / self.num_quantiles
-        self.n_components = num_features
+        # Compute the transformed observations using these quantiles
+        self.transformed_observations = self.transform(self.observations)
+        self.n_components = self.observations.shape[1]
 
-    def project(self, normalized_obs: np.ndarray) -> np.ndarray:
+    def transform(self, normalized_obs: np.ndarray) -> np.ndarray:
 
         """
-        Use the quantiles to pseudo-discretize the observation
+        Use the quantiles to pseudo-discretize many observations
+        :param normalized_obs: Array of shape (num_observations, num_features)
         """
 
         # Get the quantile of each value
-        digitalized_obs = np.array([
-            np.digitize(feature_value, bins=self.quantiles[:, feature_index])
-            for feature_index, feature_value in enumerate(normalized_obs)
-        ], dtype=np.float32)
+        transformed_obs = np.empty(normalized_obs.shape)
+        num_features = normalized_obs.shape[1]
+        for f in range(num_features):
+            transformed_obs[:, f] = np.digitize(normalized_obs[:, f], bins=self.quantiles[:, f])
 
         # Bring back to the range [0, 1]
-        digitalized_obs = digitalized_obs / self.num_quantiles
+        transformed_obs = transformed_obs / self.num_quantiles
 
-        return digitalized_obs
+        return transformed_obs

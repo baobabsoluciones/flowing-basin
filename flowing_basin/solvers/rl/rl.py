@@ -323,7 +323,7 @@ class ReinforcementLearning:
             plt.tight_layout()
             plt.show()
 
-    def plot_histograms_projector(self):
+    def plot_histograms_projector_obs(self):
 
         """
         Plot the histograms of the observations used to train the projector,
@@ -333,38 +333,19 @@ class ReinforcementLearning:
         projector = self.create_projector()
         obs_type = self.config_names['O'][0:3]
 
-        def indicate_variance(proj_type: str):
-            if proj_type not in ReinforcementLearning.static_projectors:
-                return f"({self.config.projector_explained_variance * 100:.0f}%)"
-            else:
-                return ""
-
         self.plot_histogram(projector.observations, projected=False, title=f"Original observations {obs_type}")
-        if isinstance(self.config.projector_type, list):
-            proj_types = []
-            for proj, proj_type in zip(projector.projectors, self.config.projector_type):  # noqa
-                proj_types.append(proj_type)
-                projected = proj_type not in ReinforcementLearning.static_projectors
-                self.plot_histogram(
-                    proj.transformed_observations,
-                    projected=projected,
-                    title=f"Observations {obs_type} after applying {', '.join(proj_types)} {indicate_variance(proj_type)}"
-                )
-        else:
-            projected = self.config.projector_type not in ReinforcementLearning.static_projectors
-            self.plot_histogram(
-                projector.transformed_observations,
-                projected=projected,
-                title=f"Observations {obs_type} after applying {self.config.projector_type} "
-                      f"{indicate_variance(self.config.projector_type)}"
-            )
+        self.plot_histograms_projected(projector.observations, projector, title=str(obs_type))
 
-    def plot_histograms_observations(self):
+    def plot_histograms_agent_obs(self, apply_projections: bool = True):
 
         """
         Plot the histogram of the record of raw, normalized and projected observations experienced by the agent
+
+        :param apply_projections: If False, get the projected observations from "record_projected_obs" in the folder;
+        if True, manually apply the projector to get the projected observations
         """
 
+        obs_normalized = None
         for obs_record in ReinforcementLearning.observation_records:
             obs_folder = os.path.join(self.agent_path, f'{obs_record}.npy')
             try:
@@ -372,13 +353,64 @@ class ReinforcementLearning:
             except FileNotFoundError:
                 warnings.warn(f"Histograms of {obs_record} not plotted. File '{obs_folder}' does not exist.")
                 continue
+
             if obs_record != "record_projected_obs":
                 self.plot_histogram(obs, projected=False, title=obs_record)
-            else:
+
+            # Get the projected observations from the folder
+            if obs_record == "record_projected_obs" and not apply_projections:
                 proj_type = self.config.projector_type
                 proj_type = proj_type if not isinstance(proj_type, list) else ', '.join(proj_type)
                 projected = proj_type not in ReinforcementLearning.static_projectors
                 self.plot_histogram(obs, projected=projected, title=f"{obs_record} ({proj_type})")
+
+            if obs_record == "record_normalized_obs":
+                obs_normalized = obs
+
+        # Manually apply the projections
+        if apply_projections:
+            if obs_normalized is None:
+                warnings.warn("Cannot apply projections because the normalized observations were not found.")
+                return
+            projector = self.create_projector()
+            self.plot_histograms_projected(obs_normalized, projector)
+
+    def plot_histograms_projected(self, obs: np.ndarray, projector: Projector, title: str = None):
+
+        """
+        Plot the histograms of the projections of the given observations
+        """
+
+        if title is None:
+            title = self.agent_name
+
+        def indicate_variance(proj_type: str):
+            if proj_type not in ReinforcementLearning.static_projectors:
+                return f"({self.config.projector_explained_variance * 100:.0f}%)"
+            else:
+                return ""
+
+        if isinstance(self.config.projector_type, list):
+            proj_types = []
+            for proj, proj_type in zip(projector.projectors, self.config.projector_type):  # noqa
+                proj_types.append(proj_type)
+                is_projected = proj_type not in ReinforcementLearning.static_projectors
+                obs = proj.transform(obs)
+                self.plot_histogram(
+                    obs,
+                    projected=is_projected,
+                    title=f"Observations from {title} after applying "
+                          f"{', '.join(proj_types)} {indicate_variance(proj_type)}"
+                )
+        else:
+            is_projected = self.config.projector_type not in ReinforcementLearning.static_projectors
+            obs = projector.project(obs)
+            self.plot_histogram(
+                obs,
+                projected=is_projected,
+                title=f"Observations from {title} after applying "
+                      f"{self.config.projector_type} {indicate_variance(self.config.projector_type)}"
+            )
 
     def run_agent(self, instance: Instance, model: str = "best_model") -> Solution:
 

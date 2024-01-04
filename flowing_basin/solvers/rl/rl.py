@@ -432,6 +432,18 @@ class ReinforcementLearning:
         if values is None:
             values = ['income']
 
+        # Ensure all agents have the same General configuration
+        agents_substrings = [ReinforcementLearning.extract_substrings(agent) for agent in agents]
+        agents_general = {substrings['G'] for substrings in agents_substrings}
+        if len(agents_general) == 1:
+            general_config = agents_general.pop()
+        else:
+            warnings.warn(
+                "Agents have different general configurations. "
+                "The plotted graphs will not be comparable and baselines will not be shown."
+            )
+            general_config = None
+
         training_objects = []
         for agent in agents:
 
@@ -451,9 +463,10 @@ class ReinforcementLearning:
         training = sum(training_objects)
 
         # Add baselines
-        for baseline in ReinforcementLearning.get_all_baselines():
-            if baseline.get_solver() in baselines:
-                training += baseline
+        if general_config is not None:
+            for baseline in ReinforcementLearning.get_all_baselines(general_config):
+                if baseline.get_solver() in baselines:
+                    training += baseline
 
         _, ax = plt.subplots()
         training.plot_training_curves(ax, values=values, instances=instances)
@@ -479,16 +492,19 @@ class ReinforcementLearning:
         return all_models
 
     @staticmethod
-    def get_all_baselines() -> list[Solution]:
+    def get_all_baselines(general_config: str) -> list[Solution]:
 
         """
-        Scan the folder with solutions that act as baselines for the RL agents
+        Scan the folder with solutions that act as baselines for the RL agents.
+
+        :param general_config: General configuration ("G0" or "G1")
         """
 
         sols = []
-        for file in os.listdir(ReinforcementLearning.baselines_folder):
-            full_path = os.path.join(ReinforcementLearning.baselines_folder, file)
+        parent_dir = os.path.join(ReinforcementLearning.baselines_folder, general_config)
+        for file in os.listdir(parent_dir):
             if file.endswith('.json'):
+                full_path = os.path.join(parent_dir, file)
                 sol = Solution.from_json(full_path)
                 sols.append(sol)
         return sols

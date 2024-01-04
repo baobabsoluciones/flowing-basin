@@ -5,5 +5,6 @@ under the same conditions as the RL models for general config `G1`:
  - Flow smoothing parameter set to 0.
  - Startup and limit zone penalty of 0€.
 
-**NOTE**: the solutions will be calculated
-in the pso-rbo-parameters-and-milp-comparison branch.
+**NOTE**: the MILP solutions were calculated
+in the `pso-rbo-parameters-and-milp-comparison` branch
+(which has the most updated version of the MILP model).

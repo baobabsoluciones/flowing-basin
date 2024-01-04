@@ -432,6 +432,28 @@ class Solution(SolutionCore):
 
         return values
 
+    def get_history_gap(self) -> list[float] | None:
+
+        """
+        Get the history of gap values for the MILP solver
+        """
+
+        values = self.data.get("objective_history")
+        if values is not None:
+            values = values["gap_values_pct"]
+
+        return values
+
+    def get_final_gap(self) -> float | None:
+
+        """
+        Get the final gap achieved by the MILP solver
+        """
+
+        gap_values = self.get_history_gap()
+        if gap_values is not None:
+            return gap_values[-1]
+
     def get_volumes_of_dam(self, idx: str) -> list[float] | None:
 
         """

@@ -1,11 +1,11 @@
 """
-RL Baselines
+RL Random and Greedy Baselines
 This script creates the baselines "rl-random" and "rl-greedy".
 """
-import os.path
 
 from flowing_basin.solvers.rl import ReinforcementLearning
 from flowing_basin.core import Instance
+import os.path
 
 instances = [Instance.from_name(f"Percentile{percentile:02}") for percentile in range(0, 110, 10)]
 general_configs = ["G0", "G1"]

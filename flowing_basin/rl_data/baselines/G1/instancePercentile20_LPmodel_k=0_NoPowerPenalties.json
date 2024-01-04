@@ -1102,5 +1102,6 @@
         34.16
     ],
     "solution_datetime": "2024-01-04 13:58",
-    "solver": "MILP"
+    "solver": "MILP",
+    "instance_name": "Percentile20"
 }

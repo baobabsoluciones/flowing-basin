@@ -901,5 +901,6 @@
         110.71
     ],
     "solution_datetime": "2024-01-04 14:00",
-    "solver": "MILP"
+    "solver": "MILP",
+    "instance_name": "Percentile60"
 }

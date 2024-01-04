@@ -425,11 +425,7 @@ class ReinforcementLearning:
         if values is None:
             values = ['income']
 
-        training_data_path = os.path.join(self.agent_path, "training_data.json")
-        training_data = TrainingData.from_json(training_data_path)
-        training_check = training_data.check()
-        if training_check:
-            raise ValueError(f"Problems with the data: {training_check}")
+        training_data = ReinforcementLearning.get_training_data(self.agent_name)
 
         _, ax = plt.subplots()
         training_data.plot_training_curves(ax, values=values, instances=instances)
@@ -487,32 +483,16 @@ class ReinforcementLearning:
             values = ['income']
 
         # Ensure all agents have the same General configuration
-        agents_substrings = [ReinforcementLearning.extract_substrings(agent) for agent in agents]
-        agents_general = {substrings['G'] for substrings in agents_substrings}
-        if len(agents_general) == 1:
-            general_config = agents_general.pop()
-        else:
-            warnings.warn(
-                "Agents have different general configurations. "
-                "The plotted graphs will not be comparable and baselines will not be shown."
-            )
-            general_config = None
+        general_config = ReinforcementLearning.common_general_config(
+            agents, warning_msg="The plotted graphs will not be comparable and baselines will not be shown."
+        )
 
+        # For each agent, create a TrainingData object from "training_data.json"
+        # and then add "evaluations.npz" from the EvalCallback to the TrainingData object
         training_objects = []
         for agent in agents:
-
-            # Create TrainingData object from "training_data.json"
-            agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
-            training_data_path = os.path.join(agent_folder, "training_data.json")
-            training_object = TrainingData.from_json(training_data_path)
-
-            # Add "evaluations.npz" from the EvalCallback to the TrainingData object
-            evaluation_data_path = os.path.join(agent_folder, "evaluations.npz")
-            training_object.add_random_instances(agent, evaluation_data_path)
-
-            training_check = training_object.check()
-            if training_check:
-                raise ValueError(f"Problems with the data: {training_check}")
+            training_object = ReinforcementLearning.get_training_data(agent)
+            training_object.add_random_instances(agent, ReinforcementLearning.get_path_evaluations(agent))
             training_objects.append(training_object)
         training = sum(training_objects)
 
@@ -545,7 +525,69 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
-    def get_avg_training_time(agents_regex_filter: str = '.*'):
+    def print_max_avg_incomes(agents_regex_filter: str = '.*', permutation: str = 'AGORT') -> list[list[str]] | None:
+
+        """
+        Print a CSV table with the maximum average income of each agent
+        and the corresponding average income of the baselines
+        """
+
+        results = [
+            ["method", "max_avg_income"]
+        ]
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        general_config = ReinforcementLearning.common_general_config(
+            agents, warning_msg="Cannot print CSV table (the results are not comparable and no baseline can be found)."
+        )
+        if general_config is None:
+            return
+
+        # Add max average income of agents
+        training_data_agents = []
+        for agent in agents:
+            training_data_agent = ReinforcementLearning.get_training_data(agent)
+            training_data_agents.append(training_data_agent)
+            results.append([agent, training_data_agent.get_max_avg_value()])
+        training_data = sum(training_data_agents)
+
+        # Sort agents according to the given permutation
+        results[1:] = sorted(
+            results[1:],
+            key=lambda item: ReinforcementLearning.multi_level_sorting_key(item[0], permutation=permutation)
+        )
+
+        # Add baseline average incomes
+        baselines = ReinforcementLearning.get_all_baselines(general_config)
+        for baseline in baselines:
+            training_data += baseline
+        for baseline_solver, avg_income in training_data.get_baseline_values().items():
+            results.append([baseline_solver, avg_income])
+
+        # Turn results to string and print them
+        for line in results:
+            line = [f'{int(round(el)):,}' if isinstance(el, float) else el for el in line]
+            print(';'.join(line))
+
+        return results
+
+    @staticmethod
+    def multi_level_sorting_key(agent: str, permutation: str) -> tuple:
+
+        """
+        Breaks down string "rl-A1G0O22R1T1" into the numbers (A) "1", (G) "0", (O) "22", (R) "1", (T) "1",
+        and then sorts these numbers by the given permutation of the letters AGORT.
+
+        :param agent: Input agent ID string
+        :param permutation: Permutation of the config letters, for example 'AGORT' or 'GTOAR'
+        """
+
+        substrings = ReinforcementLearning.extract_substrings(agent)
+        sorted_values = [substrings[letter] for letter in permutation]
+        return tuple(sorted_values)
+
+    @staticmethod
+    def get_avg_training_time(agents_regex_filter: str = '.*') -> float:
 
         """
         Get the average training time of all agents matching the given regex
@@ -563,12 +605,47 @@ class ReinforcementLearning:
         Get the training times of the given agents in minutes
         """
 
-        training_times = []
+        training_times = [ReinforcementLearning]
         for agent in agents:
-            agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
-            training_data = TrainingData.from_json(os.path.join(agent_folder, "training_data.json"))
+            training_data = ReinforcementLearning.get_training_data(agent)
             training_times.append(training_data.get_training_time())
         return training_times
+
+    @staticmethod
+    def get_training_data(agent: str) -> TrainingData:
+
+        """
+        Get the training data of the given agent.
+        """
+
+        agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
+        training_data_path = os.path.join(agent_folder, "training_data.json")
+        training_data = TrainingData.from_json(training_data_path)
+        return training_data
+
+    @staticmethod
+    def get_path_evaluations(agent: str) -> str:
+
+        agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
+        evaluation_data_path = os.path.join(agent_folder, "evaluations.npz")
+        return evaluation_data_path
+
+    @staticmethod
+    def common_general_config(agents: list[str], warning_msg: str = '') -> str | None:
+
+        """
+        Get the general configuration shared by all given agents
+        and give a warning if this is not the case.
+        """
+
+        agents_substrings = [ReinforcementLearning.extract_substrings(agent) for agent in agents]
+        agents_general = {substrings['G'] for substrings in agents_substrings}
+        if len(agents_general) == 1:
+            general_config = agents_general.pop()
+        else:
+            warnings.warn(f"Agents have different general configurations. {warning_msg}")
+            general_config = None
+        return general_config
 
     @staticmethod
     def get_all_agents(regex_filter: str = '.*') -> list[str]:

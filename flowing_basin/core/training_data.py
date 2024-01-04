@@ -18,6 +18,14 @@ class TrainingData(SolutionCore):
         os.path.join(os.path.dirname(__file__), "../schemas/training.json")
     )
 
+    def __init__(self, data: dict):
+
+        super().__init__(data=data)
+
+        check = self.check()
+        if check:
+            raise ValueError(f"Problems with the TrainingData data: {check}")
+
     @classmethod
     def from_dict(cls, data: list) -> "TrainingData":
 
@@ -95,7 +103,7 @@ class TrainingData(SolutionCore):
         """
         Returns 'fixed_instances' or 'random_instances'
 
-        :param: Can be 'fixed', 'random', or a list of specific fixed instances
+        :param instances: Can be 'fixed', 'random', or a list of specific fixed instances
         """
 
         if isinstance(instances, str):
@@ -171,28 +179,63 @@ class TrainingData(SolutionCore):
 
         return time_stamps
 
-    def get_training_time(self, agent_id: str = None):
+    def handle_no_agent_id(self, agent_id: str = None) -> str:
 
         """
-        Get the training time for the agent in minutes
+        Handle the cases where `agent_id` may be None
         """
 
         if agent_id is None:
             agent_ids = self.get_agent_ids()
             if len(agent_ids) != 1:
                 raise ValueError(
-                    "Cannot get the training time from a TrainingData object with more than one agent "
-                    "if no agent_id is specified."
+                    "No agent_id was specified but the TrainingData object has more than one agent."
                 )
             else:
                 agent_id = agent_ids.pop()
+
+        return agent_id
+
+    def handle_no_instances(self, instances: list[str] | str = None) -> list[str] | str:
+
+        """
+        Handle the cases where `instances` may be None. This basically sets a default value.
+
+        :param instances: Can be 'fixed', 'random', or a list of specific fixed instances
+        """
+
+        if instances is None:
+            instances = 'fixed'
+
+        return instances
+
+    def handle_no_values(self, values: str = None) -> str:
+
+        """
+        Handle the cases where `instances` may be None. This basically sets a default value.
+
+        :param values: Can be 'income' or 'acc_reward'
+        """
+
+        if values is None:
+            values = 'income'
+
+        return values
+
+    def get_training_time(self, agent_id: str = None):
+
+        """
+        Get the training time for the agent in minutes
+        """
+
+        agent_id = self.handle_no_agent_id(agent_id)
 
         # Assume the training time is equal to the last time stamp for "fixed" instances
         time_stamps = self.get_time_stamps(agent_id, instances="fixed")
         training_time = time_stamps[-1] / 60
         return training_time
 
-    def get_avg_values(self, agent_id: str, instances: list[str] | str, values: str) -> list[float]:
+    def get_avg_values(self, agent_id: str = None, instances: list[str] | str = None, values: str = None) -> list[float]:
 
         """
         Average values (incomes, accumulated rewards...) of given agent across all instances
@@ -202,6 +245,10 @@ class TrainingData(SolutionCore):
         :param agent_id:
         :param instances:
         """
+
+        agent_id = self.handle_no_agent_id(agent_id)
+        instances = self.handle_no_instances(instances)
+        values = self.handle_no_values(values)
 
         # Check values
         valid_values = {'income', 'acc_reward'}
@@ -227,13 +274,26 @@ class TrainingData(SolutionCore):
 
         return avg_values
 
-    def get_baseline_values(self, instances: list[str] | str) -> dict[str, float]:
+    def get_max_avg_value(self, agent_id: str = None, instances: list[str] | str = None, values: str = None) -> float:
+
+        """
+        Maximum value across all timesteps
+        of the values (incomes, accumulated rewards...) averaged across all instances
+        """
+
+        avg_values = self.get_avg_values(agent_id=agent_id, instances=instances, values=values)
+        max_avg_value = max(avg_values)
+        return max_avg_value
+
+    def get_baseline_values(self, instances: list[str] | str = None) -> dict[str, float]:
 
         """
         Average values (final incomes) of each solver across all given instances
 
         :param instances:
         """
+
+        instances = self.handle_no_instances(instances)
 
         if self.data.get("baselines") is None or instances == 'random':
             return dict()
@@ -249,8 +309,8 @@ class TrainingData(SolutionCore):
     def add_random_instances(self, agent_id: str, path_evaluations: str):
 
         """
-
-
+        Add the evaluations from StableBaselines3 EvalCallback
+        to the TrainingData object
         """
 
         with np.load(path_evaluations) as data:
@@ -271,6 +331,10 @@ class TrainingData(SolutionCore):
             "values": acc_rewards,
             "timesteps": timesteps,
         }
+
+        check = self.check()
+        if check:
+            raise ValueError(f"Problems with the TrainingData data: {check}")
 
     def remove_agent(self, agent_id: str):
 

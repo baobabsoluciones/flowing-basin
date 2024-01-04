@@ -32,7 +32,7 @@ class ReinforcementLearning:
     test_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_test.pickle")
 
     models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
-    baselines_folder = os.path.join(os.path.dirname(__file__), "../../solutions/rl_baselines")
+    baselines_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/baselines")
     tensorboard_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/tensorboard_logs")
 
     observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
@@ -422,7 +422,7 @@ class ReinforcementLearning:
         and the values of the given baseline solvers.
 
         :param agents: List of agent IDs in rl_data/models (e.g., ["rl-A1G0O22R1T0", "rl-A1G0O221R1T0"]).
-        :param baselines: List of solvers in solutions/rl_baselines (e.g., ["MILP", "rl-random", "rl-greedy"]).
+        :param baselines: List of solvers in the baselines folder (e.g., ["MILP", "rl-random", "rl-greedy"]).
         :param values: Can be "income" or "acc_reward".
         :param instances: Can be "fixed", "random", or a list of specific fixed instances.
         """
@@ -462,6 +462,10 @@ class ReinforcementLearning:
     @staticmethod
     def get_all_agents(regex_filter: str = '.*') -> list[str]:
 
+        """
+        Get all agent IDs in alphabetical order, filtering by the given regex pattern
+        """
+
         parent_directory = ReinforcementLearning.models_folder
         all_items = os.listdir(parent_directory)
 
@@ -470,6 +474,7 @@ class ReinforcementLearning:
         all_models = [
             item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and regex.match(item)
         ]
+        all_models.sort()
 
         return all_models
 

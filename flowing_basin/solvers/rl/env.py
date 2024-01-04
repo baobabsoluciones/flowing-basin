@@ -671,7 +671,8 @@ class RLEnvironment(gym.Env):
         last_row_decisions = last_row_impact - impact_buffer
         last_row_info = last_row_impact + info_buffer_end
 
-        data["instance_name"] = instance_name
+        if instance_name is not None:
+            data["instance_name"] = instance_name
 
         # Add time-dependent values to the data
         data["datetime"]["start_information"] = historical_data.loc[

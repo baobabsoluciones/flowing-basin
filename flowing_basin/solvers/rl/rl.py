@@ -5,6 +5,7 @@ from flowing_basin.solvers.rl import (
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
+from stable_baselines3.common.env_checker import check_env
 import numpy as np
 import math
 from matplotlib import pyplot as plt
@@ -70,7 +71,7 @@ class ReinforcementLearning:
         train = RLTrain(
             config=self.config,
             update_observation_record=self.save_obs,
-            projector=self.get_projector(),
+            projector=self.create_projector(),
             path_constants=ReinforcementLearning.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
@@ -187,7 +188,60 @@ class ReinforcementLearning:
 
         return env
 
-    def get_projector(self) -> Projector:
+    def check_train_env(self, max_timestep: int = float('inf'), obs_types: list[str] = None):
+
+        """
+        Check the training environment works as expected
+        """
+
+        if obs_types is None:
+            obs_types = ["raw", "normalized", "projected"]
+
+        env = self.create_train_env()
+
+        # Check the environment does not have any errors according to StableBaselines3
+        check_env(env)
+
+        env.reset()
+        print("\nINSTANCE:")
+        print(env.instance.data)
+        instance_checks = env.instance.check()
+        if instance_checks:
+            raise RuntimeError(f"There are problems with the created instance: {instance_checks}.")
+
+        done = False
+        timestep = 0
+        while not done and timestep < max_timestep:
+            action = env.action_space.sample()
+            obs, reward, done, _, info = env.step(action)
+            print(f"\n---- Timestep {timestep} ----")
+            print("\nACTION:", action)
+            print("FLOW:", info['flow'])
+            print("\nREWARD:", reward)
+            print("REWARD DETAILS:", env.get_reward_details())
+            for obs_type in obs_types:
+                print(f"\n{obs_type} OBSERVATION:".upper())
+                obs_to_print = info[f'{obs_type}_obs'] if obs_type != 'projected' else obs
+                env.print_obs(obs_to_print)
+
+            timestep += 1
+
+    def create_train_env(self) -> RLEnvironment:
+
+        """
+        Create the training environment for the agent
+        """
+
+        env = RLEnvironment(
+            config=self.config,
+            projector=self.create_projector(),
+            path_constants=ReinforcementLearning.constants_path,
+            path_historical_data=ReinforcementLearning.train_data_path,
+            update_observation_record=self.save_obs
+        )
+        return env
+
+    def create_projector(self) -> Projector:
 
         """
         Get the projector corresponding to the given configuration,
@@ -276,7 +330,7 @@ class ReinforcementLearning:
         as well as these observations after being transformed by this projector.
         """
 
-        projector = self.get_projector()
+        projector = self.create_projector()
         obs_type = self.config_names['O'][0:3]
 
         def indicate_variance(proj_type: str):
@@ -335,7 +389,7 @@ class ReinforcementLearning:
         run = RLRun(
             config=self.config,
             instance=instance,
-            projector=self.get_projector(),
+            projector=self.create_projector(),
             solver_name=self.agent_name
         )
         model_path = os.path.join(self.agent_path, f"{model}.zip")
@@ -356,7 +410,7 @@ class ReinforcementLearning:
         run = RLRun(
             config=self.config,
             instance=instance,
-            projector=self.get_projector(),
+            projector=self.create_projector(),
             solver_name=f"rl-{policy_name}"
         )
         run.solve(policy_name)

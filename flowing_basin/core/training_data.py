@@ -313,18 +313,19 @@ class TrainingData(SolutionCore):
         ax.set_ylabel("Average income (€)")
         ax.set_title(f"Evaluation")
 
-        twinax = ax.twinx()
-        twinax.set_ylabel("Average accumulated rewards")
+        plot_twinax = 'acc_reward' in values
+        if plot_twinax:
+            twinax = ax.twinx()
+            twinax.set_ylabel("Average accumulated rewards")
 
         colors = [plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(self.get_agent_ids()), endpoint=False)]
         agent_colors = [
             (agent_id, color)
             for agent_id, color in zip(self.get_agent_ids(), colors)
         ]
-        vals_linestyles_axes = [
-            ("income", '-', ax),
-            ("acc_reward", '--', twinax)
-        ]
+        vals_linestyles_axes = [("income", '-', ax)]
+        if plot_twinax:
+            vals_linestyles_axes.append(("acc_reward", '--', twinax))  # noqa
 
         # Plot learning curve of agents
         for agent_id, color in agent_colors:
@@ -348,5 +349,8 @@ class TrainingData(SolutionCore):
                 ax.axhline(y=value, color='gray', linestyle='-', label=solver)
 
         ax_lines, ax_labels = ax.get_legend_handles_labels()
-        twinax_lines, twinax_labels = twinax.get_legend_handles_labels()
-        ax.legend(ax_lines + twinax_lines, ax_labels + twinax_labels, loc=0)
+        if plot_twinax:
+            twinax_lines, twinax_labels = twinax.get_legend_handles_labels()
+            ax.legend(ax_lines + twinax_lines, ax_labels + twinax_labels, loc=0)
+        else:
+            ax.legend(ax_lines, ax_labels, loc=0)

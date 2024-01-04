@@ -326,69 +326,6 @@ class ReinforcementLearning:
                 projected = proj_type not in ReinforcementLearning.static_projectors
                 self.plot_histogram(obs, projected=projected, title=f"{obs_record} ({proj_type})")
 
-    def plot_training_curve(self, values: list[str] = None, instances: str | list[str] = 'fixed'):
-
-        """
-        Plot the training curve of the agent
-        """
-
-        if values is None:
-            values = ['income']
-
-        training_data_path = os.path.join(self.agent_path, "training_data.json")
-        training_data = TrainingData.from_json(training_data_path)
-        training_check = training_data.check()
-        if training_check:
-            raise ValueError(f"Problems with the data: {training_check}")
-
-        _, ax = plt.subplots()
-        training_data.plot_training_curves(ax, values=values, instances=instances)
-        plt.show()
-
-    def plot_training_curves_compare(
-            self, agents: list[str], baselines: list[str], values: list[str] = None, instances: str | list[str] = 'fixed'
-    ):
-
-        """
-        Compare the training curves of the given agents
-        and the values of the given baseline solvers
-
-        :param agents: List of agent IDs in rl_data/models (e.g., ["rl-A1G0O22R1T0", "rl-A1G0O221R1T0"]).
-        :param baselines: List of solvers in solutions/rl_baselines (e.g., ["MILP", "rl-random", "rl-greedy"]).
-        """
-
-        if values is None:
-            values = ['income']
-
-        training_objects = []
-
-        for agent in [self.agent_name, *agents]:
-
-            # Create TrainingData object from "training_data.json"
-            agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
-            training_data_path = os.path.join(agent_folder, "training_data.json")
-            training_object = TrainingData.from_json(training_data_path)
-
-            # Add "evaluations.npz" from the EvalCallback to the TrainingData object
-            evaluation_data_path = os.path.join(agent_folder, "evaluations.npz")
-            training_object.add_random_instances(agent, evaluation_data_path)
-
-            training_check = training_object.check()
-            if training_check:
-                raise ValueError(f"Problems with the data: {training_check}")
-            training_objects.append(training_object)
-
-        training = sum(training_objects)
-
-        # Add baselines
-        for baseline in ReinforcementLearning.scan_baselines():
-            if baseline.get_solver() in baselines:
-                training += baseline
-
-        _, ax = plt.subplots()
-        training.plot_training_curves(ax, values=values, instances=instances)
-        plt.show()
-
     def run_agent(self, instance: Instance, model: str = "best_model") -> Solution:
 
         """
@@ -425,8 +362,119 @@ class ReinforcementLearning:
         run.solve(policy_name)
         return run.solution
 
+    def plot_training_curve(self, values: list[str] = None, instances: str | list[str] = 'fixed'):
+
+        """
+        Plot the training curve of the agent
+        """
+
+        if values is None:
+            values = ['income']
+
+        training_data_path = os.path.join(self.agent_path, "training_data.json")
+        training_data = TrainingData.from_json(training_data_path)
+        training_check = training_data.check()
+        if training_check:
+            raise ValueError(f"Problems with the data: {training_check}")
+
+        _, ax = plt.subplots()
+        training_data.plot_training_curves(ax, values=values, instances=instances)
+        plt.show()
+
+    def plot_training_curves_compare(
+            self, agents: list[str], baselines: list[str] = None,
+            values: list[str] = None, instances: str | list[str] = 'fixed'
+    ):
+
+        """
+        Compare the training curve of the agent
+        with the training curve of the given agents
+        and the values of the given baseline solvers
+        """
+
+        ReinforcementLearning.plot_training_curves(
+            agents=[self.agent_name, *agents], baselines=baselines, values=values, instances=instances
+        )
+
     @staticmethod
-    def scan_baselines() -> list[Solution]:
+    def plot_all_training_curves(
+            agents_regex_filter: str = '.*', baselines: list[str] = None,
+            values: list[str] = None, instances: str | list[str] = 'fixed'
+    ):
+
+        """
+        Plot the training curve of all agents matching the given regex pattern
+        """
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        ReinforcementLearning.plot_training_curves(
+            agents=agents, baselines=baselines, values=values, instances=instances
+        )
+
+    @staticmethod
+    def plot_training_curves(
+            agents: list[str], baselines: list[str] = None,
+            values: list[str] = None, instances: str | list[str] = 'fixed'
+    ):
+
+        """
+        Plot the training curves of the given agents
+        and the values of the given baseline solvers.
+
+        :param agents: List of agent IDs in rl_data/models (e.g., ["rl-A1G0O22R1T0", "rl-A1G0O221R1T0"]).
+        :param baselines: List of solvers in solutions/rl_baselines (e.g., ["MILP", "rl-random", "rl-greedy"]).
+        :param values: Can be "income" or "acc_reward".
+        :param instances: Can be "fixed", "random", or a list of specific fixed instances.
+        """
+
+        if baselines is None:
+            baselines = ['MILP']
+        if values is None:
+            values = ['income']
+
+        training_objects = []
+        for agent in agents:
+
+            # Create TrainingData object from "training_data.json"
+            agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
+            training_data_path = os.path.join(agent_folder, "training_data.json")
+            training_object = TrainingData.from_json(training_data_path)
+
+            # Add "evaluations.npz" from the EvalCallback to the TrainingData object
+            evaluation_data_path = os.path.join(agent_folder, "evaluations.npz")
+            training_object.add_random_instances(agent, evaluation_data_path)
+
+            training_check = training_object.check()
+            if training_check:
+                raise ValueError(f"Problems with the data: {training_check}")
+            training_objects.append(training_object)
+        training = sum(training_objects)
+
+        # Add baselines
+        for baseline in ReinforcementLearning.get_all_baselines():
+            if baseline.get_solver() in baselines:
+                training += baseline
+
+        _, ax = plt.subplots()
+        training.plot_training_curves(ax, values=values, instances=instances)
+        plt.show()
+
+    @staticmethod
+    def get_all_agents(regex_filter: str = '.*') -> list[str]:
+
+        parent_directory = ReinforcementLearning.models_folder
+        all_items = os.listdir(parent_directory)
+
+        # Filter to take only the directories and those matching the regex pattern
+        regex = re.compile(regex_filter)
+        all_models = [
+            item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and regex.match(item)
+        ]
+
+        return all_models
+
+    @staticmethod
+    def get_all_baselines() -> list[Solution]:
 
         """
         Scan the folder with solutions that act as baselines for the RL agents

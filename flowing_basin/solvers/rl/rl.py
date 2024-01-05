@@ -91,7 +91,9 @@ class ReinforcementLearning:
                 obs_record_path = os.path.join(self.agent_path, f'{obs_record}.npy')
                 obs = np.array(getattr(train.train_env, obs_record))
                 np.save(obs_record_path, obs)
-                print(f"Saved {obs_record} with {obs.shape} observations in file '{obs_record_path}'.")
+                if self.verbose >= 1:
+                    print(f"Saved {obs_record} with {obs.shape} observations in file '{obs_record_path}'.")
+
         return train
 
     def collect_obs(self) -> RLEnvironment | None:

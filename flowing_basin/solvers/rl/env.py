@@ -146,12 +146,6 @@ class RLEnvironment(gym.Env):
         self.river_basin.reset(self.instance)
         self._reset_variables()
 
-        # Print to debug...
-        # new_start, _ = self.instance.get_start_end_datetimes()
-        # print(f"Environment reset. New episode's starting datetime: {new_start.strftime('%Y-%m-%d %H:%M')}")
-        # info_horizon = self.instance.get_information_horizon()
-        # print(f"New episode's information horizon: {info_horizon}")
-
         raw_obs = self.get_obs_array()
         normalized_obs = self.normalize(raw_obs)
         projected_obs = self.project(normalized_obs)

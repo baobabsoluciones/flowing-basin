@@ -49,7 +49,6 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                 # New best model, you could save the agent here
                 if mean_reward > self.best_mean_reward:
                     self.best_mean_reward = mean_reward
-                    # Example for saving best model
                     if self.verbose >= 1:
                         print(f"Saving new best model to {self.save_path}")
                     self.model.save(self.save_path)

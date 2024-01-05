@@ -58,13 +58,16 @@ class ReinforcementLearning:
             ReinforcementLearning.observation_records_folder, self.config_names["O"][0:3]
         )
 
-    def train(self) -> RLTrain | None:
+    def train(self, save_agent: bool = True) -> RLTrain | None:
 
         """
         Train an agent with the given configuration.
+
+        :param save_agent: Whether to save the agent or not
+        (not saving the agent may be interesting for testing purposes).
         """
 
-        if os.path.exists(self.agent_path):
+        if os.path.exists(self.agent_path) and save_agent:
             warnings.warn(f"Training aborted. Folder '{self.agent_path}' already exists.")
             return
 
@@ -75,8 +78,8 @@ class ReinforcementLearning:
             path_constants=ReinforcementLearning.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
-            path_folder=self.agent_path,
-            path_tensorboard=ReinforcementLearning.tensorboard_folder,
+            path_folder=self.agent_path if save_agent else None,
+            path_tensorboard=ReinforcementLearning.tensorboard_folder if save_agent else None,
             experiment_id=self.agent_name,
             verbose=self.verbose
         )
@@ -86,7 +89,7 @@ class ReinforcementLearning:
         train.solve()
         if self.verbose >= 1:
             print(f"Trained for {self.config.num_timesteps} timesteps in {perf_counter() - start}s.")
-        if self.save_obs:
+        if self.save_obs and save_agent:
             for obs_record in ReinforcementLearning.observation_records:
                 obs_record_path = os.path.join(self.agent_path, f'{obs_record}.npy')
                 obs = np.array(getattr(train.train_env, obs_record))

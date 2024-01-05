@@ -10,6 +10,23 @@ import os
 
 class RLTrain(Experiment):
 
+    """
+    Class to train the RL agent
+
+    :param config:
+    :param projector:
+    :param path_constants:
+    :param path_train_data:
+    :param path_test_data:
+    :param path_folder: Folder in which to save the agent and its information. If None, the agent will not be saved.
+    :param path_tensorboard: Folder with the tensorboard logs in which to add the agent log info. If None, no logging.
+    :param update_observation_record:
+    :param instance:
+    :param solution:
+    :param experiment_id:
+    :param verbose:
+    """
+
     def __init__(
             self,
             config: RLConfiguration,
@@ -17,7 +34,7 @@ class RLTrain(Experiment):
             path_constants: str,
             path_train_data: str,
             path_test_data: str,
-            path_folder: str = '.',
+            path_folder: str = None,
             path_tensorboard: str = None,
             paths_power_models: dict[str, str] = None,
             update_observation_record: bool = False,
@@ -34,6 +51,10 @@ class RLTrain(Experiment):
         self.verbose = verbose
         self.config = config
         self.projector = projector
+
+        self.path_folder = path_folder
+        if self.path_folder is not None:
+            os.makedirs(self.path_folder, exist_ok=True)
         self.path_tensorboard = path_tensorboard
 
         # Train environment
@@ -46,10 +67,10 @@ class RLTrain(Experiment):
             paths_power_models=paths_power_models,
             instance=instance,
         )
-        self.path_folder = path_folder
-        os.makedirs(self.path_folder, exist_ok=True)
-        filepath_log = os.path.join(self.path_folder, ".")
-        self.train_env = Monitor(self.train_env, filename=filepath_log)
+        if self.path_folder is not None:
+            self.train_env = Monitor(self.train_env, filename=os.path.join(self.path_folder, "."))
+        else:
+            self.train_env = Monitor(self.train_env)
 
         # Model (RL agent)
         self.model = None
@@ -131,7 +152,7 @@ class RLTrain(Experiment):
                 verbose=self.verbose
             )
             callbacks.append(eval_callback)
-        if self.config.checkpoint_callback:
+        if self.config.checkpoint_callback and self.path_folder is not None:
             checkpoint_callback = SaveOnBestTrainingRewardCallback(
                 check_freq=self.config.checkpoint_timesteps_freq,
                 log_dir=self.path_folder,
@@ -148,13 +169,14 @@ class RLTrain(Experiment):
         )
 
         # Save model
-        filepath_agent = os.path.join(self.path_folder, "model.zip")
-        self.model.save(filepath_agent)
-        if self.verbose >= 1:
-            print(f"Created ZIP file '{filepath_agent}'.")
+        if self.path_folder is not None:
+            filepath_agent = os.path.join(self.path_folder, "model.zip")
+            self.model.save(filepath_agent)
+            if self.verbose >= 1:
+                print(f"Created ZIP file '{filepath_agent}'.")
 
         # Save training data
-        if self.config.training_data_callback:
+        if self.config.training_data_callback and self.path_folder is not None:
             self.training_data = training_data_callback.training_data  # noqa
             filepath_training = os.path.join(self.path_folder, "training_data.json")
             self.training_data.to_json(filepath_training)

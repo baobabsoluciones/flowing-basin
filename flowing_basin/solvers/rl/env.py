@@ -124,6 +124,8 @@ class RLEnvironment(gym.Env):
 
         # Functions to calculate features
         self.features_functions = self.get_features_functions()
+        self.features_max_functions = self.get_features_max_functions()
+        self.features_min_functions = self.get_features_min_functions()
 
         # Observation indeces
         self.obs_indeces = self.config.get_obs_indices()
@@ -204,75 +206,69 @@ class RLEnvironment(gym.Env):
             self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
         ])
 
-    def get_features_min_values(self) -> dict[str, dict[str, float | int]]:
+    def get_features_min_functions(self) -> dict[str, Callable[[str], float | int]]:
 
         """
-        Get the minimum values of the features in the observations
+        Functions that give the minimum values of the features in the observations
         according to the current instance
         """
 
         min_values = {
-            dam_id: {
-                "past_vols": self.instance.get_min_vol_of_dam(dam_id),
-                "past_flows": 0.,
-                "past_variations": - self.instance.get_max_flow_of_channel(dam_id),
-                "past_prices": 0.,
-                "future_prices": 0.,
-                "past_inflows": 0.,
-                "future_inflows": 0.,
-                "past_turbined": 0.,
-                "past_groups": 0,
-                "past_powers": 0.,
-                "past_clipped": (
-                    0. if not self.config.flow_smoothing_clip
-                    else - self.instance.get_max_flow_of_channel(dam_id)
-                ),
-                "past_periods": (
-                    - self.config.num_steps_sight["past_periods", dam_id] if "past_periods" in self.config.features
-                    else None
-                )
-            }
-            for dam_id in self.instance.get_ids_of_dams()
+            "past_vols": lambda dam_id: self.instance.get_min_vol_of_dam(dam_id),
+            "past_flows": lambda dam_id: 0.,
+            "past_variations": lambda dam_id: - self.instance.get_max_flow_of_channel(dam_id),
+            "past_prices": lambda dam_id: 0.,
+            "future_prices": lambda dam_id: 0.,
+            "past_inflows": lambda dam_id: 0.,
+            "future_inflows": lambda dam_id: 0.,
+            "past_turbined": lambda dam_id: 0.,
+            "past_groups": lambda dam_id: 0,
+            "past_powers": lambda dam_id: 0.,
+            "past_clipped": lambda dam_id: (
+                0. if not self.config.flow_smoothing_clip
+                else - self.instance.get_max_flow_of_channel(dam_id)
+            ),
+            "past_periods": lambda dam_id: (
+                - self.config.num_steps_sight["past_periods", dam_id] if "past_periods" in self.config.features
+                else None
+            )
         }
 
         return min_values
 
-    def get_features_max_values(self) -> dict[str, dict[str, float | int]]:
+    def get_features_max_functions(self) -> dict[str, Callable[[str], float | int]]:
 
         """
-        Get the maximum values of the features in the observations
+        Functions that give the maximum values of the features in the observations
         according to the current instance
         """
 
         max_values = {
-            dam_id: {
-                "past_vols": self.instance.get_max_vol_of_dam(dam_id),
-                "past_flows": self.instance.get_max_flow_of_channel(dam_id),
-                "past_variations": self.instance.get_max_flow_of_channel(dam_id),
-                "past_prices": self.instance.get_largest_price(),
-                "future_prices": self.instance.get_largest_price(),
-                "past_inflows": (
-                    self.instance.get_max_unregulated_flow_of_dam(dam_id)
-                    if self.instance.get_order_of_dam(dam_id) > 1
-                    else self.instance.get_max_unregulated_flow_of_dam(dam_id) + self.instance.get_max_incoming_flow()
-                ),
-                "future_inflows": (
-                    self.instance.get_max_unregulated_flow_of_dam(dam_id)
-                    if self.instance.get_order_of_dam(dam_id) > 1
-                    else self.instance.get_max_unregulated_flow_of_dam(dam_id) + self.instance.get_max_incoming_flow()
-                ),
-                "past_turbined": self.instance.get_max_flow_of_channel(dam_id),
-                "past_groups": self.instance.get_max_num_power_groups(dam_id),
-                "past_powers": self.instance.get_max_power_of_power_group(dam_id),
-                "past_clipped": self.instance.get_max_flow_of_channel(dam_id),
-                "past_periods": self.instance.get_largest_impact_horizon()
-            }
-            for dam_id in self.instance.get_ids_of_dams()
+            "past_vols": lambda dam_id: self.instance.get_max_vol_of_dam(dam_id),
+            "past_flows": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
+            "past_variations": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
+            "past_prices": lambda dam_id: self.instance.get_largest_price(),
+            "future_prices": lambda dam_id: self.instance.get_largest_price(),
+            "past_inflows": lambda dam_id: (
+                self.instance.get_max_unregulated_flow_of_dam(dam_id)
+                if self.instance.get_order_of_dam(dam_id) > 1
+                else self.instance.get_max_unregulated_flow_of_dam(dam_id) + self.instance.get_max_incoming_flow()
+            ),
+            "future_inflows": lambda dam_id: (
+                self.instance.get_max_unregulated_flow_of_dam(dam_id)
+                if self.instance.get_order_of_dam(dam_id) > 1
+                else self.instance.get_max_unregulated_flow_of_dam(dam_id) + self.instance.get_max_incoming_flow()
+            ),
+            "past_turbined": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
+            "past_groups": lambda dam_id: self.instance.get_max_num_power_groups(dam_id),
+            "past_powers": lambda dam_id: self.instance.get_max_power_of_power_group(dam_id),
+            "past_clipped": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
+            "past_periods": lambda dam_id: self.instance.get_largest_impact_horizon()
         }
 
         return max_values
 
-    def get_feature_past_clipped(self, dam_id: str) -> np.array:
+    def get_feature_past_clipped(self, dam_id: str) -> np.ndarray:
 
         """
         Get the amount of flow by which the past actions were clipped
@@ -298,7 +294,7 @@ class RLEnvironment(gym.Env):
 
         return flow_clipping
 
-    def get_features_functions(self) -> dict[str, Callable[[str], np.array]]:
+    def get_features_functions(self) -> dict[str, Callable[[str], np.ndarray]]:
 
         """
         Map each feature to a function that returns its value for each dam
@@ -402,7 +398,38 @@ class RLEnvironment(gym.Env):
 
         return features_functions
 
-    def get_obs_array(self, values: str = None) -> np.array:
+    def get_feature(self, feature: str, dam_id: str, value: str = None):
+
+        """
+        Returns the value of the given feature in the given dam
+
+        :param feature:
+        :param dam_id:
+        :param value: Indicates which value to obtain -
+            'max' for the max value, 'min' for the min value, and None for the current value
+        """
+
+        if value == 'min':
+            return np.repeat(
+                self.features_min_functions[feature](dam_id), self.config.num_steps_sight[feature, dam_id]
+            )
+        elif value == 'max':
+            return np.repeat(
+                self.features_max_functions[feature](dam_id), self.config.num_steps_sight[feature, dam_id]
+            )
+        else:
+            if not self.config.obs_random or feature in self.config.obs_random_features_excluded:
+                # Actual value
+                return self.features_functions[feature](dam_id)
+            else:
+                # Random value
+                return np.random.uniform(
+                    low=self.features_min_functions[feature](dam_id),
+                    high=self.features_max_functions[feature](dam_id),
+                    size=self.config.num_steps_sight[feature, dam_id]
+                )
+
+    def get_obs_array(self, values: str = None) -> np.ndarray:
 
         """
         Returns the observation array of the agent for the current state of the river basin
@@ -412,24 +439,11 @@ class RLEnvironment(gym.Env):
         :return: Raw observation array
         """
 
-        if values == 'min':
-            features_min_values = self.get_features_min_values()
-            get_value = lambda feature, dam_id: np.repeat(
-                features_min_values[dam_id][feature], self.config.num_steps_sight[feature, dam_id]
-            )
-        elif values == 'max':
-            features_max_values = self.get_features_max_values()
-            get_value = lambda feature, dam_id: np.repeat(
-                features_max_values[dam_id][feature], self.config.num_steps_sight[feature, dam_id]
-            )
-        else:
-            get_value = lambda feature, dam_id: self.features_functions[feature](dam_id)
-
         if self.config.feature_extractor == 'MLP':
             # Observation is a 1d array
             raw_obs = np.concatenate([
                 np.concatenate([
-                    get_value(feature, dam_id)
+                    self.get_feature(feature, dam_id, values)
                     for feature in self.config.features
                     if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
                 ])
@@ -441,7 +455,7 @@ class RLEnvironment(gym.Env):
             # So observation is now a 3d array
             raw_obs = np.transpose(np.array([
                 [
-                    get_value(feature, dam_id)
+                    self.get_feature(feature, dam_id, values)
                     for feature in self.config.features
                 ]
                 for dam_id in self.instance.get_ids_of_dams()
@@ -454,7 +468,7 @@ class RLEnvironment(gym.Env):
 
         return raw_obs
 
-    def normalize(self, raw_obs: np.array) -> np.array:
+    def normalize(self, raw_obs: np.ndarray) -> np.ndarray:
 
         """
         Returns the normalization of the given observation of the agent
@@ -468,7 +482,7 @@ class RLEnvironment(gym.Env):
 
         return normalized_obs
 
-    def project(self, normalized_obs: np.array) -> np.array:
+    def project(self, normalized_obs: np.ndarray) -> np.ndarray:
 
         """
         Returns the projection of the given normalized observation of the agent
@@ -565,7 +579,7 @@ class RLEnvironment(gym.Env):
 
         return reward
 
-    def step(self, action: np.array) -> tuple[np.ndarray, float, bool, bool, dict]:
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
 
         """
         Updates the river basin with the given action

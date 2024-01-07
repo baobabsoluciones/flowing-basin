@@ -13,6 +13,7 @@ import os
 import re
 import warnings
 from time import perf_counter
+from datetime import datetime
 
 
 class ReinforcementLearning:
@@ -38,6 +39,10 @@ class ReinforcementLearning:
 
     observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
     static_projectors = ["identity", "QuantilePseudoDiscretizer"]
+    obs_basic_type_length = 2  # Length of the observation code that indicates the basic type (e.g., "O121" -> "O1")
+    obs_type_length = 3  # Length of the observation code that indicates the type (e.g., "O121" -> "O12")
+    obs_collection_pos = 2  # Position of the digit that MAY indicate a collection method (e.g., "O12" -> "2")
+    obs_collection_codes = {'1', '2'}  # Digits that DO indicate a collection method (e.g., not "0" in "O10")
 
     def __init__(self, config_name: str, verbose: int = 1, save_obs: bool = True):
 
@@ -116,18 +121,25 @@ class ReinforcementLearning:
             )
             return
 
-        # The agent must be executed using no projector
-        # This is done taking only the first 2 values of the observation config name (e.g., "O211" -> "O2")
-        reduced_config_names = self.config_names.copy()
-        reduced_config_names["O"] = reduced_config_names["O"][0:2]
-        reduced_config = self.get_config(reduced_config_names)
-        reduced_agent_name = f"rl-{''.join(reduced_config_names.values())}"
-
         # Get the collection method, indicated by the second digit in the observation name (e.g., "O211" -> "1")
+        collection_code = self.config_names["O"][ReinforcementLearning.obs_collection_pos]
+        if collection_code not in ReinforcementLearning.obs_collection_codes:
+            warnings.warn(
+                f"Observation collection aborted. "
+                f"The observation config name does not indicate a collection method (second digit is not '1' or '2')."
+            )
+            return
         collection_method = {
             "1": "training",
             "2": "random"
-        }[self.config_names["O"][2]]
+        }[collection_code]
+
+        # The agent must be executed using no projector
+        # This is done taking only the first 2 values of the observation config name (e.g., "O211" -> "O2")
+        reduced_config_names = self.config_names.copy()
+        reduced_config_names["O"] = reduced_config_names["O"][:ReinforcementLearning.obs_basic_type_length]
+        reduced_config = self.get_config(reduced_config_names)
+        reduced_agent_name = f"rl-{''.join(reduced_config_names.values())}"
 
         if collection_method == 'training':
             if self.verbose >= 1:
@@ -193,10 +205,14 @@ class ReinforcementLearning:
 
         return env
 
-    def check_train_env(self, max_timestep: int = float('inf'), obs_types: list[str] = None):
+    def check_train_env(self, max_timestep: int = float('inf'), obs_types: list[str] = None, initial_date: str = None):
 
         """
         Check the training environment works as expected
+
+        :param max_timestep: Number of timesteps for which to run the environment (default, until the episode finishes)
+        :param obs_types: Observation types to show (default, all of them: "raw", "normalized", and "projected")
+        :param initial_date: Initial date of the instance of the environment, in format '%Y-%m-%d %H:%M' (default, random)
         """
 
         if obs_types is None:
@@ -207,7 +223,10 @@ class ReinforcementLearning:
         # Check the environment does not have any errors according to StableBaselines3
         check_env(env)
 
-        env.reset()
+        if initial_date is not None:
+            initial_date = datetime.strptime(initial_date, '%Y-%m-%d %H:%M')
+
+        env.reset(initial_row=initial_date)
         print("\nINSTANCE:")
         print(env.instance.data)
         instance_checks = env.instance.check()
@@ -336,7 +355,7 @@ class ReinforcementLearning:
         """
 
         projector = self.create_projector()
-        obs_type = self.config_names['O'][0:3]
+        obs_type = self.config_names['O'][:ReinforcementLearning.obs_type_length]
 
         self.plot_histogram(projector.observations, projected=False, title=f"Original observations {obs_type}")
         self.plot_histograms_projected(projector.observations, projector, title=str(obs_type))
@@ -749,8 +768,11 @@ class ReinforcementLearning:
         for config_letter, config_name in config_names.items():
             config_folder, config_class = ReinforcementLearning.configs_info[config_letter]
             if config_letter == "O" and len(config_name) > 2:
-                # Replace the observation collection method by a generic `X` (e.g., "O211" -> "O2X1")
-                config_name = config_name[:2] + "X" + config_name[3:]
+                collection_pos = ReinforcementLearning.obs_collection_pos
+                maybe_collection_code = config_name[collection_pos]
+                if maybe_collection_code in ReinforcementLearning.obs_collection_codes:
+                    # Replace the observation collection method for projector by a generic `X` (e.g., "O211" -> "O2X1")
+                    config_name = config_name[:collection_pos] + "X" + config_name[collection_pos + 1:]
             config_path = os.path.join(config_folder, config_name + ".json")
             configs.append(config_class.from_json(config_path))
         config = RLConfiguration.from_components(configs)

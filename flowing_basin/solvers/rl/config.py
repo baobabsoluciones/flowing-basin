@@ -1,5 +1,5 @@
 from flowing_basin.core import BaseConfiguration, Configuration
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import json
 import warnings
 import numpy as np
@@ -24,22 +24,27 @@ class GeneralConfiguration(Configuration):  # noqa
             raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")
 
 
+# noinspection PyDataclass
 @dataclass(kw_only=True)
 class ObservationConfiguration(BaseConfiguration):  # noqa
 
     features: list[str]  # Features included in the observation
     unique_features: list[str]  # Features that should NOT be repeated for each dam
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
-    projector_type: str | list[str]  # Type of dimensionality reduction to apply for the observations (or identity)
     feature_extractor: str  # Either MLP or CNN or mixed
+
+    # Projector
+    projector_type: str | list[str]  # Type of dimensionality reduction to apply for the observations (or identity)
+    projector_bound: tuple[int, int] | str = None  # Bounds of the projected observations
+    projector_extrapolation: float = None  # Percentage of the bounds that are allowed to be exceeded by the projector
+    projector_explained_variance: float = None
+
+    # Randomization (for testing purposes)
+    obs_random: bool = False
+    obs_random_features_excluded: list[str] = field(default_factory=list)  # By default, an empty list
 
     # Data required to post-process config
     dam_ids: list[str]
-
-    # Optional RL environment's observation options
-    projector_bound: tuple[int, int] | str = None  # bounds of the projected observations
-    projector_extrapolation: float = None  # percentage of the bounds that are allowed to be exceeded by the projector
-    projector_explained_variance: float = None
 
     def to_dict(self) -> dict:
 
@@ -182,6 +187,12 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
             raise ValueError(
                 f"Invalid value for 'feature_extractor': {self.feature_extractor}. "
                 f"Allowed values are {valid_extractors}"
+            )
+
+        if len(self.obs_random_features_excluded) > 0 and not self.obs_random:
+            warnings.warn(
+                f"There are features excluded from the randomization: {self.obs_random_features_excluded}, "
+                f"but randomization is not turned on. This will be ignored."
             )
 
 

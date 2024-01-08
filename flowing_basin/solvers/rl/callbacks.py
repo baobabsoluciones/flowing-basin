@@ -104,7 +104,7 @@ class TrainingDataCallback(BaseCallback):
                 income = run.solution.get_objective_function()
                 acc_reward = sum(info['rewards'])
                 timestep_values.append(
-                    {"instance": run.env.instance.get_instance_name(), "income": income, "acc_reward": acc_reward}
+                    {"instance": run.instance.get_instance_name(), "income": income, "acc_reward": acc_reward}
                 )
                 incomes.append(income)
                 acc_rewards.append(acc_reward)

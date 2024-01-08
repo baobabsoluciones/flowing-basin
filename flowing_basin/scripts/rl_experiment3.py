@@ -10,10 +10,12 @@ ACTION = ["A1", "A110", "A111", "A112", "A113"]
 GENERAL = ["G0", "G1"]
 OBSERVATION = ["O2"]
 REWARD = ["R1"]
-TRAINING = ["T1"]
-# TRAINING = ["T12"]
 
-for action, general, obs, reward, training in product(ACTION, GENERAL, OBSERVATION, REWARD, TRAINING):
+for action, general, obs, reward in product(ACTION, GENERAL, OBSERVATION, REWARD):
+
+    # Use a smaller replay buffer when action is A113, which has too big observation arrays
+    training = "T1" if action != "A113" else "T3"
+
     rl = ReinforcementLearning(f"{action}{general}{obs}{reward}{training}", verbose=2)
     rl.collect_obs()
     rl.train()

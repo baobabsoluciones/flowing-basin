@@ -225,6 +225,7 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
     length_episodes: int
     num_timesteps: int  # Nuber of time steps in which to train the agent
     learning_rate: float = 3e-4
+    replay_buffer_size: int = 1_000_000
 
     # Monitor logging: reward of episodes seen during training
     log_episode_freq: int

@@ -119,7 +119,8 @@ class RLTrain(Experiment):
             )
 
         self.model = SAC(
-            policy_type, self.train_env, learning_rate=self.config.learning_rate,
+            policy_type, self.train_env,
+            learning_rate=self.config.learning_rate, buffer_size=self.config.replay_buffer_size,
             verbose=1, tensorboard_log=self.path_tensorboard, policy_kwargs=policy_kwargs,
         )
         if self.verbose >= 2:

@@ -599,7 +599,7 @@ class ReinforcementLearning:
         if general_config is None:
             return
 
-        # Add max average income of agents
+        # Add rows with max average income of agents
         training_data_agents = []
         for agent in agents:
             training_data_agent = ReinforcementLearning.get_training_data(agent)
@@ -613,12 +613,20 @@ class ReinforcementLearning:
             key=lambda item: ReinforcementLearning.multi_level_sorting_key(item[0], permutation=permutation)
         )
 
-        # Add baseline average incomes
         baselines = ReinforcementLearning.get_all_baselines(general_config)
         for baseline in baselines:
             training_data += baseline
-        for baseline_solver, avg_income in training_data.get_baseline_values().items():
-            results.append([baseline_solver, avg_income])
+
+        # Add rows with baseline average incomes
+        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():
+            results.append([baseline_solver, baseline_avg_income])
+
+        # Expand each row with the performance w.r.t. the baselines
+        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():
+            for result in results[1:]:
+                result_avg_income = result[1]
+                perf_over_baseline = (result_avg_income - baseline_avg_income) / baseline_avg_income  # noqa
+                result += [f"{perf_over_baseline:+.2%} {baseline_solver}"]
 
         # Turn results to string and print them
         for line in results:

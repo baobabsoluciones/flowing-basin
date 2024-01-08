@@ -13,6 +13,7 @@ from typing import Callable
 
 
 class RLEnvironment(gym.Env):
+
     """
     Class representing the environment for the RL agent
     The class acts as a wrapper of the river basin:

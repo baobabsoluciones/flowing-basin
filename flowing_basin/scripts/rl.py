@@ -11,7 +11,7 @@ rl = ReinforcementLearning("A1G0O2R1T1", verbose=2)
 # rl.plot_histograms_projector_obs()
 # rl.train(save_agent=False)
 # rl.plot_histograms_agent_obs()
-rl.plot_training_curve_agent(instances=["Percentile50"])
+# rl.plot_training_curve_agent(instances=["Percentile50"])
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 print(rl.run_agent("Percentile50").to_dict())
 

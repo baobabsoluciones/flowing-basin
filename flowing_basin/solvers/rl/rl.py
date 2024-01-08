@@ -449,14 +449,20 @@ class ReinforcementLearning:
         if isinstance(instance, str):
             instance = Instance.from_name(instance)
 
+        model_path = os.path.join(self.agent_path, f"{model}.zip")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(
+                f"There is no trained model {self.agent_name}. File {model_path} doesn't exist."
+            )
+
         run = RLRun(
             config=self.config,
             instance=instance,
             projector=self.create_projector(),
             solver_name=self.agent_name
         )
-        model_path = os.path.join(self.agent_path, f"{model}.zip")
         run.solve(model_path)
+
         return run.solution
 
     def run_named_policy(self, policy_name: str, instance: Instance) -> Solution:

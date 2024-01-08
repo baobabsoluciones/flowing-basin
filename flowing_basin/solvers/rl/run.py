@@ -3,11 +3,15 @@ from flowing_basin.solvers.rl import RLConfiguration, RLEnvironment
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from stable_baselines3 import SAC
 from stable_baselines3.common.policies import BasePolicy
+import os
 
 
 class RLRun(Experiment):
 
     named_policies = ["random", "greedy"]
+
+    constants_path = os.path.join(os.path.dirname(__file__), "../../data/constants/constants_2dams.json")
+    historical_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean.pickle")
 
     def __init__(
             self,
@@ -25,11 +29,18 @@ class RLRun(Experiment):
 
         self.solver_name = solver_name
         self.config = config
+
+        # Do not use the instance directly; instead,
+        # create a fresh instance from the initial datetime of the given instance
+        # This guarantees that the information buffer is adapted to the configuration
         self.env = RLEnvironment(
-            instance=self.instance,
+            instance=None,
+            initial_row=self.instance.get_start_decisions_datetime(),
             projector=projector,
             config=config,
             paths_power_models=paths_power_models,
+            path_constants=RLRun.constants_path,
+            path_historical_data=RLRun.historical_data_path
         )
 
     def solve(self, policy: BasePolicy | str, options: dict = None) -> dict:

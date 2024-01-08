@@ -66,7 +66,11 @@ class RLRun(Experiment):
             ).policy
 
         # Reset the environment (this allows the `solve` method to be called more than once)
-        obs, _ = self.env.reset(self.instance)
+        # Remember we must not give the instance directly, but rather create a fresh new one for the same day
+        obs, _ = self.env.reset(
+            instance=None,
+            initial_row=self.instance.get_start_decisions_datetime()
+        )
         done = False
         rewards = []
         while not done:

@@ -94,7 +94,9 @@ class RLTrain(Experiment):
         if self.config.feature_extractor == 'MLP':
 
             policy_type = "MlpPolicy"
-            policy_kwargs = None
+            policy_kwargs = dict(
+                net_arch=dict(pi=[256, 256], qf=[256, 256])
+            )
 
         elif self.config.feature_extractor == 'CNN':
 
@@ -118,8 +120,11 @@ class RLTrain(Experiment):
 
         self.model = SAC(
             policy_type, self.train_env, learning_rate=self.config.learning_rate,
-            verbose=1, tensorboard_log=self.path_tensorboard, policy_kwargs=policy_kwargs
+            verbose=1, tensorboard_log=self.path_tensorboard, policy_kwargs=policy_kwargs,
         )
+        if self.verbose >= 2:
+            print("Model architecture to train:")
+            print(self.model.policy)
         
     def solve(self, options: dict = None) -> dict:  # noqa
 

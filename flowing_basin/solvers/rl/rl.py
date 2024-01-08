@@ -436,11 +436,18 @@ class ReinforcementLearning:
                       f"{self.config.projector_type} {indicate_variance(self.config.projector_type)}"
             )
 
-    def run_agent(self, instance: Instance, model: str = "best_model") -> Solution:
+    def run_agent(self, instance: Instance | str, model: str = "best_model") -> Solution:
 
         """
         Solve the given instance with the current agent
+
+        :param instance: Instance to solve, or its name
+        :param model: Either "model" (the model in the last timestep of training)
+            or "best_model" (the model with the highest evaluation from StableBaselines3 EcalCallback)
         """
+
+        if isinstance(instance, str):
+            instance = Instance.from_name(instance)
 
         run = RLRun(
             config=self.config,
@@ -472,31 +479,19 @@ class ReinforcementLearning:
         run.solve(policy_name)
         return run.solution
 
-    def plot_training_curve(self, values: list[str] = None, instances: str | list[str] = 'fixed'):
-
-        """
-        Plot the training curve of the agent
-        """
-
-        if values is None:
-            values = ['income']
-
-        training_data = ReinforcementLearning.get_training_data(self.agent_name)
-
-        _, ax = plt.subplots()
-        training_data.plot_training_curves(ax, values=values, instances=instances)
-        plt.show()
-
-    def plot_training_curves_compare(
-            self, agents: list[str], baselines: list[str] = None,
+    def plot_training_curve_agent(
+            self, agents: list[str] = None, baselines: list[str] = None,
             values: list[str] = None, instances: str | list[str] = 'fixed'
     ):
 
         """
-        Compare the training curve of the agent
-        with the training curve of the given agents
+        Plot the training curve of the agent
+        compared with the training curve of the given agents
         and the values of the given baseline solvers
         """
+
+        if agents is None:
+            agents = []
 
         ReinforcementLearning.plot_training_curves(
             agents=[self.agent_name, *agents], baselines=baselines, values=values, instances=instances

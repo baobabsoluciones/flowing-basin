@@ -43,7 +43,16 @@ class RLRun(Experiment):
         """
 
         if isinstance(policy, str) and policy not in RLRun.named_policies:
-            policy = SAC.load(policy).policy
+            # To avoid a KeyError, you must indicate the env and its observation_space and action_space
+            # See issue https://github.com/DLR-RM/stable-baselines3/issues/1682#issuecomment-1813338493
+            policy = SAC.load(
+                policy,
+                env=self.env,
+                custom_objects={
+                    'observation_space': self.env.observation_space,
+                    'action_space': self.env.action_space
+                }
+            ).policy
 
         # Reset the environment (this allows the `solve` method to be called more than once)
         obs, _ = self.env.reset(self.instance)

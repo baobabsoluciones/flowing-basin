@@ -397,8 +397,8 @@ class RiverBasin:
 
         # Check instance is not finished already
         assert self.time < self.instance.get_largest_impact_horizon(), (
-            "The final time horizon has already been reached. "
-            "You should reset the environment before doing another update."
+            f"The final time horizon, {self.instance.get_largest_impact_horizon()}, has already been reached. "
+            f"You should reset the environment before doing another update."
         )
 
         # Check input is of the correct shape

@@ -1,2 +1,6 @@
 - `A0`: the agent gives relative variations of flow.
 - `A1`: the agent gives the exiting flows directly.
+- `A110`: the agent gives the exiting flows for the next 9 (99 // 11) timesteps.
+- `A111`: the agent gives the exiting flows for the next 20 (~ 99 // 5) timesteps.
+- `A112`: the agent gives the exiting flows for the next 33 (99 // 3) timesteps.
+- `A113`: the agent gives the exiting flows for the next 99 (99 // 1) timesteps.

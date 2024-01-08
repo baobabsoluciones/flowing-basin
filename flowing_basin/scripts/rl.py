@@ -5,11 +5,11 @@ or analyzing the trained agent(s).
 
 from flowing_basin.solvers.rl import ReinforcementLearning
 
-rl = ReinforcementLearning("A1G1O20R1T12", verbose=2)
-# rl.check_train_env(max_timestep=4, obs_types=['raw', 'normalized', 'projected'], initial_date='2021-03-11 00:15')
+rl = ReinforcementLearning("A110G1O2R1T12", verbose=2)
+rl.check_train_env(obs_types=['raw'], initial_date='2021-03-11 00:15')
 # rl.collect_obs()
 # rl.plot_histograms_projector_obs()
-rl.train(save_agent=False)
+# rl.train(save_agent=False)
 # rl.plot_histograms_agent_obs()
 # rl.plot_training_curve()
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])

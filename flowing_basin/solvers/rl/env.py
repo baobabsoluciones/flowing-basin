@@ -115,7 +115,7 @@ class RLEnvironment(gym.Env):
         self.action_space = gym.spaces.Box(
             low=-1,
             high=1,
-            shape=(self.instance.get_num_dams(),),
+            shape=(self.instance.get_num_dams() * self.config.num_actions_block,),
             dtype=np.float32
         )
         # The action space should be bounded between -1 and 1
@@ -579,34 +579,56 @@ class RLEnvironment(gym.Env):
 
         return reward
 
-    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
+    def is_done(self) -> bool:
+
+        """
+        Indicates whether the environment finished
+        """
+
+        return self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
+
+    def step(self, action_block: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
 
         """
         Updates the river basin with the given action
 
-        :param action: An array of size num_dams whose meaning depens on the type of action in the configuration
+        :param action_block: An array of size (num_dams * num_actions_block,)
+            whose meaning depends on the type of action in the configuration
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
 
-        # Transform action to flows
-        # Remember action is bounded between -1 and 1 in any case
-        if self.config.action_type == "exiting_relvars":
-            old_flows = self.river_basin.get_clipped_flows().reshape(-1)
-            new_flows = old_flows + action * self.max_flows  # noqa
-        else:
-            new_flows = (action + 1.) / 2. * self.max_flows
+        action_block = action_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
+        reward = 0.
+        flows_block = []
 
-        self.river_basin.update(new_flows.reshape(-1, 1))
+        # Execute all actions of the block sequentially
+        for action in action_block:
 
+            # Transform action to flows
+            # Remember action is bounded between -1 and 1 in any case
+            if self.config.action_type == "exiting_relvars":
+                old_flows = self.river_basin.get_clipped_flows().reshape(-1)
+                new_flows = old_flows + action * self.max_flows  # noqa
+            else:
+                new_flows = (action + 1.) / 2. * self.max_flows
+            flows_block.append(new_flows)
+
+            self.river_basin.update(new_flows.reshape(-1, 1))
+            reward += self.get_reward()
+
+            # Do not execute whole block of action if episode finishes in the middle
+            # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)
+            if self.is_done():
+                break
+
+        flows_block = np.array(flows_block).reshape(-1)  # Give it the same shape as the original action array
         next_raw_obs = self.get_obs_array()
         next_normalized_obs = self.normalize(next_raw_obs)
         next_projected_obs = self.project(next_normalized_obs)
-
-        reward = self.get_reward()
-        done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
+        done = self.is_done()
 
         return next_projected_obs, reward, done, False, dict(
-            flow=new_flows,
+            flow=flows_block,
             raw_obs=next_raw_obs,
             normalized_obs=next_normalized_obs,
         )

@@ -199,8 +199,8 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
 @dataclass(kw_only=True)
 class ActionConfiguration(BaseConfiguration):  # noqa
 
-    # RL environment's action options
     action_type: str
+    num_actions_block: int = 1  # By default, the agent only gives the actions for the current timestep
 
     def check(self):
 
@@ -310,6 +310,23 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         ActionConfiguration.check(self)
         RewardConfiguration.check(self)
         TrainingConfiguration.check(self)
+
+    def post_process(self):
+
+        """
+        Extend the sight of all features
+        by the number of additional periods per action block.
+        """
+
+        GeneralConfiguration.post_process(self)
+        ObservationConfiguration.post_process(self)
+        ActionConfiguration.post_process(self)
+        RewardConfiguration.post_process(self)
+        TrainingConfiguration.post_process(self)
+
+        for feature in self.features:
+            for dam_id in self.dam_ids:
+                self.num_steps_sight[feature, dam_id] += self.num_actions_block - 1
         
     def get_obs_indices(self, flattened: bool = False) -> dict[tuple[str, str, int], int | tuple[int]]:
 

@@ -16,8 +16,9 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 # print(rl.run_agent("Percentile50").to_dict())
 
 regex = ".*A1(1\d)?G.O2R1.*(T1|T3)$"  # Experiment 3
+ReinforcementLearning.print_spaces(regex)
 # ReinforcementLearning.plot_all_training_curves(regex)
-ReinforcementLearning.barchart_training_times(regex)
+# ReinforcementLearning.barchart_training_times(regex)
 # ReinforcementLearning.print_training_times(regex)
 # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
 # ReinforcementLearning.print_max_avg_incomes(regex, permutation='GTOAR')

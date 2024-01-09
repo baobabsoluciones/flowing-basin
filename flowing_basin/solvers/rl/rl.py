@@ -641,6 +641,31 @@ class ReinforcementLearning:
         return results
 
     @staticmethod
+    def print_spaces(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+
+        """
+        Print the shapes of the action and observation spaces of each agent
+        :param agents_regex_filter:
+        :param permutation:
+        :return:
+        """
+
+        print("agent;action_space;obs_space")
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
+        for agent in agents:
+            config = ReinforcementLearning.get_config(
+                ReinforcementLearning.extract_substrings(agent)
+            )
+            env = RLEnvironment(
+                config=config,
+                projector=Projector.create_projector(config),
+                path_constants=ReinforcementLearning.constants_path,
+                path_historical_data=ReinforcementLearning.train_data_path,
+                update_observation_record=False
+            )
+            print(f"{agent};{env.action_space.shape};{env.observation_space.shape}")
+
+    @staticmethod
     def multi_level_sorting_key(agent: str, permutation: str) -> tuple:
 
         """

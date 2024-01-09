@@ -15,6 +15,7 @@ for action, general, obs, reward in product(ACTION, GENERAL, OBSERVATION, REWARD
 
     # Use a smaller replay buffer when action is A113, which has too big observation arrays
     training = "T1" if action != "A113" else "T3"
+    # training = "T11" if action != "A113" else "T31"
 
     rl = ReinforcementLearning(f"{action}{general}{obs}{reward}{training}", verbose=2)
     rl.collect_obs()

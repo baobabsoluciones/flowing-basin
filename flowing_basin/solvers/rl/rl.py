@@ -628,10 +628,14 @@ class ReinforcementLearning:
 
         # Expand each row with the performance w.r.t. the baselines
         for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():  # noqa
+
+            # Add the baseline to the table header
+            results[0] += [baseline_solver]
+
             for result in results[1:]:
                 result_avg_income = result[1]
                 perf_over_baseline = (result_avg_income - baseline_avg_income) / baseline_avg_income  # noqa
-                result += [f"{perf_over_baseline:+.2%} {baseline_solver}"]
+                result += [f"{perf_over_baseline:+.2%}"]
 
         # Turn results to string and print them
         for line in results:

@@ -505,7 +505,7 @@ class ReinforcementLearning:
 
     @staticmethod
     def plot_all_training_curves(
-            agents_regex_filter: str = '.*', baselines: list[str] = None,
+            agents_regex_filter: str = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
             values: list[str] = None, instances: str | list[str] = 'fixed'
     ):
 
@@ -513,7 +513,7 @@ class ReinforcementLearning:
         Plot the training curve of all agents matching the given regex pattern
         """
 
-        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         ReinforcementLearning.plot_training_curves(
             agents=agents, baselines=baselines, values=values, instances=instances
         )
@@ -560,17 +560,17 @@ class ReinforcementLearning:
                     training += baseline
 
         _, ax = plt.subplots()
-        training.plot_training_curves(ax, values=values, instances=instances)
+        training.plot_training_curves(ax, values=values, instances=instances)  # noqa
         plt.show()
 
     @staticmethod
-    def barchart_training_times(agents_regex_filter: str = '.*'):
+    def barchart_training_times(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
 
         """
         Show the training time of all agents matching the given regex in a barchart
         """
 
-        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         training_times = ReinforcementLearning.get_training_times(agents)
 
         plt.bar(agents, training_times)
@@ -580,6 +580,16 @@ class ReinforcementLearning:
         plt.title('Training time of agents')
         plt.tight_layout()  # Avoid the agent IDs being cut down at the bottom of the figure
         plt.show()
+
+    @staticmethod
+    def print_training_times(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
+        training_times = ReinforcementLearning.get_training_times(agents)
+
+        print("agent; training time (min)")
+        for agent, training_time in zip(agents, training_times):
+            print(f"{agent}; {training_time:.2f}")
 
     @staticmethod
     def print_max_avg_incomes(agents_regex_filter: str = '.*', permutation: str = 'AGORT') -> list[list[str]] | None:
@@ -593,7 +603,7 @@ class ReinforcementLearning:
             ["method", "max_avg_income"]
         ]
 
-        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         general_config = ReinforcementLearning.common_general_config(
             agents, warning_msg="Cannot print CSV table (the results are not comparable and no baseline can be found)."
         )
@@ -608,22 +618,16 @@ class ReinforcementLearning:
             results.append([agent, training_data_agent.get_max_avg_value()])
         training_data = sum(training_data_agents)
 
-        # Sort agents according to the given permutation
-        results[1:] = sorted(
-            results[1:],
-            key=lambda item: ReinforcementLearning.multi_level_sorting_key(item[0], permutation=permutation)
-        )
-
         baselines = ReinforcementLearning.get_all_baselines(general_config)
         for baseline in baselines:
             training_data += baseline
 
         # Add rows with baseline average incomes
-        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():
+        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():  # noqa
             results.append([baseline_solver, baseline_avg_income])
 
         # Expand each row with the performance w.r.t. the baselines
-        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():
+        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():  # noqa
             for result in results[1:]:
                 result_avg_income = result[1]
                 perf_over_baseline = (result_avg_income - baseline_avg_income) / baseline_avg_income  # noqa
@@ -652,13 +656,13 @@ class ReinforcementLearning:
         return tuple(sorted_values)
 
     @staticmethod
-    def get_avg_training_time(agents_regex_filter: str = '.*') -> float:
+    def get_avg_training_time(agents_regex_filter: str = '.*', permutation: str = 'AGORT') -> float:
 
         """
         Get the average training time of all agents matching the given regex
         """
 
-        agents = ReinforcementLearning.get_all_agents(agents_regex_filter)
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         training_times = ReinforcementLearning.get_training_times(agents)
 
         return sum(training_times) / len(training_times)
@@ -670,7 +674,7 @@ class ReinforcementLearning:
         Get the training times of the given agents in minutes
         """
 
-        training_times = [ReinforcementLearning]
+        training_times = []
         for agent in agents:
             training_data = ReinforcementLearning.get_training_data(agent)
             training_times.append(training_data.get_training_time())
@@ -713,7 +717,7 @@ class ReinforcementLearning:
         return general_config
 
     @staticmethod
-    def get_all_agents(regex_filter: str = '.*') -> list[str]:
+    def get_all_agents(regex_filter: str = '.*', permutation: str = 'AGORT') -> list[str]:
 
         """
         Get all agent IDs in alphabetical order, filtering by the given regex pattern
@@ -727,7 +731,9 @@ class ReinforcementLearning:
         all_models = [
             item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and regex.match(item)
         ]
-        all_models.sort()
+        all_models.sort(
+            key=lambda model: ReinforcementLearning.multi_level_sorting_key(model, permutation=permutation)
+        )
 
         return all_models
 

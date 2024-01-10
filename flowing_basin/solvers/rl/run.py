@@ -48,22 +48,34 @@ class RLRun(Experiment):
         """
         Load the given model and use it to solve the instance given in the initialization.
 
-        :param policy: A StableBaselines3 policy, a path to a model, or one of the named policies ("random" or "greedy")
+        :param policy: A StableBaselines3 policy, a path to a model, or one of the named policies
+            ("random" or "greedy"). You can also give "greedy_0.7" to indicate the degree of greediness,
+            which the percentage of flow that the greedy agent attempts to assign at each period.
         :param options: Unused parameter
         :return: Dictionary with additional information
         """
 
-        if isinstance(policy, str) and policy not in RLRun.named_policies:
-            # To avoid a KeyError, you must indicate the env and its observation_space and action_space
-            # See issue https://github.com/DLR-RM/stable-baselines3/issues/1682#issuecomment-1813338493
-            policy = SAC.load(
-                policy,
-                env=self.env,
-                custom_objects={
-                    'observation_space': self.env.observation_space,
-                    'action_space': self.env.action_space
-                }
-            ).policy
+        # Define the policy
+        greediness = 1.
+        policy_name = policy.split("_")
+        if isinstance(policy, str):
+            if policy_name[0] not in RLRun.named_policies:
+                # Not a named policy, but a path.
+                # To avoid a KeyError, you must indicate the env and its observation_space and action_space
+                # See issue https://github.com/DLR-RM/stable-baselines3/issues/1682#issuecomment-1813338493
+                policy = SAC.load(
+                    policy,
+                    env=self.env,
+                    custom_objects={
+                        'observation_space': self.env.observation_space,
+                        'action_space': self.env.action_space
+                    }
+                ).policy
+            else:
+                # A named policy.
+                if len(policy_name) > 1:
+                    greediness = float(policy_name[1])
+                    assert 0. <= greediness <= 1., f"Greediness must be a number between 0 and 1, not {greediness}."
 
         # Reset the environment (this allows the `solve` method to be called more than once)
         # Remember we must not give the instance directly, but rather create a fresh new one for the same day
@@ -74,10 +86,10 @@ class RLRun(Experiment):
         done = False
         rewards = []
         while not done:
-            if policy == "random":
+            if policy_name[0] == "random":
                 action = self.env.action_space.sample()
-            elif policy == "greedy":
-                action = self.env.action_space.high  # noqa
+            elif policy_name[0] == "greedy":
+                action = (greediness * 2 - 1) * self.env.action_space.high  # noqa
             else:
                 action, _ = policy.predict(obs, deterministic=True)
             obs, reward, done, _, _ = self.env.step(action)

@@ -483,7 +483,7 @@ class ReinforcementLearning:
         Solve the given instance with a special policy ("random" or "greedy")
         """
 
-        if policy_name not in RLRun.named_policies:
+        if policy_name.split("_")[0] not in RLRun.named_policies:
             raise ValueError(
                 f"Invalid value for `policy_name`: {policy_name}. Allowed values are {RLRun.named_policies}."
             )

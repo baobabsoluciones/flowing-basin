@@ -71,7 +71,7 @@ class TrainingDataCallback(BaseCallback):
 
     def __init__(
             self, eval_freq: int, config: RLConfiguration, projector: Projector, instances: list[str],
-            policy_id: str, verbose: int = 1
+            policy_id: str, training_data: TrainingData = None, verbose: int = 1
     ):
 
         super(TrainingDataCallback, self).__init__(verbose)
@@ -86,56 +86,53 @@ class TrainingDataCallback(BaseCallback):
         ]
 
         self.policy_id = policy_id
-        self.values = []
-        self.timesteps = []
-        self.time_stamps = []
         self.start_time = perf_counter()
-        self.training_data = None
+
+        if training_data is None:
+            self.training_data = TrainingData.create_empty_fixed_instances(
+                agent_id=self.policy_id, config=self.config.to_dict()
+            )
+            self.start_timestamp_offset = 0.
+            self.start_timestep_offset = 0
+        else:
+            self.training_data = training_data
+            self.start_timestamp_offset = self.training_data.get_time_stamps()[-1]
+            self.start_timestep_offset = self.training_data.get_timesteps()[-1]
 
     def _on_step(self) -> bool:
 
         if self.n_calls % self.eval_freq == 0:
 
-            timestep_values = []
             incomes = []
             acc_rewards = []
+            new_values = []
+
             for run in self.runs:
+
                 info = run.solve(self.model.policy)
                 income = run.solution.get_objective_function()
                 acc_reward = sum(info['rewards'])
-                timestep_values.append(
-                    {"instance": run.instance.get_instance_name(), "income": income, "acc_reward": acc_reward}
-                )
+
                 incomes.append(income)
                 acc_rewards.append(acc_reward)
+                new_values.append(
+                    {
+                        "instance": run.instance.get_instance_name(),
+                        "income": income,
+                        "acc_reward": acc_reward
+                    }
+                )
 
             # Add to training data
-            self.values.append(timestep_values)
-            self.timesteps.append(self.n_calls)
-            self.time_stamps.append(perf_counter() - self.start_time)
+            self.training_data.add_timestep_fixed_instances(
+                agent_id=self.policy_id,
+                new_timestep=self.n_calls + self.start_timestep_offset,
+                new_time_stamp=perf_counter() - self.start_time + self.start_timestamp_offset,
+                new_values=new_values
+            )
 
             # Add to tensorboard
             self.logger.record("training_data/income", sum(incomes) / len(incomes))
             self.logger.record("training_data/acc_reward", sum(acc_rewards) / len(acc_rewards))
 
         return True
-
-    def _on_training_end(self):
-
-        """
-        Fill the training data attribute
-        """
-
-        self.training_data = TrainingData.from_dict(
-            [
-                {
-                    "id": self.policy_id,
-                    "fixed_instances": {
-                        "values": self.values,
-                        "timesteps": self.timesteps,
-                        "time_stamps": self.time_stamps,
-                    },
-                    "configuration": self.config.to_dict()
-                }
-            ]
-        )

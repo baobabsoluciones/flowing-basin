@@ -5,17 +5,17 @@ or analyzing the trained agent(s).
 
 from flowing_basin.solvers.rl import ReinforcementLearning
 
-# rl = ReinforcementLearning("A110G0O2R1T12", verbose=2)
+rl = ReinforcementLearning("A1G0O1R1T11", verbose=2)
 # rl.check_train_env(obs_types=['raw'], initial_date='2021-03-11 00:15')
 # rl.collect_obs()
 # rl.plot_histograms_projector_obs()
-# rl.train(save_agent=False)
+rl.train()
 # rl.plot_histograms_agent_obs()
 # rl.plot_training_curve_agent(instances=["Percentile50"])
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 # print(rl.run_agent("Percentile50").to_dict())
 
-regex = r'.*A1(1\d)?G1O2R1.*(T1|T3)$'  # Experiment 3
+regex = r'.*T11$'
 # ReinforcementLearning.print_spaces(regex)
 ReinforcementLearning.plot_all_training_curves(regex)
 # ReinforcementLearning.barchart_training_times(regex)

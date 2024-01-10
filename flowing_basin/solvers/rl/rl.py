@@ -63,23 +63,25 @@ class ReinforcementLearning:
             ReinforcementLearning.observation_records_folder, self.config_names["O"][0:3]
         )
 
-    def train(self, save_agent: bool = True) -> RLTrain | None:
+    def train(self, save_agent: bool = True, save_replay_buffer: bool = True) -> RLTrain | None:
 
         """
         Train an agent with the given configuration.
 
         :param save_agent: Whether to save the agent or not
-        (not saving the agent may be interesting for testing purposes).
+            (not saving the agent may be interesting for testing purposes).
+        :param save_replay_buffer: Whether to save the replay buffer or not
+            (the replay buffer may occupy several GB for big observation spaces).
         """
 
-        if os.path.exists(self.agent_path) and save_agent:
-            warnings.warn(f"Training aborted. Folder '{self.agent_path}' already exists.")
-            return
-
+        # Define model
+        if self.verbose >= 1:
+            print(f"Defining agent {self.agent_name}...")
         train = RLTrain(
             config=self.config,
-            update_observation_record=self.save_obs,
             projector=self.create_projector(),
+            update_observation_record=self.save_obs,
+            save_replay_buffer=save_replay_buffer,
             path_constants=ReinforcementLearning.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
@@ -88,19 +90,29 @@ class ReinforcementLearning:
             experiment_id=self.agent_name,
             verbose=self.verbose
         )
+
+        # Train model
         if self.verbose >= 1:
-            print(f"Training agent with {''.join(self.config_names.values())} for {self.config.num_timesteps} timesteps...")
+            print(f"Training agent {self.agent_name} for {self.config.num_timesteps} timesteps...")
         start = perf_counter()
         train.solve()
         if self.verbose >= 1:
-            print(f"Trained for {self.config.num_timesteps} timesteps in {perf_counter() - start}s.")
+            print(
+                f"Trained agent {self.agent_name} for {self.config.num_timesteps} timesteps "
+                f"in {perf_counter() - start}s."
+            )
+
+        # Saving the observations allows studying them later
         if self.save_obs and save_agent:
             for obs_record in ReinforcementLearning.observation_records:
                 obs_record_path = os.path.join(self.agent_path, f'{obs_record}.npy')
                 obs = np.array(getattr(train.train_env, obs_record))
                 np.save(obs_record_path, obs)
                 if self.verbose >= 1:
-                    print(f"Saved {obs_record} with {obs.shape} observations in file '{obs_record_path}'.")
+                    print(
+                        f"Saved {obs_record} for {self.agent_name} with {obs.shape} observations "
+                        f"in file '{obs_record_path}'."
+                    )
 
         return train
 
@@ -611,23 +623,21 @@ class ReinforcementLearning:
             return
 
         # Add rows with max average income of agents
-        training_data_agents = []
         for agent in agents:
             training_data_agent = ReinforcementLearning.get_training_data(agent)
-            training_data_agents.append(training_data_agent)
             results.append([agent, training_data_agent.get_max_avg_value()])
-        training_data = sum(training_data_agents)
 
+        training_data_baselines = TrainingData.create_empty()
         baselines = ReinforcementLearning.get_all_baselines(general_config)
         for baseline in baselines:
-            training_data += baseline
+            training_data_baselines += baseline
 
         # Add rows with baseline average incomes
-        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():  # noqa
+        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_values().items():  # noqa
             results.append([baseline_solver, baseline_avg_income])
 
         # Expand each row with the performance w.r.t. the baselines
-        for baseline_solver, baseline_avg_income in training_data.get_baseline_values().items():  # noqa
+        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_values().items():  # noqa
 
             # Add the baseline to the table header
             results[0] += [baseline_solver]

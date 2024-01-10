@@ -90,13 +90,60 @@ class TrainingData(SolutionCore):
 
         if isinstance(instances, list):
             return instances
-        elif instances == 'fixed':
+        elif instances == 'fixed' and len(self.get_agent_ids()) > 0:
             # Fixed instances that appear in the first timestep of the first agent
             values_first_timestep = self.data[self.get_agent_ids()[0]][self.get_instances_name('fixed')]['values'][0]
             fixed_instances = [value['instance'] for value in values_first_timestep]
             return fixed_instances
         else:
             return []
+
+    @classmethod
+    def create_empty(cls):
+
+        """
+        Create an empty TrainingData object
+        """
+
+        return cls.from_dict([])
+
+    @classmethod
+    def create_empty_fixed_instances(cls, agent_id: str, config: dict):
+
+        """
+        Create a TrainingData object with empty lists in the 'fixed_instances' field of 'agent_id'
+        """
+
+        data = dict()
+        data["id"] = agent_id
+        data["configuration"] = config
+        data["fixed_instances"] = {
+            "time_stamps": [],
+            "timesteps": [],
+            "values": []
+        }
+        data = [data]
+
+        return cls.from_dict(data)
+
+    def add_timestep_fixed_instances(
+            self, agent_id: str, new_time_stamp: float, new_timestep: int, new_values: list[dict[str, str | float]]
+    ):
+
+        """
+        Add the values for a timestep in the 'fixed_instances' field of 'agent_id'
+
+        :param agent_id:
+        :param new_time_stamp:
+        :param new_timestep:
+        :param new_values: List of dictionaries, each containing
+            the "instance" solved, its "income" and its "acc_reward".
+        """
+
+        container = self.data[agent_id]['fixed_instances']
+        container["time_stamps"].append(new_time_stamp)
+        container["timesteps"].append(new_timestep)
+        container["values"].append(new_values)
 
     def get_instances_name(self, instances: list[str] | str) -> str:
 
@@ -154,18 +201,21 @@ class TrainingData(SolutionCore):
 
         return name
 
-    def get_timesteps(self, agent_id: str, instances: list[str] | str) -> list[float] | None:
+    def get_timesteps(self, agent_id: str = None, instances: list[str] | str = None) -> list[int] | None:
 
         """
         Get the time steps of training for each evaluation value
         """
+
+        agent_id = self.handle_no_agent_id(agent_id)
+        instances = self.handle_no_instances(instances)
 
         self.check_has_agent_instances(agent_id, instances)
         timesteps = self.data[agent_id][self.get_instances_name(instances)]['timesteps']
 
         return timesteps
 
-    def get_time_stamps(self, agent_id: str, instances: list[str] | str) -> list[float] | None:
+    def get_time_stamps(self, agent_id: str = None, instances: list[str] | str = None) -> list[float] | None:
 
         """
         Get the time stamps for the evaluation results
@@ -173,6 +223,9 @@ class TrainingData(SolutionCore):
         :param agent_id:
         :param instances:
         """
+
+        agent_id = self.handle_no_agent_id(agent_id)
+        instances = self.handle_no_instances(instances)
 
         self.check_has_agent_instances(agent_id, instances)
         time_stamps = self.data[agent_id][self.get_instances_name(instances)]['time_stamps']
@@ -298,12 +351,27 @@ class TrainingData(SolutionCore):
         if self.data.get("baselines") is None or instances == 'random':
             return dict()
 
-        instances_ids = self.get_instances_ids(instances)
+        # Get the instance IDs from the first agent
+        instances_ids = set(self.get_instances_ids(instances))
+
         baseline_objectives = dict()
         for solver, instance_objective in self.data["baselines"].items():
-            if set(instances_ids).issubset(instance_objective.keys()):
-                objectives = [obj for instance, obj in instance_objective.items() if instance in instances_ids]
+
+            # Ensure the agent has all given instance IDs
+            if instances_ids.issubset(instance_objective.keys()):
+
+                # Average income across all given instance IDs (or across all instances)
+                objectives = [
+                    obj for instance, obj in instance_objective.items()
+                    if len(instances_ids) == 0 or instance in instances_ids
+                ]
                 baseline_objectives[solver] = sum(objectives) / len(objectives)
+
+                # If the first agent had no instance IDs, set them to be those of the first baseline
+                # to guarantee the values are comparable
+                if len(instances_ids) == 0:
+                    instances_ids = set(instance_objective.keys())
+
         return baseline_objectives
 
     def add_random_instances(self, agent_id: str, path_evaluations: str):

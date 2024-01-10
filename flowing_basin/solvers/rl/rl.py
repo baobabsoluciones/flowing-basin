@@ -44,10 +44,9 @@ class ReinforcementLearning:
     obs_collection_pos = 2  # Position of the digit that MAY indicate a collection method (e.g., "O12" -> "2")
     obs_collection_codes = {'1', '2'}  # Digits that DO indicate a collection method (e.g., not "0" in "O10")
 
-    def __init__(self, config_name: str, verbose: int = 1, save_obs: bool = True):
+    def __init__(self, config_name: str, verbose: int = 1):
 
         self.verbose = verbose
-        self.save_obs = save_obs
         config_name = config_name
         self.config_names = self.extract_substrings(config_name)
         self.config_full_name = ''.join(self.config_names.values())  # Identical to `config_name`, but in alphabetical order
@@ -63,7 +62,7 @@ class ReinforcementLearning:
             ReinforcementLearning.observation_records_folder, self.config_names["O"][0:3]
         )
 
-    def train(self, save_agent: bool = True, save_replay_buffer: bool = True) -> RLTrain | None:
+    def train(self, save_agent: bool = True, save_replay_buffer: bool = False, save_obs: bool = False) -> RLTrain | None:
 
         """
         Train an agent with the given configuration.
@@ -72,6 +71,8 @@ class ReinforcementLearning:
             (not saving the agent may be interesting for testing purposes).
         :param save_replay_buffer: Whether to save the replay buffer or not
             (the replay buffer may occupy several GB for big observation spaces).
+        :param save_obs: Whether to save the observations experienced during training or not
+            (these observations may occupy several GB for big observation spaces).
         """
 
         # Define model
@@ -80,7 +81,7 @@ class ReinforcementLearning:
         train = RLTrain(
             config=self.config,
             projector=self.create_projector(),
-            update_observation_record=self.save_obs,
+            update_observation_record=save_obs,
             save_replay_buffer=save_replay_buffer,
             path_constants=ReinforcementLearning.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
@@ -103,7 +104,7 @@ class ReinforcementLearning:
             )
 
         # Saving the observations allows studying them later
-        if self.save_obs and save_agent:
+        if save_obs and save_agent:
             for obs_record in ReinforcementLearning.observation_records:
                 obs_record_path = os.path.join(self.agent_path, f'{obs_record}.npy')
                 obs = np.array(getattr(train.train_env, obs_record))
@@ -217,20 +218,24 @@ class ReinforcementLearning:
 
         return env
 
-    def check_train_env(self, max_timestep: int = float('inf'), obs_types: list[str] = None, initial_date: str = None):
+    def check_train_env(
+            self, initial_date: str = None, max_timestep: int = float('inf'),
+            obs_types: list[str] = None,  update_obs: bool = False
+    ):
 
         """
         Check the training environment works as expected
 
         :param max_timestep: Number of timesteps for which to run the environment (default, until the episode finishes)
-        :param obs_types: Observation types to show (default, all of them: "raw", "normalized", and "projected")
         :param initial_date: Initial date of the instance of the environment, in format '%Y-%m-%d %H:%M' (default, random)
+        :param obs_types: Observation types to show (default, all of them: "raw", "normalized", and "projected")
+        :param update_obs: Whether to update the observation record of the environment or not
         """
 
         if obs_types is None:
             obs_types = ["raw", "normalized", "projected"]
 
-        env = self.create_train_env()
+        env = self.create_train_env(update_obs)
 
         # Check the environment does not have any errors according to StableBaselines3
         check_env(env)
@@ -262,7 +267,7 @@ class ReinforcementLearning:
 
             timestep += 1
 
-    def create_train_env(self) -> RLEnvironment:
+    def create_train_env(self, update_obs: bool = True) -> RLEnvironment:
 
         """
         Create the training environment for the agent
@@ -273,7 +278,7 @@ class ReinforcementLearning:
             projector=self.create_projector(),
             path_constants=ReinforcementLearning.constants_path,
             path_historical_data=ReinforcementLearning.train_data_path,
-            update_observation_record=self.save_obs
+            update_observation_record=update_obs
         )
         return env
 

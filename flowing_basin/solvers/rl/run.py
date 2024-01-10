@@ -55,11 +55,13 @@ class RLRun(Experiment):
         :return: Dictionary with additional information
         """
 
-        # Define the policy
+        # Define the policy if input is a string
+        policy_name = None
         greediness = 1.
-        policy_name = policy.split("_")
         if isinstance(policy, str):
-            if policy_name[0] not in RLRun.named_policies:
+            policy_parts = policy.split("_")
+            policy_name = policy_parts[0]
+            if policy_name not in RLRun.named_policies:
                 # Not a named policy, but a path.
                 # To avoid a KeyError, you must indicate the env and its observation_space and action_space
                 # See issue https://github.com/DLR-RM/stable-baselines3/issues/1682#issuecomment-1813338493
@@ -73,8 +75,8 @@ class RLRun(Experiment):
                 ).policy
             else:
                 # A named policy.
-                if len(policy_name) > 1:
-                    greediness = float(policy_name[1])
+                if len(policy_parts) > 1:
+                    greediness = float(policy_parts[1])
                     assert 0. <= greediness <= 1., f"Greediness must be a number between 0 and 1, not {greediness}."
 
         # Reset the environment (this allows the `solve` method to be called more than once)
@@ -86,9 +88,9 @@ class RLRun(Experiment):
         done = False
         rewards = []
         while not done:
-            if policy_name[0] == "random":
+            if policy_name == "random":
                 action = self.env.action_space.sample()
-            elif policy_name[0] == "greedy":
+            elif policy_name == "greedy":
                 action = (greediness * 2 - 1) * self.env.action_space.high  # noqa
             else:
                 action, _ = policy.predict(obs, deterministic=True)

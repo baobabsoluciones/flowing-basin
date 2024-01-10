@@ -5,6 +5,7 @@ and not rollout rewards (CheckpointCallback).
 - `T3X`: same as T1, but with a smaller replay buffer size (500_000 instead of 1_000_000).
 This is necessary to avoid an ArrayMemoryError with very large observation arrays,
 such as rl-A113G0O2R1T.* with observations of shape (1736,).
+- `T4X`: this combines T2 and T3 (more aggressive learning rate and smaller replay buffer).
 
 In all of these, `X` can be nothing, `1` or `2`:
 - If `X` is nothing, the training is done for 99000 timesteps.

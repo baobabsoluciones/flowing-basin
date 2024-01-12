@@ -15,10 +15,11 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 # print(rl.run_agent("Percentile50").to_dict())
 
-regex = r'rl-A1G0O2R1T1'
+regex = r'rl-A113G1O2R1T4$'
 # ReinforcementLearning.print_spaces(regex)
-ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "Heuristic", "rl-greedy", "rl-random"])
+# ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "Heuristic", "rl-greedy", "rl-random"])
 # ReinforcementLearning.barchart_training_times(regex)
 # ReinforcementLearning.print_training_times(regex)
 # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
 # ReinforcementLearning.print_max_avg_incomes(regex, permutation='GTOAR')
+ReinforcementLearning.barchart_icomes(regex)

@@ -345,7 +345,44 @@ class TrainingData(SolutionCore):
         max_avg_value = max(avg_values)
         return max_avg_value
 
-    def get_baseline_values(self, instances: list[str] | str = None) -> dict[str, float]:
+    def get_agent_best_instances_values(
+            self, agent_id: str = None, instances: list[str] | str = None, values: str = None
+    ) -> dict[str, float]:
+
+        """
+        Value of each instance
+        at the point with the highest average value
+        :return: dict[instance_name, value_best]
+        """
+
+        agent_id = self.handle_no_agent_id(agent_id)
+        instances = self.handle_no_instances(instances)
+        values = self.handle_no_values(values)
+
+        self.check_has_agent_instances(agent_id, instances)
+        self.check_has_agent_instances_values(agent_id, instances, values)
+
+        # Calculate the point with the highest average value
+        avg_values = self.get_avg_values(agent_id=agent_id, instances=instances, values=values)
+        best_index = np.argmax(avg_values)
+
+        best_timestep = self.data[agent_id][self.get_instances_name(instances)]["values"][best_index]
+        result = {timestep_instance["instance"]: timestep_instance[values] for timestep_instance in best_timestep}
+        return result
+
+    def get_baseline_instances_values(self) -> dict[str, dict[str, float]]:
+
+        """
+        Get the value for each instance of all baselines
+        :return: dict[solver, dict[instance_name, value]]
+        """
+
+        if self.data.get("baselines") is None:
+            return dict()
+
+        return self.data["baselines"]
+
+    def get_baseline_avg_values(self, instances: list[str] | str = None) -> dict[str, float]:
 
         """
         Average values (final incomes) of each solver across all given instances
@@ -505,7 +542,7 @@ class TrainingData(SolutionCore):
         # Plot baselines as horizontal lines
         # Use different shades of grey
         if plot_baselines:
-            baseline_values = self.get_baseline_values(instances)
+            baseline_values = self.get_baseline_avg_values(instances)
             baseline_colors = [
                 plt.get_cmap('gray')(color) for color in np.linspace(0, 1, len(baseline_values), endpoint=False)
             ]

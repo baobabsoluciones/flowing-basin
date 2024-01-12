@@ -12,8 +12,8 @@ reward = "R1"
 
 ENVIRONMENTS = ["G0", "G1"]  # Real, simplified
 OBSERVATIONS = ["O2", "O1"]  # Normal, more informative
-# TRAININGS = ["T3", "T4"]  # Normal, higher learning rate
-TRAININGS = ["T31", "T41"]
+TRAININGS = ["T3", "T4"]  # Normal, higher learning rate
+# TRAININGS = ["T31", "T41"]
 
 for env, obs, training in product(ENVIRONMENTS, OBSERVATIONS, TRAININGS):
 
@@ -25,5 +25,10 @@ for env, obs, training in product(ENVIRONMENTS, OBSERVATIONS, TRAININGS):
 
     rl = ReinforcementLearning(f"{action}{env}{obs}{reward}{training}", verbose=2)
     rl.train()
+
+    # Delete the reference to the ReinforcementLearning object so it can be garbage collected
+    # before another ReinforcementLearning object is created in the next iteration
+    # This avoids having two replay buffers occupying memory at the same time
+    del rl
 
 # In total 2 * 3 - 1 = 5 agents ==> 5 * 5 = 25 hours of training

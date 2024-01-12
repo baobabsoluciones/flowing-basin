@@ -33,5 +33,6 @@ for example in EXAMPLES:
     print("Optimal solution:", heuristic.solution.data)
 
     # Save solution
+    heuristic.solution.data["instance_name"] = example
     heuristic.solution.to_json(path_sol)
     print("Saved solution in ", path_sol)

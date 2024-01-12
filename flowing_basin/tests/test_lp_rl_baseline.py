@@ -34,5 +34,6 @@ for example in EXAMPLES:
     print("Optimal solution:", lp.solution.data)
 
     # Save solution
+    lp.solution.data["instance_name"] = example
     lp.solution.to_json(path_sol)
     print("Saved solution in ", path_sol)

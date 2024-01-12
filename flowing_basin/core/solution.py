@@ -203,6 +203,10 @@ class Solution(SolutionCore):
         :return:
         """
 
+        # If there is no flow smoothing, then there is no need to check
+        if flow_smoothing == 0:
+            return True
+
         compliance = True
         for dam_id in self.get_ids_of_dams():
             flows = self.get_exiting_flows_of_dam(dam_id)
@@ -211,7 +215,7 @@ class Solution(SolutionCore):
             for flow in flows:
                 current_variation = flow - previous_flow
                 if any([current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]):
-                    print(dam_id, flow, current_variation, variations[-flow_smoothing:])
+                    # print(dam_id, flow, current_variation, variations[-flow_smoothing:])
                     compliance = False
                 variations.append(current_variation)
                 previous_flow = flow

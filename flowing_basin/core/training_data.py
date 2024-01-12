@@ -275,7 +275,7 @@ class TrainingData(SolutionCore):
 
         return values
 
-    def get_training_time(self, agent_id: str = None):
+    def get_training_time(self, agent_id: str = None, timestep: int = None) -> float:
 
         """
         Get the training time for the agent in minutes
@@ -283,9 +283,16 @@ class TrainingData(SolutionCore):
 
         agent_id = self.handle_no_agent_id(agent_id)
 
-        # Assume the training time is equal to the last time stamp for "fixed" instances
+        # Assume the training time is equal to the time stamp for "fixed" instances
         time_stamps = self.get_time_stamps(agent_id, instances="fixed")
-        training_time = time_stamps[-1] / 60
+        if timestep is None:
+            training_time = time_stamps[-1]
+        else:
+            training_time = np.interp(timestep, self.get_timesteps(agent_id, instances="fixed"), time_stamps)
+
+        # Turn to minutes
+        training_time /= 60
+
         return training_time
 
     def get_avg_values(self, agent_id: str = None, instances: list[str] | str = None, values: str = None) -> list[float]:

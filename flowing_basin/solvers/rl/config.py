@@ -49,10 +49,10 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
     def to_dict(self) -> dict:
 
         """
-        Turn the dataclass into a JSON-serializable dictionary
+        Turn the original dataclass into a JSON-serializable dictionary
         """
 
-        data_json = asdict(self)
+        data_json = super(ObservationConfiguration, self).to_dict()
 
         # Convert 'num_steps_sight' into a list of (key, value) pairs
         data_json["num_steps_sight"] = [{"key": k, "value": v} for k, v in data_json["num_steps_sight"].items()]

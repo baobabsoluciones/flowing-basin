@@ -6,6 +6,7 @@ from .solution import Solution
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 import json
+from copy import deepcopy
 
 
 @dataclass(kw_only=True)
@@ -21,10 +22,10 @@ class BaseConfiguration:
     def to_dict(self) -> dict:
 
         """
-        Turn the dataclass into a JSON-serializable dictionary
+        Turn the original dataclass (before any post-processing) into a JSON-serializable dictionary
         """
 
-        data_json = asdict(self)
+        data_json = asdict(self.prior)
         return data_json
 
     def to_json(self, path: str):
@@ -42,6 +43,7 @@ class BaseConfiguration:
     def __post_init__(self):
 
         self.check()
+        self.prior = deepcopy(self)
         self.post_process()
 
     def check(self):

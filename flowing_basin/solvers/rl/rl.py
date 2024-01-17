@@ -58,9 +58,12 @@ class ReinforcementLearning:
 
         # The first two digits in the observation name (e.g., "O211" -> "O21")
         # indicate the type of observations that should be used for the projector
-        self.obs_records_path = os.path.join(
-            ReinforcementLearning.observation_records_folder, self.config_names["O"][0:3]
-        )
+        folder_name = self.config_names["O"][:ReinforcementLearning.obs_type_length]
+        if self.config.num_timesteps != 99_000:
+            folder_name += f"_steps{self.config.num_actions_block}"
+        if self.config.num_actions_block != 1:
+            folder_name += f"_block{self.config.num_actions_block}"
+        self.obs_records_path = os.path.join(ReinforcementLearning.observation_records_folder, folder_name)
 
     def train(self, save_agent: bool = True, save_replay_buffer: bool = False, save_obs: bool = False) -> RLTrain | None:
 

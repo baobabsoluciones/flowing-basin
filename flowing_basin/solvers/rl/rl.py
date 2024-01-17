@@ -220,7 +220,7 @@ class ReinforcementLearning:
 
     def check_train_env(
             self, initial_date: str = None, max_timestep: int = float('inf'),
-            obs_types: list[str] = None,  update_obs: bool = False
+            obs_types: list[str] = None,  update_obs: bool = False, seed: int = None
     ):
 
         """
@@ -230,6 +230,7 @@ class ReinforcementLearning:
         :param initial_date: Initial date of the instance of the environment, in format '%Y-%m-%d %H:%M' (default, random)
         :param obs_types: Observation types to show (default, all of them: "raw", "normalized", and "projected")
         :param update_obs: Whether to update the observation record of the environment or not
+        :param seed: Seed for the random actions
         """
 
         if obs_types is None:
@@ -249,6 +250,9 @@ class ReinforcementLearning:
         instance_checks = env.instance.check()
         if instance_checks:
             raise RuntimeError(f"There are problems with the created instance: {instance_checks}.")
+
+        if seed is not None:
+            env.action_space.seed(seed)
 
         done = False
         timestep = 0
@@ -520,6 +524,53 @@ class ReinforcementLearning:
             agents=[self.agent_name, *agents], baselines=baselines, values=values, instances=instances
         )
 
+    def barchart_instances_rewards(self, reward_configs: list[str], named_policy: str = None):
+
+        """
+        Show a barchart with the reward across all fixed instances
+        of the agent with each of the given reward configuration.
+
+        :param reward_configs:
+        :param named_policy: Named policy to run instead of the current agent
+        :return:
+        """
+
+        model_path = os.path.join(self.agent_path, f"best_model.zip")
+        agent_name = self.agent_name if named_policy is None else f"rl-{named_policy}"
+        avg_rewards = []
+        values = dict()
+
+        for reward_config in reward_configs:
+
+            # Change the reward configuration
+            new_config_names = self.config_names.copy()
+            new_config_names["R"] = reward_config
+            new_config = self.get_config(new_config_names)
+            new_agent_name = f"rl-{''.join(new_config_names.values())}"
+            values[reward_config] = dict()
+
+            for instance in self.get_all_fixed_instances():
+                run = RLRun(
+                    config=new_config,
+                    instance=instance,
+                    projector=self.create_projector(),
+                    solver_name=new_agent_name
+                )
+                if named_policy is None:
+                    info = run.solve(model_path)
+                else:
+                    info = run.solve(named_policy)
+                avg_reward = sum(info['rewards']) / len(info['rewards'])
+                avg_rewards.append(avg_reward)
+                values[reward_config][instance.get_instance_name()] = avg_reward
+
+        if self.verbose >= 1:
+            print("Average rewards:", avg_rewards)
+            print("Average rewards (mean):", sum(avg_rewards) / len(avg_rewards))
+        self.barchart_instances(
+            values, value_type="Average reward", agent_name=agent_name, general_config=self.config_names['G']
+        )
+
     @staticmethod
     def plot_all_training_curves(
             agents_regex_filter: str = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
@@ -599,11 +650,11 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
-    def barchart_icomes(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+    def barchart_instances_incomes(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
 
         """
         Show a barchart with the income across all fixed instances
-        of the given agents and baselines
+        of the given agents and baselines, as stored in the JSON files.
 
         :param agents_regex_filter:
         :param permutation:
@@ -630,6 +681,25 @@ class ReinforcementLearning:
             training_data_baselines += baseline
         values.update(training_data_baselines.get_baseline_instances_values())
 
+        # Plot the values gathered
+        ReinforcementLearning.barchart_instances(
+            values, value_type="Income (€)", agent_name="agents and baselines", general_config=general_config
+        )
+
+    @staticmethod
+    def barchart_instances(values: dict[str, dict[str, float]], value_type: str, agent_name: str, general_config: str):
+
+        """
+        Plot a barchart with the value of each solver at every instance.
+        The values may be incomes, rewards, or anything else.
+        The 'solvers' may actually be something else, e.g. different reward configurations.
+
+        :param values: dict[solver, dict[instance, value]]
+        :param value_type: Indicate which value is being plotted (income, reward...)
+        :param agent_name: Name of the agent(s) that will appear on the title
+        :param general_config:
+        """
+
         solvers = list(values.keys())
         bar_width = 0.4 * 2. / len(solvers)
         offsets = [i * bar_width for i in range(len(solvers))]
@@ -647,8 +717,8 @@ class ReinforcementLearning:
         ax.set_xticklabels(instances, rotation='vertical')
 
         ax.set_xlabel('Instances')
-        ax.set_ylabel('Income (€)')
-        ax.set_title(f'Bar chart with agent and baseline values for all instances in {general_config}')
+        ax.set_ylabel(value_type)
+        ax.set_title(f'Bar chart of {agent_name} for all instances in {general_config}')
         ax.legend()
 
         plt.tight_layout()
@@ -854,6 +924,17 @@ class ReinforcementLearning:
                 sol = Solution.from_json(full_path)
                 sols.append(sol)
         return sols
+
+    @staticmethod
+    def get_all_fixed_instances() -> list[Instance]:
+
+        """
+        Get all fixed instances that are being used to evaluate the agents and baselines.
+        These instances are Percentile00, Percentile10, ..., Percentile100, from driest to rainiest.
+        """
+
+        instances = [Instance.from_name(f"Percentile{percentile:02}") for percentile in range(0, 110, 10)]
+        return instances
 
     @staticmethod
     def extract_substrings(input_string: str) -> dict[str, str]:

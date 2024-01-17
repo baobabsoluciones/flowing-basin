@@ -22,4 +22,4 @@ regex = r'rl-A113G1O2R1T4$'
 # ReinforcementLearning.print_training_times(regex)
 # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
 # ReinforcementLearning.print_max_avg_incomes(regex, permutation='GTOAR')
-ReinforcementLearning.barchart_icomes(regex)
+ReinforcementLearning.barchart_instances_incomes(regex)

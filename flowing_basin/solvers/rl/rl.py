@@ -60,7 +60,7 @@ class ReinforcementLearning:
         # indicate the type of observations that should be used for the projector
         folder_name = self.config_names["O"][:ReinforcementLearning.obs_type_length]
         if self.config.num_timesteps != 99_000:
-            folder_name += f"_steps{self.config.num_actions_block}"
+            folder_name += f"_steps{self.config.num_timesteps}"
         if self.config.num_actions_block != 1:
             folder_name += f"_block{self.config.num_actions_block}"
         self.obs_records_path = os.path.join(ReinforcementLearning.observation_records_folder, folder_name)

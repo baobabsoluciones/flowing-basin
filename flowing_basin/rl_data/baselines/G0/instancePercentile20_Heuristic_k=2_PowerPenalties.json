@@ -754,5 +754,6 @@
         34.16
     ],
     "solution_datetime": "2024-01-12 14:48",
-    "solver": "Heuristic"
+    "solver": "Heuristic",
+    "instance_name": "Percentile20"
 }

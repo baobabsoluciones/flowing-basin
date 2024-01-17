@@ -599,6 +599,62 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
+    def barchart_icomes(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+
+        """
+        Show a barchart with the income across all fixed instances
+        of the given agents and baselines
+
+        :param agents_regex_filter:
+        :param permutation:
+        :return:
+        """
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
+        general_config = ReinforcementLearning.common_general_config(
+            agents, warning_msg="Cannot show barchart (the results are not comparable and no baseline can be found)."
+        )
+        if general_config is None:
+            return
+
+        # Agent values
+        values = dict()
+        for agent in agents:
+            training_data_agent = ReinforcementLearning.get_training_data(agent)
+            values[training_data_agent.handle_no_agent_id()] = training_data_agent.get_agent_best_instances_values()
+
+        # Baseline values
+        training_data_baselines = TrainingData.create_empty()
+        baselines = ReinforcementLearning.get_all_baselines(general_config)
+        for baseline in baselines:
+            training_data_baselines += baseline
+        values.update(training_data_baselines.get_baseline_instances_values())
+
+        solvers = list(values.keys())
+        bar_width = 0.4 * 2. / len(solvers)
+        offsets = [i * bar_width for i in range(len(solvers))]
+
+        instances = list(values[solvers[0]].keys())
+        x_values = np.arange(len(instances))
+
+        # Plot the bars for all instances, one solver at a time
+        fig, ax = plt.subplots()
+        for solver, offset in zip(solvers, offsets):
+            # Order is important
+            sorted_values = dict(sorted(values[solver].items()))
+            ax.bar(x_values + offset, list(sorted_values.values()), width=bar_width, label=solver)
+        ax.set_xticks(x_values + bar_width / 2)
+        ax.set_xticklabels(instances, rotation='vertical')
+
+        ax.set_xlabel('Instances')
+        ax.set_ylabel('Income (€)')
+        ax.set_title(f'Bar chart with agent and baseline values for all instances in {general_config}')
+        ax.legend()
+
+        plt.tight_layout()
+        plt.show()
+
+    @staticmethod
     def print_training_times(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
@@ -638,11 +694,11 @@ class ReinforcementLearning:
             training_data_baselines += baseline
 
         # Add rows with baseline average incomes
-        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_values().items():  # noqa
+        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
             results.append([baseline_solver, baseline_avg_income])
 
         # Expand each row with the performance w.r.t. the baselines
-        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_values().items():  # noqa
+        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
 
             # Add the baseline to the table header
             results[0] += [baseline_solver]

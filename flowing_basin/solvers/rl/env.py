@@ -10,6 +10,7 @@ from datetime import datetime
 import pickle
 from random import randint
 from typing import Callable
+from copy import deepcopy
 
 
 class RLEnvironment(gym.Env):
@@ -139,6 +140,11 @@ class RLEnvironment(gym.Env):
         # Initialize these variables
         self._reset_variables()
 
+        # Calculate reference values for the reward
+        self.avg_rew_greedy = None
+        if self.config.greedy_reference:
+            self.avg_rew_greedy = self.get_greedy_avg_reward()
+
     def reset(
             self, instance: Instance = None, initial_row: int | datetime = None, seed=None, options=None
     ) -> tuple[np.ndarray, dict]:
@@ -152,6 +158,10 @@ class RLEnvironment(gym.Env):
         raw_obs = self.get_obs_array()
         normalized_obs = self.normalize(raw_obs)
         projected_obs = self.project(normalized_obs)
+
+        # Recalculate reference values for the reward
+        if self.config.greedy_reference:
+            self.avg_rew_greedy = self.get_greedy_avg_reward()
 
         return projected_obs, dict(raw_obs=raw_obs, normalized_obs=normalized_obs)
 
@@ -206,6 +216,22 @@ class RLEnvironment(gym.Env):
         self.max_flows = np.array([
             self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
         ])
+
+    def get_greedy_avg_reward(self, greediness: float = 1.) -> float:
+
+        """
+        Get the average reward of the greedy agent in the current environment
+        """
+
+        env = deepcopy(self)
+        done = False
+        rewards = []
+        while not done:
+            action = (greediness * 2 - 1) * env.action_space.high  # noqa
+            obs, reward, done, _, _ = env.step(action, greedy_reference=False)
+            rewards.append(reward)
+        avg_reward = sum(rewards) / len(rewards)
+        return avg_reward
 
     def get_features_min_functions(self) -> dict[str, Callable[[str], float | int]]:
 
@@ -565,7 +591,7 @@ class RLEnvironment(gym.Env):
 
         return reward_details
 
-    def get_reward(self) -> float:
+    def get_reward(self, greedy_reference: bool = True) -> float:
 
         """
         Calculate the reward from its components
@@ -573,10 +599,20 @@ class RLEnvironment(gym.Env):
         We divide the income and penalties by the maximum price in the episode
         to avoid inconsistencies throughout episodes (in which energy prices are normalized differently)
         Note we do not take into account the final volumes here; this is something the agent should tackle on its own
+
+        :param greedy_reference: Whether to use rl-greedy as a reference for the reward or not.
+            If the configuration does not have this on, then no reference is used and this parameter is ignored.
+        :return: Reward obtained by the agent.
         """
 
         reward = sum(reward_component for reward_component in self.get_reward_details().values())
         reward = reward / self.instance.get_largest_price()
+
+        if greedy_reference and self.config.greedy_reference:
+            if not self.config.reference_ratio:
+                reward = reward - max(0., self.avg_rew_greedy)
+            else:
+                reward = (reward - max(0., self.avg_rew_greedy)) / max(1., self.avg_rew_greedy)
 
         return reward
 
@@ -588,13 +624,15 @@ class RLEnvironment(gym.Env):
 
         return self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
 
-    def step(self, action_block: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
+    def step(self, action_block: np.ndarray, greedy_reference: bool = True) -> tuple[np.ndarray, float, bool, bool, dict]:
 
         """
         Updates the river basin with the given action
 
         :param action_block: An array of size (num_dams * num_actions_block,)
             whose meaning depends on the type of action in the configuration
+        :param greedy_reference: Whether to use rl-greedy as a reference for the reward or not.
+            If the configuration does not have this on, then no reference is used and this parameter is ignored.
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
 
@@ -615,7 +653,7 @@ class RLEnvironment(gym.Env):
             flows_block.append(new_flows)
 
             self.river_basin.update(new_flows.reshape(-1, 1))
-            reward += self.get_reward()
+            reward += self.get_reward(greedy_reference)
 
             # Do not execute whole block of action if episode finishes in the middle
             # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)

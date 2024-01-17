@@ -225,7 +225,7 @@ class RewardConfiguration(BaseConfiguration):  # noqa
     :param reference_ratio:
         Can only be None when greedy_reference is False
         If False, `reward = rew_agent - max(0, avg_rew_greedy)`;
-        if True, `reward = (rew_agent - avg_rew_greedy) / avg_rew_greedy if avg_rew_greedy > 0 else rew_agent`
+        if True, `reward = (rew_agent - max(0., avg_rew_greedy)) / max(1., avg_rew_greedy)`
     """
 
     flow_smoothing_penalty: float

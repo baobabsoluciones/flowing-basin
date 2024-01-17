@@ -220,7 +220,9 @@ class RLEnvironment(gym.Env):
     def get_greedy_avg_reward(self, greediness: float = 1.) -> float:
 
         """
-        Get the average reward of the greedy agent in the current environment
+        Get the average reward of the greedy agent in the current environment.
+        The average reward is the reward per timestep, not per step.
+        These are different when the action block size is greater than 1.
         """
 
         env = deepcopy(self)
@@ -228,8 +230,8 @@ class RLEnvironment(gym.Env):
         rewards = []
         while not done:
             action = (greediness * 2 - 1) * env.action_space.high  # noqa
-            obs, reward, done, _, _ = env.step(action, greedy_reference=False)
-            rewards.append(reward)
+            _, _, done, _, info = env.step(action, greedy_reference=False)
+            rewards.extend(info['rewards'])
         avg_reward = sum(rewards) / len(rewards)
         return avg_reward
 
@@ -602,7 +604,7 @@ class RLEnvironment(gym.Env):
 
         :param greedy_reference: Whether to use rl-greedy as a reference for the reward or not.
             If the configuration does not have this on, then no reference is used and this parameter is ignored.
-        :return: Reward obtained by the agent.
+        :return: Reward obtained by the agent for its last action.
         """
 
         reward = sum(reward_component for reward_component in self.get_reward_details().values())
@@ -637,7 +639,7 @@ class RLEnvironment(gym.Env):
         """
 
         action_block = action_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
-        reward = 0.
+        rewards = []
         flows_block = []
 
         # Execute all actions of the block sequentially
@@ -653,20 +655,22 @@ class RLEnvironment(gym.Env):
             flows_block.append(new_flows)
 
             self.river_basin.update(new_flows.reshape(-1, 1))
-            reward += self.get_reward(greedy_reference)
+            rewards.append(self.get_reward(greedy_reference))
 
             # Do not execute whole block of action if episode finishes in the middle
             # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)
             if self.is_done():
                 break
 
+        total_reward = sum(rewards)
         flows_block = np.array(flows_block).reshape(-1)  # Give it the same shape as the original action array
         next_raw_obs = self.get_obs_array()
         next_normalized_obs = self.normalize(next_raw_obs)
         next_projected_obs = self.project(next_normalized_obs)
         done = self.is_done()
 
-        return next_projected_obs, reward, done, False, dict(
+        return next_projected_obs, total_reward, done, False, dict(
+            rewards=rewards,
             flow=flows_block,
             raw_obs=next_raw_obs,
             normalized_obs=next_normalized_obs,

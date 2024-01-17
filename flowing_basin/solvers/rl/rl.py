@@ -537,7 +537,6 @@ class ReinforcementLearning:
 
         model_path = os.path.join(self.agent_path, f"best_model.zip")
         agent_name = self.agent_name if named_policy is None else f"rl-{named_policy}"
-        avg_rewards = []
         values = dict()
 
         for reward_config in reward_configs:
@@ -547,9 +546,13 @@ class ReinforcementLearning:
             new_config_names["R"] = reward_config
             new_config = self.get_config(new_config_names)
             new_agent_name = f"rl-{''.join(new_config_names.values())}"
+            avg_rewards = []
             values[reward_config] = dict()
 
             for instance in self.get_all_fixed_instances():
+
+                if self.verbose >= 2:
+                    print(f"[{agent_name}] [{reward_config}] [{instance.get_instance_name()}] Running...")
                 run = RLRun(
                     config=new_config,
                     instance=instance,
@@ -561,12 +564,17 @@ class ReinforcementLearning:
                 else:
                     info = run.solve(named_policy)
                 avg_reward = sum(info['rewards']) / len(info['rewards'])
+
+                # Divide by the block size to get consistent results with different action types
+                # This effectively gives the reward per timestep instead of the reward per step
+                avg_reward /= self.config.num_actions_block
                 avg_rewards.append(avg_reward)
                 values[reward_config][instance.get_instance_name()] = avg_reward
 
-        if self.verbose >= 1:
-            print("Average rewards:", avg_rewards)
-            print("Average rewards (mean):", sum(avg_rewards) / len(avg_rewards))
+            if self.verbose >= 1:
+                print(f"[{agent_name}] [{reward_config}] Average rewards:", avg_rewards)
+                print(f"[{agent_name}] [{reward_config}] Average rewards (mean):", sum(avg_rewards) / len(avg_rewards))
+
         self.barchart_instances(
             values, value_type="Average reward", agent_name=agent_name, general_config=self.config_names['G']
         )

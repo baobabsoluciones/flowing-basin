@@ -215,7 +215,33 @@ class ActionConfiguration(BaseConfiguration):  # noqa
 @dataclass(kw_only=True)
 class RewardConfiguration(BaseConfiguration):  # noqa
 
-    flow_smoothing_penalty: float  # Penalty for not fulfilling the flow smoothing parameter
+    # noinspection PyUnresolvedReferences
+    """
+
+    :param flow_smoothing_penalty:
+        Penalty for not fulfilling the flow smoothing parameter
+    :param greedy_reference:
+        If True, use rl-greedy's average performance on the episode as a reference to compute the reward
+    :param reference_ratio:
+        Can only be None when greedy_reference is False
+        If False, `reward = rew_agent - max(0, avg_rew_greedy)`;
+        if True, `reward = (rew_agent - avg_rew_greedy) / avg_rew_greedy if avg_rew_greedy > 0 else rew_agent`
+    """
+
+    flow_smoothing_penalty: float
+    greedy_reference: bool = False
+    reference_ratio: bool = None
+
+    def check(self):
+
+        super(RewardConfiguration, self).check()
+
+        # Check self.reference_ratio
+        if self.greedy_reference:
+            if self.reference_ratio is None:
+                raise ValueError(
+                    f"Reference ratio must be specified if {self.greedy_reference=}, but {self.reference_ratio=}."
+                )
 
 
 # noinspection PyDataclass

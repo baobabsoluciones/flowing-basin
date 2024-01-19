@@ -5,7 +5,10 @@ from flowing_basin.solvers.rl import (
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
+from stable_baselines3 import SAC
 from stable_baselines3.common.env_checker import check_env
+import torch
+from captum.attr import IntegratedGradients
 import numpy as np
 import math
 from matplotlib import pyplot as plt
@@ -59,6 +62,9 @@ class ReinforcementLearning:
         # The first two digits in the observation name (e.g., "O211" -> "O21")
         # indicate the type of observations that should be used for the projector
         folder_name = self.config_names["O"][:ReinforcementLearning.obs_type_length]
+        if len(folder_name) == 2:
+            # Assume the record method is the random agent, "O1" -> "O12"
+            folder_name += "2"
         if self.config.num_timesteps != 99_000:
             folder_name += f"_steps{self.config.num_timesteps}"
         if self.config.num_actions_block != 1:
@@ -296,9 +302,8 @@ class ReinforcementLearning:
         assuming the required observations folder exists.
         """
 
-        if os.path.exists(self.obs_records_path):
-            observations = np.load(os.path.join(self.obs_records_path, 'observations.npy'))
-            obs_config = RLConfiguration.from_json(os.path.join(self.obs_records_path, 'config.json'))
+        observations = self.load_observation_record()
+        if observations is not None:
             if self.verbose >= 1:
                 print(f"Using observations from '{self.obs_records_path}' for projector.")
         else:
@@ -307,10 +312,93 @@ class ReinforcementLearning:
                     f"Cannot build projector because the projector type is not 'identity' "
                     f"and the observations folder '{self.obs_records_path}' does not exist."
                 )
-            observations = None
-            obs_config = None
-        projector = Projector.create_projector(self.config, observations, obs_config)
+        projector = Projector.create_projector(self.config, observations)
         return projector
+
+    def load_observation_record(self) -> np.ndarray:
+
+        """
+        Load the observation record for the agent.
+        """
+
+        observations = None
+
+        if os.path.exists(self.obs_records_path):
+
+            observations = np.load(os.path.join(self.obs_records_path, 'observations.npy'))
+            obs_config = RLConfiguration.from_json(os.path.join(self.obs_records_path, 'config.json'))
+
+            # Check observations of the observation record are compatible with the current configuration
+            compatibility_errors = self.config.check_observation_compatibility(obs_config)
+            if compatibility_errors:
+                raise Exception(f"The configurations are not observation-compatible: {compatibility_errors}")
+
+        return observations
+
+    def get_model_path(self, model_type: str = "best_model"):
+
+        """
+        Get the path to a trained model.
+
+        :param model_type: Either "model" (the model in the last timestep of training)
+            or "best_model" (the model with the highest evaluation from StableBaselines3 EcalCallback)
+        """
+
+        model_path = os.path.join(self.agent_path, f"{model_type}.zip")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(
+                f"There is no trained model {self.agent_name}. File {model_path} doesn't exist."
+            )
+
+        return model_path
+
+    def load_model(self, model_type: str = "best_model") -> SAC:
+
+        """
+        Load a trained model.
+
+        :param model_type: See method `get_model_path`
+        """
+
+        model_path = self.get_model_path(model_type)
+        env = self.create_train_env()
+        model = SAC.load(
+            model_path,
+            env=env,
+            custom_objects={
+                'observation_space': env.observation_space,
+                'action_space': env.action_space
+            }
+        )
+        return model
+
+    def integrated_gradients(self):
+
+        """
+        At the moment, this does nothing, just tests things
+        """
+
+        model = self.load_model()  # type: SAC
+        obs_record = self.load_observation_record()  # type: np.ndarray # shape (num_obs, num_features)
+
+        obs = obs_record[0]
+        obs = torch.from_numpy(obs).reshape(1, -1)
+
+        action = model.policy(obs, deterministic=True)
+        print(action)
+
+        # Equivalent:
+        action = model.policy.actor(obs, deterministic=True)
+        print(action)
+
+        # Evaluation of both critics
+        evaluation_critics = model.policy.critic(obs=obs, actions=action)
+        print(evaluation_critics)
+
+        # Evaluation of only the first critic
+        obs_action_pair = torch.cat([obs, action], dim=1)
+        evaluation_critic1 = model.policy.critic.q_networks[0](obs_action_pair)
+        print(evaluation_critic1)
 
     def plot_histogram(self, obs: np.ndarray, projected: bool, title: str):
 
@@ -460,25 +548,19 @@ class ReinforcementLearning:
                       f"{self.config.projector_type} {indicate_variance(self.config.projector_type)}"
             )
 
-    def run_agent(self, instance: Instance | str, model: str = "best_model") -> Solution:
+    def run_agent(self, instance: Instance | str, model_type: str = "best_model") -> Solution:
 
         """
         Solve the given instance with the current agent
 
         :param instance: Instance to solve, or its name
-        :param model: Either "model" (the model in the last timestep of training)
-            or "best_model" (the model with the highest evaluation from StableBaselines3 EcalCallback)
+        :param model_type: See method `get_model_path`
         """
 
         if isinstance(instance, str):
             instance = Instance.from_name(instance)
 
-        model_path = os.path.join(self.agent_path, f"{model}.zip")
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(
-                f"There is no trained model {self.agent_name}. File {model_path} doesn't exist."
-            )
-
+        model_path = self.get_model_path(model_type)
         run = RLRun(
             config=self.config,
             instance=instance,
@@ -538,7 +620,7 @@ class ReinforcementLearning:
         :return:
         """
 
-        model_path = os.path.join(self.agent_path, f"best_model.zip")
+        model_path = self.get_model_path()
         agent_name = self.agent_name if named_policy is None else f"rl-{named_policy}"
         values = dict()
 
@@ -722,7 +804,7 @@ class ReinforcementLearning:
         fig, ax = plt.subplots()
         for solver, offset in zip(solvers, offsets):
             # Order is important
-            sorted_values = dict(sorted(values[solver].items()))
+            sorted_values = dict(sorted(values[solver].items()))  # noqa
             ax.bar(x_values + offset, list(sorted_values.values()), width=bar_width, label=solver)
         ax.set_xticks(x_values + bar_width / 2)
         ax.set_xticklabels(instances, rotation='vertical')

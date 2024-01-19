@@ -6,41 +6,22 @@ from abc import ABC, abstractmethod
 
 class Projector(ABC):
 
-    def __init__(self, observations: np.array = None, obs_config: RLConfiguration = None):
+    def __init__(self, observations: np.array = None):
 
         """
         Abstract class for the projector
 
         :param observations: Array of shape num_observations x flattened_observation_size
             with the observations that will be used to train the projector
-        :param obs_config: The configuration used when generating the observations
-            (which must match the current configuration in some fields)
         """
 
         self.observations = observations
-        self.obs_config = obs_config
-
         self.n_components = None
         self.transformed_observations = None
 
         # Default bounds values
         self.low = 0
         self.high = 1
-
-    def check_config_attribute(self, other_config: RLConfiguration, attribute: str):
-
-        assert getattr(self.obs_config, attribute) == getattr(other_config, attribute), (
-            f"The {attribute} considered in both configurations must be the same, "
-            f"but the observations used by the projector has {getattr(self.obs_config, attribute)} "
-            f"and the given configuration has {getattr(other_config, attribute)}"
-        )
-
-    def check_config(self, other_config: RLConfiguration):
-
-        if self.obs_config is not None:
-            observation_attributes = ["features", "unique_features", "num_steps_sight"]
-            for attribute in observation_attributes:
-                self.check_config_attribute(other_config, attribute)
 
     def project(self, normalized_obs: np.ndarray) -> np.ndarray:
 
@@ -77,17 +58,16 @@ class Projector(ABC):
 
     @classmethod
     def create_projector_single(
-            cls, proj_type: str,
-            proj_config: RLConfiguration = None, observations: np.ndarray = None, obs_config: RLConfiguration = None
+            cls, proj_type: str, proj_config: RLConfiguration = None, observations: np.ndarray = None
     ):
 
         """
         Select the projector based on the given configuration
         """
 
-        if proj_type != 'identity' and any([proj_config is None, observations is None, obs_config is None]):
+        if proj_type != 'identity' and any([proj_config is None, observations is None]):
             raise ValueError(
-                "The parameters `proj_config`, `observations`, and `obs_config` "
+                "The parameters `proj_config` and `observations` "
                 "can only be None when the projector is of type 'identity'."
             )
 
@@ -96,7 +76,6 @@ class Projector(ABC):
         if proj_type != 'identity':
             kwargs.update(dict(
                 observations=observations,
-                obs_config=obs_config,
             ))
         if proj_type == 'PCA':
             kwargs.update(dict(
@@ -106,50 +85,42 @@ class Projector(ABC):
             ))
         projector = proj_constructor(**kwargs)
 
-        # Check the configuration and the observation's configuration matches in the required fields
-        projector.check_config(proj_config)
-
         return projector
 
     @classmethod
-    def create_projector(
-            cls, proj_config: RLConfiguration, observations: np.ndarray = None, obs_config: RLConfiguration = None
-    ):
+    def create_projector(cls, proj_config: RLConfiguration, observations: np.ndarray = None):
 
         """
         Select the projector based on the given configuration
         """
 
-        if proj_config.projector_type != 'identity' and any([observations is None, obs_config is None]):
+        if proj_config.projector_type != 'identity' and observations is None:
             raise ValueError(
-                "The parameters `observations` and `obs_config` "
-                "can only be None when the projector is of type 'identity'."
+                "The parameter `observations` can only be None when the projector is of type 'identity'."
             )
 
         if isinstance(proj_config.projector_type, list):
-            projector = ProjectorList(proj_config, observations, obs_config)
+            projector = ProjectorList(proj_config, observations)
         else:
-            projector = cls.create_projector_single(proj_config.projector_type, proj_config, observations, obs_config)
+            projector = cls.create_projector_single(proj_config.projector_type, proj_config, observations)
 
         return projector
 
 
 class ProjectorList(Projector):
 
-    def __init__(self, proj_config: RLConfiguration, observations: np.ndarray, obs_config: RLConfiguration):
+    def __init__(self, proj_config: RLConfiguration, observations: np.ndarray):
 
         """
         Initialize the quantile-based pseudo-discretizer
         """
 
-        super(ProjectorList, self).__init__(
-            observations=observations, obs_config=obs_config
-        )
+        super(ProjectorList, self).__init__(observations)
 
         self.projectors = []
         prev_transformed_obs = self.observations
         for proj_type in proj_config.projector_type:
-            projector = self.create_projector_single(proj_type, proj_config, prev_transformed_obs, self.obs_config)
+            projector = self.create_projector_single(proj_type, proj_config, prev_transformed_obs)
             self.projectors.append(projector)
             prev_transformed_obs = projector.transformed_observations
 
@@ -188,7 +159,7 @@ class IdentityProjector(Projector):
 class PCAProjector(Projector):
 
     def __init__(
-            self, observations: np.ndarray, obs_config: RLConfiguration, explained_variance: float,
+            self, observations: np.ndarray, explained_variance: float,
             bounds: tuple[float, float] | str, extrapolation: float
     ):
 
@@ -202,7 +173,7 @@ class PCAProjector(Projector):
         :param extrapolation: The degree of extrapolation allowed, as a fraction of the original bounds
         """
 
-        super(PCAProjector, self).__init__(observations, obs_config)
+        super(PCAProjector, self).__init__(observations)
 
         # Fitted model
         self.model = PCA(n_components=explained_variance)
@@ -246,15 +217,13 @@ class PCAProjector(Projector):
 
 class QuantilePseudoDiscretizer(Projector):
 
-    def __init__(self, observations: np.ndarray, obs_config: RLConfiguration, num_quantiles: int = 100):
+    def __init__(self, observations: np.ndarray, num_quantiles: int = 100):
 
         """
         Initialize the quantile-based pseudo-discretizer
         """
 
-        super(QuantilePseudoDiscretizer, self).__init__(
-            observations=observations, obs_config=obs_config
-        )
+        super(QuantilePseudoDiscretizer, self).__init__(observations)
 
         # Compute the quantiles
         self.num_quantiles = num_quantiles

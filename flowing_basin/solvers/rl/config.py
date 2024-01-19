@@ -391,3 +391,38 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
                         running_index += 1
 
         return indices
+
+    def check_attribute_equal(self, other: "RLConfiguration", attribute: str) -> str | None:
+
+        """
+        Check if the current and given configurations have the same value for the given attribute
+
+        :return: Error message, if the value is not the same; None otherwise
+        """
+
+        error_msg = None
+        if getattr(self, attribute) != getattr(other, attribute):
+            error_msg = (
+                f"The {attribute} considered in both configurations must be the same, "
+                f"but the current configuration has {getattr(self, attribute)} "
+                f"and the other configuration has {getattr(other, attribute)}"
+            )
+        return error_msg
+
+    def check_observation_compatibility(self, other: "RLConfiguration") -> list[str]:
+
+        """
+        Check if the current and given configurations have compatible observations
+
+        :return: List with error messages, if configurations are not observation-compatible.
+        """
+
+        observation_attributes = ["features", "unique_features", "num_steps_sight", "num_actions_block"]
+
+        errors = []
+        for attribute in observation_attributes:
+            error_msg = self.check_attribute_equal(other, attribute)
+            if error_msg is not None:
+                errors.append(error_msg)
+
+        return errors

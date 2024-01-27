@@ -14,7 +14,7 @@ for action, general in product(actions, generals):
 
     # Use a smaller replay buffer when action is A113, which has too big observation arrays
     training = "T1" if action != "A113" else "T3"
-    # training = "T11" if action != "A113" else "T31"
+    # training = "T13" if action != "A113" else "T33"
 
     obs = "O222"
     reward = "R1"

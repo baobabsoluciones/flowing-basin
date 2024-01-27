@@ -828,12 +828,17 @@ class ReinforcementLearning:
             print(f"{agent}; {training_time:.2f}")
 
     @staticmethod
-    def print_max_avg_incomes(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT') -> list[list[str]] | None:
+    def print_max_avg_incomes(
+            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None
+    ) -> list[list[str]] | None:
 
         """
         Print a CSV table with the maximum average income of each agent
         and the corresponding average income of the baselines
         """
+
+        if baselines is None:
+            baselines = ['MILP', 'rl-random', 'rl-greedy']
 
         results = [
             ["method", "max_avg_income"]
@@ -852,9 +857,10 @@ class ReinforcementLearning:
             results.append([agent, training_data_agent.get_max_avg_value()])
 
         training_data_baselines = TrainingData.create_empty()
-        baselines = ReinforcementLearning.get_all_baselines(general_config)
-        for baseline in baselines:
-            training_data_baselines += baseline
+        all_baselines = ReinforcementLearning.get_all_baselines(general_config)
+        for baseline in all_baselines:
+            if baseline.get_solver() in baselines:
+                training_data_baselines += baseline
 
         # Add rows with baseline average incomes
         for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
@@ -985,7 +991,7 @@ class ReinforcementLearning:
         """
         Get all agent IDs in alphabetical order, filtering by the given regex pattern
 
-        :param regex_filter: Regex pattern matched by all desired agents, or list of agent IDs
+        :param regex_filter: Regex pattern matched by all desired agents, or list of regex patterns
         :param permutation: Order in which the agents are returned
         :return: List of agent IDs in the desired order
         """
@@ -993,16 +999,14 @@ class ReinforcementLearning:
         parent_directory = ReinforcementLearning.models_folder
         all_items = os.listdir(parent_directory)
 
+        if isinstance(regex_filter, list):
+            regex_filter = "$|".join(regex_filter) + "$"
+
         # Filter to take only the existing directories and those matching the regex pattern
-        if isinstance(regex_filter, str):
-            regex = re.compile(regex_filter)
-            all_models = [
-                item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and regex.match(item)
-            ]
-        else:
-            all_models = [
-                item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and item in regex_filter
-            ]
+        regex = re.compile(regex_filter)
+        all_models = [
+            item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and regex.match(item)
+        ]
 
         all_models.sort(
             key=lambda model: ReinforcementLearning.multi_level_sorting_key(model, permutation=permutation)

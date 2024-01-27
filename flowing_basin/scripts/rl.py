@@ -15,9 +15,9 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 # print(rl.run_agent("Percentile50").to_dict())
 
-regex = ["rl-A1G.O2R1T1", "rl-A1G.O222R1T1", "rl-A113G.O2R1T3", "rl-A113G.O222R1T3"]
-regex = [agent.replace(".", "1") for agent in regex]
+regex = ["rl-A1G.O2R1T1", "rl-A1G.O2R22T1", "rl-A113G.O2R1T3", "rl-A113G.O2R22T3"]
 # ReinforcementLearning.barchart_training_times(regex)
+regex = [agent.replace(".", "1") for agent in regex]
 # ReinforcementLearning.print_max_avg_incomes(regex, permutation='GATOR', baselines=["MILP", "rl-greedy", "rl-random"])
 ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
 

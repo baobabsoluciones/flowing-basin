@@ -666,7 +666,7 @@ class ReinforcementLearning:
 
     @staticmethod
     def plot_all_training_curves(
-            agents_regex_filter: str = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
+            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
             values: list[str] = None, instances: str | list[str] = 'fixed'
     ):
 
@@ -725,7 +725,7 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
-    def barchart_training_times(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+    def barchart_training_times(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'):
 
         """
         Show the training time of all agents matching the given regex in a barchart
@@ -743,7 +743,7 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
-    def barchart_instances_incomes(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+    def barchart_instances_incomes(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'):
 
         """
         Show a barchart with the income across all fixed instances
@@ -818,7 +818,7 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
-    def print_training_times(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+    def print_training_times(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'):
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         training_times = ReinforcementLearning.get_training_times(agents)
@@ -828,7 +828,7 @@ class ReinforcementLearning:
             print(f"{agent}; {training_time:.2f}")
 
     @staticmethod
-    def print_max_avg_incomes(agents_regex_filter: str = '.*', permutation: str = 'AGORT') -> list[list[str]] | None:
+    def print_max_avg_incomes(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT') -> list[list[str]] | None:
 
         """
         Print a CSV table with the maximum average income of each agent
@@ -879,7 +879,7 @@ class ReinforcementLearning:
         return results
 
     @staticmethod
-    def print_spaces(agents_regex_filter: str = '.*', permutation: str = 'AGORT'):
+    def print_spaces(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'):
 
         """
         Print the shapes of the action and observation spaces of each agent
@@ -919,7 +919,7 @@ class ReinforcementLearning:
         return tuple(sorted_values)
 
     @staticmethod
-    def get_avg_training_time(agents_regex_filter: str = '.*', permutation: str = 'AGORT') -> float:
+    def get_avg_training_time(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT') -> float:
 
         """
         Get the average training time of all agents matching the given regex
@@ -980,20 +980,30 @@ class ReinforcementLearning:
         return general_config
 
     @staticmethod
-    def get_all_agents(regex_filter: str = '.*', permutation: str = 'AGORT') -> list[str]:
+    def get_all_agents(regex_filter: str | list[str] = '.*', permutation: str = 'AGORT') -> list[str]:
 
         """
         Get all agent IDs in alphabetical order, filtering by the given regex pattern
+
+        :param regex_filter: Regex pattern matched by all desired agents, or list of agent IDs
+        :param permutation: Order in which the agents are returned
+        :return: List of agent IDs in the desired order
         """
 
         parent_directory = ReinforcementLearning.models_folder
         all_items = os.listdir(parent_directory)
 
-        # Filter to take only the directories and those matching the regex pattern
-        regex = re.compile(regex_filter)
-        all_models = [
-            item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and regex.match(item)
-        ]
+        # Filter to take only the existing directories and those matching the regex pattern
+        if isinstance(regex_filter, str):
+            regex = re.compile(regex_filter)
+            all_models = [
+                item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and regex.match(item)
+            ]
+        else:
+            all_models = [
+                item for item in all_items if os.path.isdir(os.path.join(parent_directory, item)) and item in regex_filter
+            ]
+
         all_models.sort(
             key=lambda model: ReinforcementLearning.multi_level_sorting_key(model, permutation=permutation)
         )

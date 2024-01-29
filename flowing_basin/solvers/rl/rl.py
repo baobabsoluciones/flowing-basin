@@ -282,6 +282,8 @@ class ReinforcementLearning:
             print("\nACTION:", action)
             print("FLOW:", info['flow'])
             print("\nREWARD:", reward)
+            if self.config.action_type == "adjustments":
+                print("ABSOLUTE REWARDS IN PAST ITERATIONS:", env.total_rewards)
             if self.config.num_actions_block == 1:
                 print("REWARD DETAILS:", env.get_reward_details())
             for obs_type in obs_types:

@@ -119,6 +119,7 @@ class RiverBasin:
         instance: Instance = None,
         flow_smoothing: int = None,
         num_scenarios: int = None,
+        greedy_start: bool = False
     ):
 
         """
@@ -145,21 +146,35 @@ class RiverBasin:
 
         # Update river basin until the start of decisions
         if self.info_offset > 0:
-            self.update_until_decisions_start()
+            self.update_until_decisions_start(greedy_start)
 
         return
 
-    def update_until_decisions_start(self):
+    def update_until_decisions_start(self, greedy: bool = False):
 
         """
         Update the river basin with the starting flows
         until decisions must start
+
+        :param greedy: Use greedy flows (maximum flows) instead of starting flows
         """
 
-        starting_flows = [
-            [self.instance.get_starting_flows(dam_id) for dam_id in self.instance.get_ids_of_dams()]
-            for _ in range(self.num_scenarios)
-        ]
+        if greedy:
+            starting_flows = [
+                [
+                    [
+                        self.instance.get_max_flow_of_channel(dam_id)
+                        for _ in range(self.instance.get_start_information_offset())
+                    ] for dam_id in self.instance.get_ids_of_dams()
+                ] for _ in range(self.num_scenarios)
+            ]
+        else:
+            starting_flows = [
+                [
+                    self.instance.get_starting_flows(dam_id) for dam_id in self.instance.get_ids_of_dams()
+                ] for _ in range(self.num_scenarios)
+            ]
+
         starting_flows = np.array(starting_flows)  # Array of shape num_scenarios x num_dams x num_steps
         starting_flows = np.transpose(starting_flows)  # Array of shape num_steps x num_dams x num_scenarios
         self.deep_update_flows(starting_flows)

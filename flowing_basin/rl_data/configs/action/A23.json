@@ -1,0 +1,6 @@
+{
+  "action_type": "adjustments",
+  "greediness": 0.8,
+  "noise_std_dev": 0.15,
+  "num_actions_block": 99
+}

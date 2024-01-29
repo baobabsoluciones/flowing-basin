@@ -5,7 +5,7 @@ or analyzing the trained agent(s).
 
 from flowing_basin.solvers.rl import ReinforcementLearning
 
-rl = ReinforcementLearning("A21G0O3R1T13", verbose=2)
+rl = ReinforcementLearning("A23G0O3R1T13", verbose=2)
 rl.check_train_env(obs_types=['projected'], initial_date='2020-08-19 00:00')  # instancePercentile50
 # rl.collect_obs()
 # rl.plot_histograms_projector_obs()

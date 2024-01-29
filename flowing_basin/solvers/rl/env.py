@@ -162,7 +162,7 @@ class RLEnvironment(gym.Env):
         self._reset_variables()
 
         if self.config.action_type == "adjustments":
-            self.update_greedy(greediness=self.config.greediness)
+            self.update_greedy(greediness=self.config.greediness, noise_std_dev=self.config.noise_std_dev)
 
         raw_obs = self.get_obs_array()
         normalized_obs = self.normalize(raw_obs)
@@ -246,15 +246,20 @@ class RLEnvironment(gym.Env):
         avg_reward = sum(rewards) / len(rewards)
         return avg_reward
 
-    def update_greedy(self, greediness: float = 1.):
+    def update_greedy(self, greediness: float = 1., noise_std_dev: float = 0.):
 
         """
         Update the environment with greedy actions
+        :param greediness:
+        :param noise_std_dev:
         """
 
         done = False
         while not done:
             action = (greediness * 2 - 1) * self.action_space.high  # noqa
+            noise = np.random.normal(0., noise_std_dev, action.shape)
+            action += noise
+            action = np.clip(action, -1., 1.)
             _, _, done, _, _ = self.step(action, update_as_flows=True)
 
     def get_features_min_functions(self) -> dict[str, Callable[[str], float | int]]:

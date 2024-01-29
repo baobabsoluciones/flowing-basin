@@ -249,6 +249,7 @@ class RLEnvironment(gym.Env):
         min_values = {
             "past_vols": lambda dam_id: self.instance.get_min_vol_of_dam(dam_id),
             "past_flows": lambda dam_id: 0.,
+            "past_flows_unclipped": lambda dam_id: 0.,
             "past_variations": lambda dam_id: - self.instance.get_max_flow_of_channel(dam_id),
             "past_prices": lambda dam_id: 0.,
             "future_prices": lambda dam_id: 0.,
@@ -279,6 +280,7 @@ class RLEnvironment(gym.Env):
         max_values = {
             "past_vols": lambda dam_id: self.instance.get_max_vol_of_dam(dam_id),
             "past_flows": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
+            "past_flows_unclipped": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
             "past_variations": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
             "past_prices": lambda dam_id: self.instance.get_largest_price(),
             "future_prices": lambda dam_id: self.instance.get_largest_price(),
@@ -338,6 +340,12 @@ class RLEnvironment(gym.Env):
             "past_vols": lambda dam_id: np.flip(
                 self.river_basin.all_past_volumes[dam_id].squeeze()[
                 -self.config.num_steps_sight["past_vols", dam_id]:
+                ]
+            ),
+
+            "past_flows_unclipped": lambda dam_id: np.flip(
+                self.river_basin.all_past_flows.squeeze()[
+                -self.config.num_steps_sight["past_flows_unclipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
                 ]
             ),
 

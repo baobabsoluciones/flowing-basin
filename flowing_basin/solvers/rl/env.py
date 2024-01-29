@@ -136,6 +136,8 @@ class RLEnvironment(gym.Env):
         self.obs_min = None
         self.obs_max = None
         self.max_flows = None
+        self.total_rewards = None
+        self.last_flows_block = None
 
         # Initialize these variables
         self._reset_variables()
@@ -223,6 +225,8 @@ class RLEnvironment(gym.Env):
         self.max_flows = np.array([
             self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
         ])
+        self.total_rewards = []
+        self.last_flows_block = np.empty(self.instance.get_num_dams(), self.config.num_actions_block)
 
     def get_greedy_avg_reward(self, greediness: float = 1.) -> float:
 
@@ -237,7 +241,7 @@ class RLEnvironment(gym.Env):
         rewards = []
         while not done:
             action = (greediness * 2 - 1) * env.action_space.high  # noqa
-            _, _, done, _, info = env.step(action, greedy_reference=False)
+            _, _, done, _, info = env.step(action, greedy_reference=False, update_as_flows=True)
             rewards.extend(info['rewards'])
         avg_reward = sum(rewards) / len(rewards)
         return avg_reward
@@ -653,9 +657,12 @@ class RLEnvironment(gym.Env):
         """
 
         if self.config.action_type != "adjustments" or update_as_flows:
+            # Stop when instance finishes
             done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
         else:
-            raise NotImplementedError
+            # Stop when solution gets worse
+            assert len(self.total_rewards) >= 2, "There is no baseline for the current total reward."
+            done = self.total_rewards[-1] < self.total_rewards[-2]
 
         return done
 
@@ -676,18 +683,24 @@ class RLEnvironment(gym.Env):
         rewards = []
         flows_block = []
 
+        if self.config.action_type == "adjustments" and not update_as_flows:
+            self.river_basin.reset()
+
         # Execute all actions of the block sequentially
-        for action in action_block:
+        for action, last_flow in zip(action_block, self.last_flows_block):
 
             # Transform action to flows
             # Remember action is bounded between -1 and 1 in any case
             if self.config.action_type == "exiting_relvars":
+                # Relvars over the flows of the previos timestep
                 old_flows = self.river_basin.get_clipped_flows().reshape(-1)
                 new_flows = old_flows + action * self.max_flows  # noqa
             elif self.config.action_type == "exiting_flows" or update_as_flows:
+                # Flows directly (but action is between -1 and 1, not 0 and 1)
                 new_flows = (action + 1.) / 2. * self.max_flows
             elif self.config.action_type == "adjustments":
-                raise NotImplementedError
+                # Adjustments are configured as relvars over the unclipped flows of the previous iteration
+                new_flows = np.clip(last_flow + action * self.max_flows, 0, self.max_flows)
             else:
                 raise ValueError("Invalid action type.")
             flows_block.append(new_flows)
@@ -697,14 +710,22 @@ class RLEnvironment(gym.Env):
 
             # Do not execute whole block of action if episode finishes in the middle
             # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)
-            if self.is_done():
+            if self.is_done(update_as_flows) and self.config.action_type != "adjustments":
                 break
 
+        # Total reward obtained with the given actions
         total_reward = sum(rewards)
-        flows_block = np.array(flows_block).reshape(-1)  # Give it the same shape as the original action array
+        self.total_rewards.append(total_reward)
+
+        # Unclipped flows equivalent to the given actions
+        flows_block = np.array(flows_block)
+        self.last_flows_block = flows_block
+        flows_block = flows_block.reshape(-1)  # Give it the same shape as the original action array
+
         next_raw_obs = self.get_obs_array()
         next_normalized_obs = self.normalize(next_raw_obs)
         next_projected_obs = self.project(next_normalized_obs)
+
         done = self.is_done(update_as_flows)
 
         return next_projected_obs, total_reward, done, False, dict(

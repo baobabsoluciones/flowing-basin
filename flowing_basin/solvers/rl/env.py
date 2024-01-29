@@ -149,6 +149,10 @@ class RLEnvironment(gym.Env):
             self, instance: Instance = None, initial_row: int | datetime = None, seed=None, options=None
     ) -> tuple[np.ndarray, dict]:
 
+        """
+        Reset the environment. Return the initial projected observation and a dictionary with other information.
+        """
+
         super().reset(seed=seed)
 
         self._reset_instance(instance, initial_row)

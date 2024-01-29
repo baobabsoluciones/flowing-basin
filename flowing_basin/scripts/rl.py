@@ -5,8 +5,8 @@ or analyzing the trained agent(s).
 
 from flowing_basin.solvers.rl import ReinforcementLearning
 
-# rl = ReinforcementLearning("A113G0O222R1T13", verbose=2)
-# rl.check_train_env(obs_types=['raw'], initial_date='2021-03-11 00:15')
+rl = ReinforcementLearning("A113G0O2R1T13", verbose=2)
+rl.check_train_env(obs_types=['raw'], initial_date='2021-03-11 00:15')
 # rl.collect_obs()
 # rl.plot_histograms_projector_obs()
 # rl.train()
@@ -15,11 +15,11 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 # print(rl.run_agent("Percentile50").to_dict())
 
-regex = ["rl-A1G.O2R1T1", "rl-A1G.O2R22T1", "rl-A113G.O2R1T3", "rl-A113G.O2R22T3"]
+# regex = ["rl-A1G.O2R1T1", "rl-A1G.O2R22T1", "rl-A113G.O2R1T3", "rl-A113G.O2R22T3"]
 # ReinforcementLearning.barchart_training_times(regex)
-regex = [agent.replace(".", "1") for agent in regex]
+# regex = [agent.replace(".", "1") for agent in regex]
 # ReinforcementLearning.print_max_avg_incomes(regex, permutation='GATOR', baselines=["MILP", "rl-greedy", "rl-random"])
-ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
+# ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
 
 # ReinforcementLearning.print_spaces(regex)
 # ReinforcementLearning.print_training_times(regex)

@@ -253,13 +253,23 @@ class ReinforcementLearning:
         if initial_date is not None:
             initial_date = datetime.strptime(initial_date, '%Y-%m-%d %H:%M')
 
-        env.reset(initial_row=initial_date)
+        obs, info = env.reset(initial_row=initial_date)
+
+        # Instance
         print("\nINSTANCE:")
         print(env.instance.data)
         instance_checks = env.instance.check()
         if instance_checks:
             raise RuntimeError(f"There are problems with the created instance: {instance_checks}.")
 
+        # Initial observation
+        print(f"\n---- Timestep -1 ----")
+        for obs_type in obs_types:
+            print(f"\n{obs_type} OBSERVATION:".upper())
+            obs_to_print = info[f'{obs_type}_obs'] if obs_type != 'projected' else obs
+            env.print_obs(obs_to_print)
+
+        # Seed for random actions
         if seed is not None:
             env.action_space.seed(seed)
 

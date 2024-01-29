@@ -226,7 +226,7 @@ class RLEnvironment(gym.Env):
             self.instance.get_max_flow_of_channel(dam_id) for dam_id in self.instance.get_ids_of_dams()
         ])
         self.total_rewards = []
-        self.last_flows_block = np.empty(self.instance.get_num_dams(), self.config.num_actions_block)
+        self.last_flows_block = np.empty((self.instance.get_num_dams() * self.config.num_actions_block,))
 
     def get_greedy_avg_reward(self, greediness: float = 1.) -> float:
 
@@ -254,7 +254,7 @@ class RLEnvironment(gym.Env):
 
         done = False
         while not done:
-            action = (greediness * 2 - 1) * env.action_space.high  # noqa
+            action = (greediness * 2 - 1) * self.action_space.high  # noqa
             _, _, done, _, _ = self.step(action, update_as_flows=True)
 
     def get_features_min_functions(self) -> dict[str, Callable[[str], float | int]]:
@@ -267,7 +267,7 @@ class RLEnvironment(gym.Env):
         min_values = {
             "past_vols": lambda dam_id: self.instance.get_min_vol_of_dam(dam_id),
             "past_flows": lambda dam_id: 0.,
-            "past_flows_unclipped": lambda dam_id: 0.,
+            "past_flows_raw": lambda dam_id: 0.,
             "past_variations": lambda dam_id: - self.instance.get_max_flow_of_channel(dam_id),
             "past_prices": lambda dam_id: 0.,
             "future_prices": lambda dam_id: 0.,
@@ -298,7 +298,7 @@ class RLEnvironment(gym.Env):
         max_values = {
             "past_vols": lambda dam_id: self.instance.get_max_vol_of_dam(dam_id),
             "past_flows": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
-            "past_flows_unclipped": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
+            "past_flows_raw": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
             "past_variations": lambda dam_id: self.instance.get_max_flow_of_channel(dam_id),
             "past_prices": lambda dam_id: self.instance.get_largest_price(),
             "future_prices": lambda dam_id: self.instance.get_largest_price(),
@@ -361,9 +361,9 @@ class RLEnvironment(gym.Env):
                 ]
             ),
 
-            "past_flows_unclipped": lambda dam_id: np.flip(
+            "past_flows_raw": lambda dam_id: np.flip(
                 self.river_basin.all_past_flows.squeeze()[
-                -self.config.num_steps_sight["past_flows_unclipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
+                -self.config.num_steps_sight["past_flows_raw", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
                 ]
             ),
 
@@ -664,7 +664,7 @@ class RLEnvironment(gym.Env):
             assert len(self.total_rewards) >= 2, "There is no baseline for the current total reward."
             done = self.total_rewards[-1] < self.total_rewards[-2]
 
-        return done
+        return bool(done)
 
     def step(self, action_block: np.ndarray, greedy_reference: bool = True, update_as_flows: bool = False) -> tuple[np.ndarray, float, bool, bool, dict]:
 
@@ -678,8 +678,6 @@ class RLEnvironment(gym.Env):
         :param update_as_flows: Whether to treat the action as flows, independently of the configuration.
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
-
-        action_block = action_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
         rewards = []
         flows_block = []
 
@@ -687,7 +685,9 @@ class RLEnvironment(gym.Env):
             self.river_basin.reset()
 
         # Execute all actions of the block sequentially
-        for action, last_flow in zip(action_block, self.last_flows_block):
+        action_block = action_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
+        last_flows_block = self.last_flows_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
+        for action, last_flow in zip(action_block, last_flows_block):
 
             # Transform action to flows
             # Remember action is bounded between -1 and 1 in any case
@@ -708,19 +708,19 @@ class RLEnvironment(gym.Env):
             self.river_basin.update(new_flows.reshape(-1, 1))
             rewards.append(self.get_reward(greedy_reference))
 
-            # Do not execute whole block of action if episode finishes in the middle
-            # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)
-            if self.is_done(update_as_flows) and self.config.action_type != "adjustments":
-                break
+            if self.config.action_type != "adjustments":
+                # Do not execute whole block of action if episode finishes in the middle
+                # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)
+                if self.is_done(update_as_flows):
+                    break
 
         # Total reward obtained with the given actions
         total_reward = sum(rewards)
         self.total_rewards.append(total_reward)
 
         # Unclipped flows equivalent to the given actions
-        flows_block = np.array(flows_block)
+        flows_block = np.array(flows_block).reshape(-1)  # Give it the same shape as the original action array
         self.last_flows_block = flows_block
-        flows_block = flows_block.reshape(-1)  # Give it the same shape as the original action array
 
         next_raw_obs = self.get_obs_array()
         next_normalized_obs = self.normalize(next_raw_obs)

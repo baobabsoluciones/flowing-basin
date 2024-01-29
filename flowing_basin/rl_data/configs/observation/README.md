@@ -7,6 +7,8 @@
 - `O2X`: observation O2 with a PCA projector.
 - `O2X1`: observation O2 with a QuantilePseudoDiscretizer followed by a PCA projector.
 - `O2X2`: observation O2 with a QuantilePseudoDiscretizer.
+- `O3`: like O2, but with past_prices and past_inflows instead of future_prices and future_inflows,
+and with past_flows_raw instead of past_clipped.
 
 In all of these, `X` can be either `1` or `2`:
 - If `X` is `1`, the PCA projector is trained with observations obtained from a SAC agent.

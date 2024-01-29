@@ -106,8 +106,9 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
 
         # Check self.features
         valid_features = {
-            "past_vols", "past_flows", "past_variations", "past_prices", "future_prices", "past_inflows",
-            "future_inflows", "past_turbined", "past_groups", "past_powers", "past_clipped", "past_periods"
+            "past_vols", "past_flows", "past_flows_raw", "past_variations", "past_prices",
+            "future_prices", "past_inflows", "future_inflows", "past_turbined", "past_groups",
+            "past_powers", "past_clipped", "past_periods"
         }
         for feature in self.features:
             if feature not in valid_features:

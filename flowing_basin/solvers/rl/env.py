@@ -159,6 +159,9 @@ class RLEnvironment(gym.Env):
         self.river_basin.reset(self.instance)
         self._reset_variables()
 
+        if self.config.action_type == "adjustments":
+            self.update_greedy()
+
         raw_obs = self.get_obs_array()
         normalized_obs = self.normalize(raw_obs)
         projected_obs = self.project(normalized_obs)
@@ -238,6 +241,17 @@ class RLEnvironment(gym.Env):
             rewards.extend(info['rewards'])
         avg_reward = sum(rewards) / len(rewards)
         return avg_reward
+
+    def update_greedy(self, greediness: float = 1.):
+
+        """
+        Update the environment with greedy actions
+        """
+
+        done = False
+        while not done:
+            action = (greediness * 2 - 1) * env.action_space.high  # noqa
+            _, _, done, _, _ = self.step(action, update_as_flows=True)
 
     def get_features_min_functions(self) -> dict[str, Callable[[str], float | int]]:
 
@@ -630,15 +644,22 @@ class RLEnvironment(gym.Env):
 
         return reward
 
-    def is_done(self) -> bool:
+    def is_done(self, update_as_flows: bool = False) -> bool:
 
         """
         Indicates whether the environment finished
+
+        :param update_as_flows: Whether to treat the action as flows, independently of the configuration.
         """
 
-        return self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
+        if self.config.action_type != "adjustments" or update_as_flows:
+            done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
+        else:
+            raise NotImplementedError
 
-    def step(self, action_block: np.ndarray, greedy_reference: bool = True) -> tuple[np.ndarray, float, bool, bool, dict]:
+        return done
+
+    def step(self, action_block: np.ndarray, greedy_reference: bool = True, update_as_flows: bool = False) -> tuple[np.ndarray, float, bool, bool, dict]:
 
         """
         Updates the river basin with the given action
@@ -647,6 +668,7 @@ class RLEnvironment(gym.Env):
             whose meaning depends on the type of action in the configuration
         :param greedy_reference: Whether to use rl-greedy as a reference for the reward or not.
             If the configuration does not have this on, then no reference is used and this parameter is ignored.
+        :param update_as_flows: Whether to treat the action as flows, independently of the configuration.
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
 
@@ -662,8 +684,12 @@ class RLEnvironment(gym.Env):
             if self.config.action_type == "exiting_relvars":
                 old_flows = self.river_basin.get_clipped_flows().reshape(-1)
                 new_flows = old_flows + action * self.max_flows  # noqa
-            else:
+            elif self.config.action_type == "exiting_flows" or update_as_flows:
                 new_flows = (action + 1.) / 2. * self.max_flows
+            elif self.config.action_type == "adjustments":
+                raise NotImplementedError
+            else:
+                raise ValueError("Invalid action type.")
             flows_block.append(new_flows)
 
             self.river_basin.update(new_flows.reshape(-1, 1))
@@ -679,7 +705,7 @@ class RLEnvironment(gym.Env):
         next_raw_obs = self.get_obs_array()
         next_normalized_obs = self.normalize(next_raw_obs)
         next_projected_obs = self.project(next_normalized_obs)
-        done = self.is_done()
+        done = self.is_done(update_as_flows)
 
         return next_projected_obs, total_reward, done, False, dict(
             rewards=rewards,

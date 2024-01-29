@@ -207,7 +207,7 @@ class ActionConfiguration(BaseConfiguration):  # noqa
         super(ActionConfiguration, self).check()
 
         # Check self.action_type
-        valid_actions = {"exiting_flows", "exiting_relvars"}
+        valid_actions = {"exiting_flows", "exiting_relvars", "adjustments"}
         if self.action_type not in valid_actions:
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
 
@@ -337,6 +337,12 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         ActionConfiguration.check(self)
         RewardConfiguration.check(self)
         TrainingConfiguration.check(self)
+
+        if self.action_type == "adjustments" and self.num_actions_block != self.length_episodes:
+            raise ValueError(
+                f"With {self.action_type=}, the block size should be equal to {self.length_episodes=}, "
+                f"but it is actually {self.num_actions_block=}."
+            )
 
     def post_process(self):
 

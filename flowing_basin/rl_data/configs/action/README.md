@@ -4,3 +4,4 @@
 - `A111`: the agent gives the exiting flows for the next 20 (~ 99 // 5) timesteps.
 - `A112`: the agent gives the exiting flows for the next 33 (99 // 3) timesteps.
 - `A113`: the agent gives the exiting flows for the next 99 (99 // 1) timesteps.
+- `A21`: the agent adjusts the actions of the solution (initially rl-greedy's) until it no longer improves.

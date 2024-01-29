@@ -282,7 +282,8 @@ class ReinforcementLearning:
             print("\nACTION:", action)
             print("FLOW:", info['flow'])
             print("\nREWARD:", reward)
-            print("REWARD DETAILS:", env.get_reward_details())
+            if self.config.num_actions_block == 1:
+                print("REWARD DETAILS:", env.get_reward_details())
             for obs_type in obs_types:
                 print(f"\n{obs_type} OBSERVATION:".upper())
                 obs_to_print = info[f'{obs_type}_obs'] if obs_type != 'projected' else obs

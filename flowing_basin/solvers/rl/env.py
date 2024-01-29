@@ -716,6 +716,11 @@ class RLEnvironment(gym.Env):
 
         # Total reward obtained with the given actions
         total_reward = sum(rewards)
+        if self.config.action_type != "adjustments" or update_as_flows:
+            final_reward = total_reward
+        else:
+            # Difference with previous total reward
+            final_reward = total_reward - self.total_rewards[-1]
         self.total_rewards.append(total_reward)
 
         # Unclipped flows equivalent to the given actions
@@ -728,7 +733,7 @@ class RLEnvironment(gym.Env):
 
         done = self.is_done(update_as_flows)
 
-        return next_projected_obs, total_reward, done, False, dict(
+        return next_projected_obs, final_reward, done, False, dict(
             rewards=rewards,
             flow=flows_block,
             raw_obs=next_raw_obs,

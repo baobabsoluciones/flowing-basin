@@ -204,6 +204,7 @@ class ActionConfiguration(BaseConfiguration):  # noqa
     num_actions_block: int = 1  # By default, the agent only gives the actions for the current timestep
     greediness: float = 1.  # Greediness of the baseline greedy agent when action_type == 'adjustments'
     noise_std_dev: float = 0.  # Standard deviation of the initial greedy actions
+    randomness: bool = False  # If True, use random actions instead of greedy actions
 
     def check(self):
 

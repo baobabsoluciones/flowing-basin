@@ -202,6 +202,7 @@ class ActionConfiguration(BaseConfiguration):  # noqa
 
     action_type: str
     num_actions_block: int = 1  # By default, the agent only gives the actions for the current timestep
+    greediness: float = 1.  # Greediness of the baseline greedy agent when action_type == 'adjustments'
 
     def check(self):
 

@@ -162,7 +162,7 @@ class RLEnvironment(gym.Env):
         self._reset_variables()
 
         if self.config.action_type == "adjustments":
-            self.update_greedy()
+            self.update_greedy(greediness=self.config.greediness)
 
         raw_obs = self.get_obs_array()
         normalized_obs = self.normalize(raw_obs)

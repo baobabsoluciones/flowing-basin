@@ -205,6 +205,7 @@ class ActionConfiguration(BaseConfiguration):  # noqa
     greediness: float = 1.  # Greediness of the baseline greedy agent when action_type == 'adjustments'
     noise_std_dev: float = 0.  # Standard deviation of the initial greedy actions
     randomness: bool = False  # If True, use random actions instead of greedy actions
+    max_iterations: int = 20  # Maximum number of consecutive adjustments
 
     def check(self):
 

@@ -671,9 +671,12 @@ class RLEnvironment(gym.Env):
             # Stop when instance finishes
             done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
         else:
-            # Stop when solution gets worse
+            # Stop when solution gets worse or the maximum number of iterations is exceeded
             assert len(self.total_rewards) >= 2, "There is no baseline for the current total reward."
-            done = self.total_rewards[-1] < self.total_rewards[-2]
+            done = (
+                self.total_rewards[-1] < self.total_rewards[-2] or
+                len(self.total_rewards) - 1 > self.config.max_iterations
+            )
 
         return bool(done)
 

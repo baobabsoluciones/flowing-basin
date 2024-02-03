@@ -8,3 +8,4 @@
 - `A22`: like A21, but the initial greedy actions are taken with a greeediness of 80% instead of 100%
 (which has similar performance and avoids clipping all positive adjustments).
 - `A23`: like A22, but Gaussian noise with 0.15 standard deviation is added to the initial greedy actions.
+- `A24`: like A21, but the initial actions are completely random (no greediness).

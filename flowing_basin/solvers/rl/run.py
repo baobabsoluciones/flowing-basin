@@ -29,6 +29,8 @@ class RLRun(Experiment):
 
         self.solver_name = solver_name
         self.config = config
+        if self.config.action_type == "adjustments":
+            self.solutions = []
 
         # Do not use the instance directly; instead,
         # create a fresh instance from the initial datetime of the given instance
@@ -87,26 +89,43 @@ class RLRun(Experiment):
         )
         done = False
         rewards = []
+
         while not done:
+
             if policy_name == "random":
                 action = self.env.action_space.sample()
             elif policy_name == "greedy":
                 action = (greediness * 2 - 1) * self.env.action_space.high  # noqa
             else:
                 action, _ = policy.predict(obs, deterministic=True)
+
             obs, reward, done, _, _ = self.env.step(action)
             rewards.append(reward)
 
+            if self.config.action_type == "adjustments":
+                solution = self.get_solution()
+                self.solutions.append(solution)
+
+        self.solution = self.get_solution()
+
+        return dict(rewards=rewards)
+
+    def get_solution(self) -> Solution:
+
+        """
+        Get the solution from the current state of the environment
+        """
+
         clipped_flows = {
             dam_id: self.env.river_basin.all_past_clipped_flows.squeeze()[
-                self.instance.get_start_information_offset():, self.instance.get_order_of_dam(dam_id) - 1
-            ].tolist()
+                    self.instance.get_start_information_offset():, self.instance.get_order_of_dam(dam_id) - 1
+                    ].tolist()
             for dam_id in self.instance.get_ids_of_dams()
         }
         volume = {
             dam_id: self.env.river_basin.all_past_volumes[dam_id].squeeze()[
-                self.instance.get_start_information_offset():
-            ].tolist()
+                    self.instance.get_start_information_offset():
+                    ].tolist()
             for dam_id in self.instance.get_ids_of_dams()
         }
 
@@ -117,7 +136,7 @@ class RLRun(Experiment):
 
         start_decisions, end_decisions, end_impact, start_info, end_info, solution_datetime = self.get_instance_solution_datetimes()
 
-        self.solution = Solution.from_dict(
+        solution = Solution.from_dict(
             dict(
                 instance_name=self.instance.get_instance_name(),
                 instance_datetimes=dict(
@@ -144,4 +163,4 @@ class RLRun(Experiment):
             )
         )
 
-        return dict(rewards=rewards)
+        return solution

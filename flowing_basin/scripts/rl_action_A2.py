@@ -23,7 +23,7 @@ for row in range(num_rows):
             instance = instances[i]
             run = rl.run_agent(instance, model_type="model")
             incomes = [sol.get_objective_function() for sol in run.solutions]
-            total_rewards =[total_reward * instance.get_largest_price() for total_reward in run.total_rewards]
+            total_rewards = [total_reward * instance.get_largest_price() for total_reward in run.total_rewards]
             ax = axs[row, col]
             ax.plot(incomes, marker='o', label=rl.agent_name + " (incomes)")
             ax.plot(total_rewards, marker='o', label=rl.agent_name + " (reward × price)")

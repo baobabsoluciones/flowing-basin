@@ -302,6 +302,22 @@ class Instance(InstanceCore):
 
         return int(num_time_steps_offset)
 
+    def get_end_information_offset(self) -> int:
+
+        """
+        Get the number of time steps between the end of the impact interval and the end of the information interval.
+        This will be 0,
+        except when information about the future is necessary
+        (like in RL).
+        """
+
+        end_impact = self.get_end_impact_datetime()
+        end_info = self.get_end_information_datetime()
+        difference = end_info - end_impact
+        num_time_steps_offset = difference.total_seconds() // self.get_time_step_seconds()
+
+        return int(num_time_steps_offset)
+
     def get_time_step_seconds(self) -> float:
 
         """
@@ -731,9 +747,14 @@ class Instance(InstanceCore):
 
         """
         Get the largest price value for the instance.
+
+        :return: Maximum price of the decision interval (not the whole information interval)
         """
 
-        return max(self.data["energy_prices"])
+        max_price = max(
+            self.data["energy_prices"][self.get_start_information_offset(): -self.get_end_information_offset()]
+        )
+        return max_price
 
     def calculate_total_avg_inflow(self) -> float:
 

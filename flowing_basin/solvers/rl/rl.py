@@ -561,7 +561,7 @@ class ReinforcementLearning:
                       f"{self.config.projector_type} {indicate_variance(self.config.projector_type)}"
             )
 
-    def run_agent(self, instance: Instance | str, model_type: str = "best_model") -> Solution:
+    def run_agent(self, instance: Instance | str, model_type: str = "best_model") -> RLRun:
 
         """
         Solve the given instance with the current agent
@@ -582,7 +582,7 @@ class ReinforcementLearning:
         )
         run.solve(model_path)
 
-        return run.solution
+        return run
 
     def run_named_policy(self, policy_name: str, instance: Instance) -> Solution:
 
@@ -658,10 +658,10 @@ class ReinforcementLearning:
                     solver_name=new_agent_name
                 )
                 if named_policy is None:
-                    info = run.solve(model_path)
+                    run.solve(model_path)
                 else:
-                    info = run.solve(named_policy)
-                avg_reward = sum(info['rewards']) / len(info['rewards'])
+                    run.solve(named_policy)
+                avg_reward = sum(run.rewards) / len(run.rewards)
 
                 # Divide by the block size to get consistent results with different action types
                 # This effectively gives the reward per timestep instead of the reward per step

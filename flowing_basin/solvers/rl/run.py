@@ -29,8 +29,10 @@ class RLRun(Experiment):
 
         self.solver_name = solver_name
         self.config = config
+        self.rewards = None
         if self.config.action_type == "adjustments":
-            self.solutions = []
+            self.solutions = None
+            self.total_rewards = None
 
         # Do not use the instance directly; instead,
         # create a fresh instance from the initial datetime of the given instance
@@ -88,9 +90,15 @@ class RLRun(Experiment):
             initial_row=self.instance.get_start_decisions_datetime()
         )
         done = False
-        rewards = []
+        self.rewards = []
+        if self.config.action_type == "adjustments":
+            self.solutions = []
 
         while not done:
+
+            if self.config.action_type == "adjustments":
+                solution = self.get_solution()
+                self.solutions.append(solution)
 
             if policy_name == "random":
                 action = self.env.action_space.sample()
@@ -98,17 +106,27 @@ class RLRun(Experiment):
                 action = (greediness * 2 - 1) * self.env.action_space.high  # noqa
             else:
                 action, _ = policy.predict(obs, deterministic=True)
-
             obs, reward, done, _, _ = self.env.step(action)
-            rewards.append(reward)
-
-            if self.config.action_type == "adjustments":
-                solution = self.get_solution()
-                self.solutions.append(solution)
+            self.rewards.append(reward)
 
         self.solution = self.get_solution()
+        if self.config.action_type == "adjustments":
+            self.solutions.append(self.solution)
+            self.total_rewards = self.env.total_rewards
 
-        return dict(rewards=rewards)
+        return dict()
+
+    def get_obj_fun(self) -> float:
+
+        """
+        Get the objective function from the current state of the environment
+        """
+
+        income = self.env.river_basin.get_acc_income()
+        num_startups = self.env.river_basin.get_acc_num_startups()
+        num_limit_zones = self.env.river_basin.get_acc_num_times_in_limit()
+        obj_fun = income - num_startups * self.config.startups_penalty - num_limit_zones * self.config.limit_zones_penalty
+        return obj_fun.item()
 
     def get_solution(self) -> Solution:
 
@@ -129,11 +147,6 @@ class RLRun(Experiment):
             for dam_id in self.instance.get_ids_of_dams()
         }
 
-        income = self.env.river_basin.get_acc_income()
-        num_startups = self.env.river_basin.get_acc_num_startups()
-        num_limit_zones = self.env.river_basin.get_acc_num_times_in_limit()
-        obj_fun = income - num_startups * self.config.startups_penalty - num_limit_zones * self.config.limit_zones_penalty
-
         start_decisions, end_decisions, end_impact, start_info, end_info, solution_datetime = self.get_instance_solution_datetimes()
 
         solution = Solution.from_dict(
@@ -150,7 +163,7 @@ class RLRun(Experiment):
                 solver=self.solver_name,
                 time_step_minutes=self.instance.get_time_step_seconds() // 60,
                 configuration=self.config.to_dict(),
-                objective_function=obj_fun.item(),
+                objective_function=self.get_obj_fun(),
                 dams=[
                     dict(
                         id=dam_id,

@@ -488,7 +488,7 @@ class Instance(InstanceCore):
         :param idx: ID of the dam in the river basin
         :return:
             Flow that went through the channel in the time steps prior to the start of decisions,
-            in decreasing order (i.e., flow in time steps -1, ..., -info_offset) (m3/s)
+            in ascending order (i.e., flow in time steps -info_offset, ..., -1) (m3/s)
         """
 
         starting_flows = self.data["dams"][idx].get("starting_flows")
@@ -496,6 +496,70 @@ class Instance(InstanceCore):
             starting_flows = copy(starting_flows)
 
         return starting_flows
+
+    def get_starting_volumes(self, idx: str) -> list[float] | None:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return:
+            Volume in the dam in the time steps prior to the start of decisions,
+            in ascending order (i.e., in time steps -info_offset, ..., -1) (m3/s)
+        """
+
+        starting_volumes = self.data["dams"][idx].get("starting_volumes")
+        if starting_volumes is not None:
+            starting_volumes = copy(starting_volumes)
+
+        return starting_volumes
+
+    def get_starting_powers(self, idx: str) -> list[float] | None:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return:
+            Power generated in the time steps prior to the start of decisions,
+            in ascending order (i.e., in time steps -info_offset, ..., -1) (m3/s)
+        """
+
+        starting_powers = self.data["dams"][idx].get("starting_powers")
+        if starting_powers is not None:
+            starting_powers = copy(starting_powers)
+
+        return starting_powers
+
+    def get_starting_turbined(self, idx: str) -> list[float] | None:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return:
+            Turbined flow in the time steps prior to the start of decisions,
+            in ascending order (i.e., in time steps -info_offset, ..., -1) (m3/s)
+        """
+
+        starting_turbined = self.data["dams"][idx].get("starting_turbined")
+        if starting_turbined is not None:
+            starting_turbined = copy(starting_turbined)
+
+        return starting_turbined
+
+    def get_starting_groups(self, idx: str) -> list[float] | None:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return:
+            Number of active power groups in the time steps prior to the start of decisions,
+            in ascending order (i.e., in time steps -info_offset, ..., -1) (m3/s)
+        """
+
+        starting_groups = self.data["dams"][idx].get("starting_groups")
+        if starting_groups is not None:
+            starting_groups = copy(starting_groups)
+
+        return starting_groups
 
     def get_relevant_lags_of_dam(self, idx: str) -> list[int]:
 

@@ -19,6 +19,7 @@ class RiverBasin:
         mode: str = "nonlinear",
         paths_power_models: dict[str, str] = None,
         do_history_updates: bool = True,
+        update_to_decisions: bool = False
     ):
 
         # Number of scenarios (e.g. candidate solutions) for which to do calculations at the same time
@@ -28,6 +29,9 @@ class RiverBasin:
 
         # Whether to update history (slow) or not (fast)
         self.do_history_updates = do_history_updates
+
+        # Whether to update to decisions or read from data
+        self.update_to_decisions = update_to_decisions
 
         # Number of periods in which we force to keep the direction (flow increasing OR decreasing) in each dam
         self.flow_smoothing = flow_smoothing
@@ -60,8 +64,10 @@ class RiverBasin:
         self._reset_variables()
 
         # Update river basin until the start of decisions
-        if self.info_offset > 0:  # noqa
+        if self.info_offset > 0 and self.update_to_decisions:  # noqa
             self.update_until_decisions_start()
+
+        assert self.time == -1, "Simulator must have the timer at the beginning of the decisions."
 
     def _reset_variables(self):
 
@@ -73,41 +79,93 @@ class RiverBasin:
         self.info_offset = self.instance.get_start_information_offset()
         self.time = -1 - self.info_offset
 
-        # Record of flows exiting the dams,
-        # initialized as an empty array of the correct shape (num_time_steps x num_dams x num_scenarios)
-        self.all_past_flows = np.array([]).reshape(
-            (0, self.instance.get_num_dams(), self.num_scenarios)
-        )
-        self.all_past_clipped_flows = np.array([]).reshape(
-            (0, self.instance.get_num_dams(), self.num_scenarios)
-        )
+        if self.info_offset == 0 or self.update_to_decisions:
 
-        # Record of volumes, powers, turbined flows and power group numbers of each dam,
-        # initialized as empty arrays of the correct shape (num_time_steps x num_scenarios)
-        self.all_past_volumes = {
-            dam_id: np.array([]).reshape(
-                (0, self.num_scenarios)
+            # Record of flows exiting the dams,
+            # initialized as an empty array of the correct shape (num_time_steps x num_dams x num_scenarios)
+            self.all_past_flows = np.array([]).reshape(
+                (0, self.instance.get_num_dams(), self.num_scenarios)
             )
-            for dam_id in self.instance.get_ids_of_dams()
-        }
-        self.all_past_powers = {
-            dam_id: np.array([]).reshape(
-                (0, self.num_scenarios)
+            self.all_past_clipped_flows = np.array([]).reshape(
+                (0, self.instance.get_num_dams(), self.num_scenarios)
             )
-            for dam_id in self.instance.get_ids_of_dams()
-        }
-        self.all_past_turbined = {
-            dam_id: np.array([]).reshape(
-                (0, self.num_scenarios)
+
+            # Record of volumes, powers, turbined flows and power group numbers of each dam,
+            # initialized as empty arrays of the correct shape (num_time_steps x num_scenarios)
+            self.all_past_volumes = {
+                dam_id: np.array([]).reshape(
+                    (0, self.num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+            self.all_past_powers = {
+                dam_id: np.array([]).reshape(
+                    (0, self.num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+            self.all_past_turbined = {
+                dam_id: np.array([]).reshape(
+                    (0, self.num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+            self.all_past_groups = {
+                dam_id: np.array([]).reshape(
+                    (0, self.num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+
+        else:
+
+            # Fill the previous values with the initial conditions read from data
+
+            self.all_past_flows = np.transpose(
+                [  # (num_scenarios x num_dams x num_time_steps)
+                    [
+                        self.instance.get_starting_flows(dam_id) for dam_id in self.instance.get_ids_of_dams()
+                    ] for _ in range(self.num_scenarios)
+                ], (2, 1, 0)  # (num_time_steps x num_dams x num_scenarios)
             )
-            for dam_id in self.instance.get_ids_of_dams()
-        }
-        self.all_past_groups = {
-            dam_id: np.array([]).reshape(
-                (0, self.num_scenarios)
+            self.all_past_clipped_flows = np.transpose(
+                [  # (num_scenarios x num_dams x num_time_steps)
+                    [
+                        self.instance.get_starting_flows(dam_id) for dam_id in self.instance.get_ids_of_dams()
+                    ] for _ in range(self.num_scenarios)
+                ], (2, 1, 0)  # (num_time_steps x num_dams x num_scenarios)
             )
-            for dam_id in self.instance.get_ids_of_dams()
-        }
+
+            self.all_past_volumes = {
+                dam_id: np.transpose(
+                    [self.instance.get_starting_volumes(dam_id) for _ in range(self.num_scenarios)],
+                    (1, 0)  # (num_time_steps x num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+            self.all_past_powers = {
+                dam_id: np.transpose(
+                    [self.instance.get_starting_powers(dam_id) for _ in range(self.num_scenarios)],
+                    (1, 0)  # (num_time_steps x num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+            self.all_past_turbined = {
+                dam_id: np.transpose(
+                    [self.instance.get_starting_turbined(dam_id) for _ in range(self.num_scenarios)],
+                    (1, 0)  # (num_time_steps x num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+            self.all_past_groups = {
+                dam_id: np.transpose(
+                    [self.instance.get_starting_groups(dam_id) for _ in range(self.num_scenarios)],
+                    (1, 0)  # (num_time_steps x num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+
+            self.time = -1
 
         # Data frame that will contain all states of the river basin throughout time
         self.history = self.create_history()
@@ -145,8 +203,10 @@ class RiverBasin:
             )
 
         # Update river basin until the start of decisions
-        if self.info_offset > 0:
+        if self.info_offset > 0 and self.update_to_decisions:
             self.update_until_decisions_start(greedy_start)
+
+        assert self.time == -1, "Simulator must have the timer at the beginning of the decisions."
 
         return
 
@@ -178,7 +238,6 @@ class RiverBasin:
         starting_flows = np.array(starting_flows)  # Array of shape num_scenarios x num_dams x num_steps
         starting_flows = np.transpose(starting_flows)  # Array of shape num_steps x num_dams x num_scenarios
         self.deep_update_flows(starting_flows)
-        assert self.time == -1
 
     def create_history(self) -> pd.DataFrame:
 

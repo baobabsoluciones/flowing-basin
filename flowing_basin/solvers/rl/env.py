@@ -388,7 +388,7 @@ class RLEnvironment(gym.Env):
                 self.river_basin.dams[self.instance.get_order_of_dam(dam_id) - 1].all_previous_variations.squeeze()[
                 -self.config.num_steps_sight["past_variations", dam_id]:
                 ]
-            ),
+            ),  # TODO: replace this with something that can be extracted from data
 
             "past_prices": lambda dam_id: np.flip(
                 self.instance.get_all_prices()[
@@ -839,12 +839,14 @@ class RLEnvironment(gym.Env):
             last_row_info, "datetime"
         ].strftime("%Y-%m-%d %H:%M")
 
+        print(historical_data.iloc[initial_row_info:last_row_info, :].to_string())
+
         data["incoming_flows"] = historical_data.loc[
-                                 initial_row_info: last_row_info, "incoming_flow"
-                                 ].values.tolist()
+            initial_row_info: last_row_info, "incoming_flow"
+        ].values.tolist()
         data["energy_prices"] = historical_data.loc[
-                                initial_row_info: last_row_info, "price"
-                                ].values.tolist()
+            initial_row_info: last_row_info, "price"
+        ].values.tolist()
 
         for order, dam_id in enumerate(dam_ids):
 
@@ -857,21 +859,33 @@ class RLEnvironment(gym.Env):
             # Initial volume
             # Not to be confused with the volume at the end of the first time step
             data["dams"][order]["initial_vol"] = historical_data.loc[
-                initial_row_info, dam_id + "_vol"
+                initial_row_decisions, dam_id + "_vol"
             ]
 
             initial_lags = historical_data.loc[
-                           initial_row_info - channel_last_lags[dam_id]: initial_row_info - 1, dam_id + "_flow"
-                           ].values.tolist()
-            initial_lags.reverse()
+               initial_row_decisions - channel_last_lags[dam_id]: initial_row_decisions - 1, dam_id + "_flow"
+            ].values.tolist()  # Flows in timesteps -N, ..., -2, -1
+            initial_lags.reverse()  # Flows in timesteps -1, -2, ..., -N
             data["dams"][order]["initial_lags"] = initial_lags
 
             if initial_row_info != initial_row_decisions:
-                starting_flows = historical_data.loc[
-                                 initial_row_info: initial_row_decisions - 1, dam_id + "_flow"
-                                 ].values.tolist()
-                starting_flows.reverse()
-                data["dams"][order]["starting_flows"] = starting_flows
+                # Get the necessary data to bring the simulator to the decision point
+                # Most recent value comes last, so we get the values in timesteps -info_offset, ..., -2, -1
+                data["dams"][order]["starting_flows"] = np.clip(historical_data.loc[
+                    initial_row_info: initial_row_decisions - 1, dam_id + "_flow"
+                ].values, None, constants.get_max_flow_of_channel(dam_id)).tolist()
+                data["dams"][order]["starting_volumes"] = np.clip(historical_data.loc[
+                    initial_row_info: initial_row_decisions - 1, dam_id + "_vol"
+                ].values, None, constants.get_max_vol_of_dam(dam_id)).tolist()
+                data["dams"][order]["starting_powers"] = np.clip(historical_data.loc[
+                    initial_row_info: initial_row_decisions - 1, dam_id + "_power"
+                ].values, None, constants.get_max_power_of_power_group(dam_id)).tolist()
+                data["dams"][order]["starting_turbined"] = np.clip(historical_data.loc[
+                    initial_row_info: initial_row_decisions - 1, dam_id + "_turbined_flow"
+                ].values, None, constants.get_max_flow_of_channel(dam_id)).tolist()
+                data["dams"][order]["starting_groups"] = [
+                    1 for _ in range(initial_row_decisions - initial_row_info)
+                ]  # TODO: get the actual number of starting power groups (merge branch pso-rbo-parameters-and-milp-comparison?)
 
             # Unregulated flow
             # We will only consider the unregulated flow of the original dams,

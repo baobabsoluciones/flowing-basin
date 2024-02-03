@@ -47,7 +47,6 @@ class PowerGroup:
         # Save the decision horizon and this power group's impact horizon
         self.decision_horizon = instance.get_decision_horizon()
         self.impact_horizon = self.decision_horizon + instance.get_relevant_lags_of_dam(self.idx)[0]
-        # TODO: again, shouldn't it be get_relevant_lags_of_dam(self.idx)[-1]?
 
         # Time-dependent attributes
         self.power = None

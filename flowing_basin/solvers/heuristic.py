@@ -536,7 +536,7 @@ class HeuristicSingleDam:
         # For some alternative solutions, this assert is not satisfied
         # TODO: find out why and fix it
 
-    def remove_limit_zones(self):
+    def remove_limit_zones(self, sorted_groups: list[list[int]]):
 
         pass
 
@@ -599,7 +599,8 @@ class HeuristicSingleDam:
                 price=self.instance.get_price(time_step),
                 flow_out=np.array([self.assigned_flows[time_step]]),
                 unregulated_flow=self.instance.get_unregulated_flow_of_dam(time_step, self.dam.idx),
-                flow_contribution=np.array([self.flow_contribution[time_step]])
+                flow_contribution=np.array([self.flow_contribution[time_step]]),
+                time=time_step
             )
             turbined_flows.append(turbined_flow.item())
             actual_exiting_flows.append(self.dam.flow_out_clipped2.item())

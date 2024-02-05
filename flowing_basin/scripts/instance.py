@@ -34,7 +34,7 @@ for example in EXAMPLES:
         # Average inflow
         calculated_avg_inflow = instance.calculate_total_avg_inflow()
         print("total avg inflow:", calculated_avg_inflow)
-        date = instance.get_start_end_datetimes()[0].date()
+        date = instance.get_start_decisions_datetime().date()
         daily_inflow_data = pd.read_pickle("../data/history/historical_data_daily_avg_inflow.pickle")
         avg_inflow = daily_inflow_data.loc[date, 'total_avg_inflow']
         print("total avg inflow (as stored in data):", avg_inflow)

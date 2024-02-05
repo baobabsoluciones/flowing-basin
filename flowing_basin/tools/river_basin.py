@@ -492,7 +492,7 @@ class RiverBasin:
 
         return np.array([dam.flow_out_smoothed for dam in self.dams])
 
-    def update(self, flows: np.ndarray, fast_mode: bool = False):
+    def update(self, flows: np.ndarray):
 
         """
         Update the river basin for a single time step.
@@ -500,7 +500,6 @@ class RiverBasin:
         :param flows:
             Array of shape num_dams x num_scenarios with
             the flows going through each channel for every scenario in the current time step (m3/s)
-        :param fast_mode: Whether to update the history or not
         """
 
         # Increase time step identifier (which will be used to get the next price, incoming flow, and unregulated flows)
@@ -570,12 +569,12 @@ class RiverBasin:
             axis=0,
         )
 
-        if self.do_history_updates and not fast_mode:
+        if self.do_history_updates:
             self.update_history()
 
         return
 
-    def deep_update_flows(self, flows: np.ndarray, fast_mode: bool = False):
+    def deep_update_flows(self, flows: np.ndarray):
 
         """
         Update the river basin for the whole planning horizon.
@@ -583,22 +582,20 @@ class RiverBasin:
         :param flows:
             Array of shape num_time_steps x num_dams x num_scenarios with
             the flows that should go through each channel in every time step for every scenario (m3/s)
-        :param fast_mode: Whether to update the history at every time step or not
         """
 
         for flow in flows:
-            self.update(flow, fast_mode=fast_mode)
+            self.update(flow)
 
         return
 
-    def deep_update_relvars(self, relvars: np.ndarray, fast_mode: bool = False):
+    def deep_update_relvars(self, relvars: np.ndarray):
 
         """
 
         :param relvars: Relative variations
             Array of shape num_time_steps x num_dams x num_scenarios with
             the variation of flow (as a fraction of flow max) through each channel in every time step and scenario (m3/s)
-        :param fast_mode: Whether to update the history at every time step or not
         """
 
         # Max flow through each channel, as an array of shape num_dams x num_scenarios
@@ -623,12 +620,12 @@ class RiverBasin:
         # Update river basin repeatedly
         for relvar in relvars:
             new_flows = old_flows + relvar * max_flows
-            self.update(new_flows, fast_mode=fast_mode)
+            self.update(new_flows)
             old_flows = self.get_clipped_flows()
 
         return
 
-    def deep_update(self, flows_or_relvars: np.ndarray, is_relvars: bool, fast_mode: bool = False):
+    def deep_update(self, flows_or_relvars: np.ndarray, is_relvars: bool):
 
         """
         Reset the river basin and update it for the whole planning horizon
@@ -638,17 +635,16 @@ class RiverBasin:
             Array of shape num_time_steps x num_dams x num_particles with
             the flows or relvars assigned for the whole planning horizon
         :param is_relvars: Whether the given array represents relvars or flows
-        :param fast_mode: Whether to update the history at every time step or not
         """
 
         num_scenarios = flows_or_relvars.shape[-1]
         self.reset(num_scenarios=num_scenarios)
 
         if is_relvars:
-            self.deep_update_relvars(relvars=flows_or_relvars, fast_mode=fast_mode)
+            self.deep_update_relvars(relvars=flows_or_relvars)
             return
 
-        self.deep_update_flows(flows=flows_or_relvars, fast_mode=fast_mode)
+        self.deep_update_flows(flows=flows_or_relvars)
         return
 
     def get_state(self) -> dict:

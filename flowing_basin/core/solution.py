@@ -146,7 +146,7 @@ class Solution(SolutionCore):
 
         # For evey dam, the total income must be equal to the computed income from configuration and details
         inconsistent_dams = []
-        config = self.data.get("configuration")
+        config = self.get_configuration()
         if has_details and config is not None:
             for dam_id in self.get_ids_of_dams():
                 dam_details = self.data["dams"][dam_id]["objective_function_details"]
@@ -190,24 +190,32 @@ class Solution(SolutionCore):
 
         return inconsistencies
 
-    def complies_with_flow_smoothing(self, flow_smoothing: int, epsilon: float = 1e-6) -> bool:
+    def complies_with_flow_smoothing(
+            self, flow_smoothing: int, initial_flows: dict[str, float], epsilon: float = 1e-6
+    ) -> bool:
 
         """
         Indicates whether the solution complies with the given flow smoothing parameter or not
 
         :param flow_smoothing:
+        :param initial_flows: First lag of each dam
         :param epsilon: Small tolerance for rounding errors
         :return:
         """
+
+        # If there is no flow smoothing, then there is no need to check
+        if flow_smoothing == 0:
+            return True
 
         compliance = True
         for dam_id in self.get_ids_of_dams():
             flows = self.get_exiting_flows_of_dam(dam_id)
             variations = []
-            previous_flow = 0  # We do not have access to the instance, so we assume it is 0
+            previous_flow = initial_flows[dam_id]
             for flow in flows:
                 current_variation = flow - previous_flow
                 if any([current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]):
+                    # print(dam_id, flow, current_variation, variations[-flow_smoothing:])
                     compliance = False
                 variations.append(current_variation)
                 previous_flow = flow
@@ -393,10 +401,27 @@ class Solution(SolutionCore):
         Get the assigned flows to the given dam.
 
         :param idx: ID of the dam in the river basin
-        :return: List indicating the flow exiting the reservoir at each point in time (m3/s)
+        :return: List indicating the assigned flow exiting the reservoir at each point in time (m3/s)
         """
 
         return self.data["dams"][idx]["flows"]
+
+    def get_predicted_exiting_flows_of_dam(self, idx: str) -> list[float]:
+
+        """
+        Get the actual exiting flows predicted for the given dam
+        (these may be different from the assigned flows due to clipping).
+
+        :param idx: ID of the dam in the river basin
+        :return: List indicating the predicted flow exiting the reservoir at each point in time (m3/s)
+        """
+
+        predicted_flows = self.data["dams"][idx].get("flows_predicted")
+        if predicted_flows is None:
+            # Assume predicted flows equal the assigned flows
+            predicted_flows = self.get_exiting_flows_of_dam(idx)
+
+        return predicted_flows
 
     def get_objective_function(self) -> float | None:
 
@@ -407,6 +432,17 @@ class Solution(SolutionCore):
         """
 
         return self.data.get("objective_function")
+
+    def get_objective_details(self, idx: str) -> dict[str, float] | None:
+
+        """
+        Get the details behind the objective function value
+        (income from energy, startups, limit zones and volume exceedance)
+
+        :return:
+        """
+
+        return self.data["dams"][idx].get("objective_function_details")
 
     def get_history_time_stamps(self) -> list[float] | None:
 
@@ -420,7 +456,7 @@ class Solution(SolutionCore):
 
         return time_stamps
 
-    def get_history_values(self) -> list[float] | None:
+    def get_history_objective_function_values(self) -> list[float] | None:
 
         """
         Get the history of objective function values
@@ -432,27 +468,70 @@ class Solution(SolutionCore):
 
         return values
 
-    def get_history_gap(self) -> list[float] | None:
+    def get_history_gap_values(self) -> list[float] | None:
 
         """
-        Get the history of gap values for the MILP solver
+        Get the gap values of the MILP solver
         """
 
         values = self.data.get("objective_history")
         if values is not None:
-            values = values["gap_values_pct"]
+            values = values.get("gap_values_pct")
 
         return values
 
-    def get_final_gap(self) -> float | None:
+    def get_final_gap_value(self) -> float | None:
 
         """
-        Get the final gap achieved by the MILP solver
+        Get the final gap value of the MILP solver
         """
 
-        gap_values = self.get_history_gap()
+        gap_values = self.get_history_gap_values()
         if gap_values is not None:
-            return gap_values[-1]
+            final_gap = gap_values[-1]
+        else:
+            final_gap = None
+
+        return final_gap
+
+    def get_history_objective_function_value(self, time_s: float) -> float:
+
+        """
+        Get the objective function value
+        for the given execution time in seconds
+        """
+
+        obj_fun_value = np.interp(
+            time_s,
+            self.get_history_time_stamps(),
+            self.get_history_objective_function_values(),
+        )
+
+        return obj_fun_value
+
+    def get_history_gap_value(self, time_s: float) -> float:
+
+        """
+        Get the gap value
+        for the given execution time in seconds
+        (valid only for the MILP solver)
+        """
+
+        obj_fun_value = np.interp(
+            time_s,
+            self.get_history_time_stamps(),
+            self.get_history_gap_values(),
+        )
+
+        return obj_fun_value
+
+    def get_configuration(self) -> dict | None:
+
+        """
+        Get the configuration used to find the current solution
+        """
+
+        return self.data.get("configuration")
 
     def get_volumes_of_dam(self, idx: str) -> list[float] | None:
 
@@ -504,12 +583,12 @@ class Solution(SolutionCore):
         # Remove first dimension
         flows_p = flows_p[0]
 
-        return cls(
+        return Solution.from_dict(
             dict(
-                dams={
-                    dam_id: dict(id=dam_id, flows=flows_p[dam_index].tolist())
+                dams=[
+                    dict(id=dam_id, flows=flows_p[dam_index].tolist())
                     for dam_index, dam_id in enumerate(dam_ids)
-                }
+                ]
             )
         )
 
@@ -544,6 +623,7 @@ class Solution(SolutionCore):
         info_time_steps = self.get_information_time_steps()
 
         flows = self.get_exiting_flows_of_dam(dam_id)
+        flows_predicted = self.get_predicted_exiting_flows_of_dam(dam_id)
         volumes = self.get_volumes_of_dam(dam_id)
 
         ax.plot(decision_time_steps, volumes, color='b', label="Predicted volume")
@@ -554,7 +634,9 @@ class Solution(SolutionCore):
 
         twinax = ax.twinx()
         twinax.plot(info_time_steps, self.get_all_prices(), color='r', label="Price")
-        twinax.plot(decision_time_steps, flows, color='g', label="Flow")
+        if flows != flows_predicted:
+            twinax.plot(decision_time_steps, flows, color='g', linestyle='--', label="Flow (assigned)")
+        twinax.plot(decision_time_steps, flows_predicted, color='g', linestyle='-', label="Flow")
         twinax.set_ylabel("Flow (m3/s), Price (€)")
         twinax.legend()
 
@@ -565,7 +647,7 @@ class Solution(SolutionCore):
         """
 
         time_stamps = self.get_history_time_stamps()
-        values = self.get_history_values()
+        values = self.get_history_objective_function_values()
         if time_stamps is None or values is None:
             warnings.warn("This solution object does not have the time stamps or objective function values recorded.")
             return

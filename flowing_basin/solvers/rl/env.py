@@ -619,9 +619,9 @@ class RLEnvironment(gym.Env):
 
         # Calculate flow smoothing penalty
         flow_smoothing_uncompliance = np.any([
-            dam.all_previous_variations[-self.config.flow_smoothing - 1: -1] * dam.all_previous_variations[
-                -1] < - epsilon
-            for dam in self.river_basin.dams
+            self.river_basin.all_past_variations[dam_id].squeeze()[-self.config.flow_smoothing - 1: -1] *
+            self.river_basin.all_past_variations[dam_id].squeeze()[-1] < - epsilon
+            for dam_id in self.instance.get_ids_of_dams()
         ])
         flow_smoothing_penalty = flow_smoothing_uncompliance * self.config.flow_smoothing_penalty
 

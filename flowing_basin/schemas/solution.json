@@ -106,6 +106,12 @@
                             "type": "number"
                         }
                     },
+                    "flows_predicted": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
                     "power": {
                         "type": "array",
                         "items": {

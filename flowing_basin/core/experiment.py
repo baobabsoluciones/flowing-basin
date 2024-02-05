@@ -3,7 +3,7 @@ from typing import Dict
 from pytups import SuperDict
 from .instance import Instance
 from .solution import Solution
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, fields
 from datetime import datetime
 import json
 from copy import deepcopy
@@ -27,6 +27,15 @@ class BaseConfiguration:
 
         data_json = asdict(self.prior)
         return data_json
+
+    @classmethod
+    def from_dict(cls, data: dict):
+
+        # We filter the data dictionary to include only the necessary keys/arguments
+        necessary_attributes = {field.name for field in fields(cls) if field.init}
+        filtered_data = {attr: val for attr, val in data.items() if attr in necessary_attributes}
+
+        return cls(**filtered_data)
 
     def to_json(self, path: str):
 

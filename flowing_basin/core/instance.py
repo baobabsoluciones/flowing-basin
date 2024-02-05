@@ -325,7 +325,8 @@ class Instance(InstanceCore):
         :return: The time between updates in seconds (s)
         """
 
-        return self.data["time_step_minutes"] * 60
+        time_step_seconds = self.data["time_step_minutes"] * 60
+        return time_step_seconds
 
     def get_decision_horizon(self) -> int:
 
@@ -411,7 +412,8 @@ class Instance(InstanceCore):
         :return: Order of the dam in the river basin, from 1 to num_dams
         """
 
-        return self.data["dams"][idx]["order"]
+        order = self.data["dams"][idx]["order"]
+        return copy(order)
 
     def get_dam_id_from_order(self, order: int) -> str:
 
@@ -435,7 +437,11 @@ class Instance(InstanceCore):
         :return: The volume of the dam in the beginning (m3)
         """
 
-        return self.data["dams"][idx]["initial_vol"]
+        min_vol = self.get_min_vol_of_dam(idx)
+        max_vol = self.get_max_vol_of_dam(idx)
+        initial_vol = self.data["dams"][idx]["initial_vol"]
+
+        return max(min_vol, min(initial_vol, max_vol))
 
     def get_historical_final_vol_of_dam(self, idx: str) -> float | None:
 
@@ -447,7 +453,13 @@ class Instance(InstanceCore):
         :return: The previously observed volume of the dam in the decision horizon (m3)
         """
 
-        return self.data["dams"][idx].get("final_vol")
+        final_vol = self.data["dams"][idx].get("final_vol")
+        if final_vol is not None:
+            min_vol = self.get_min_vol_of_dam(idx)
+            max_vol = self.get_max_vol_of_dam(idx)
+            final_vol = max(min_vol, min(final_vol, max_vol))
+
+        return final_vol
 
     def get_min_vol_of_dam(self, idx: str) -> float:
 
@@ -457,7 +469,8 @@ class Instance(InstanceCore):
         :return: Minimum volume of the dam (m3)
         """
 
-        return self.data["dams"][idx]["vol_min"]
+        vol_min = self.data["dams"][idx]["vol_min"]
+        return copy(vol_min)
 
     def get_max_vol_of_dam(self, idx: str) -> float:
 
@@ -467,7 +480,8 @@ class Instance(InstanceCore):
         :return: Maximum volume of the dam (m3)
         """
 
-        return self.data["dams"][idx]["vol_max"]
+        vol_max = self.data["dams"][idx]["vol_max"]
+        return copy(vol_max)
 
     def get_initial_lags_of_channel(self, idx: str) -> list[float]:
 
@@ -479,7 +493,8 @@ class Instance(InstanceCore):
             in decreasing order (i.e., flow in time steps -1, ..., -last_lag) (m3/s)
         """
 
-        return self.data["dams"][idx]["initial_lags"]
+        initial_lags = self.data["dams"][idx]["initial_lags"]
+        return copy(initial_lags)
 
     def get_starting_flows(self, idx: str) -> list[float] | None:
 
@@ -586,7 +601,8 @@ class Instance(InstanceCore):
         :return: List of the relevant lags of the dam (1 lag = 15 minutes of time delay)
         """
 
-        return self.data["dams"][idx]["relevant_lags"]
+        relevant_lags = self.data["dams"][idx]["relevant_lags"]
+        return copy(relevant_lags)
 
     def get_verification_lags_of_dam(self, idx: str) -> list[int]:
 
@@ -598,7 +614,8 @@ class Instance(InstanceCore):
         At each time step, the turbined flow should be roughly equal to the average of the verification lags
         """
 
-        return self.data["dams"][idx]["verification_lags"]
+        verification_lags = self.data["dams"][idx]["verification_lags"]
+        return copy(verification_lags)
 
     def get_max_flow_of_channel(self, idx: str) -> float:
 
@@ -608,7 +625,8 @@ class Instance(InstanceCore):
         :return: Maximum flow the channel can carry (m3/s)
         """
 
-        return self.data["dams"][idx]["flow_max"]
+        flow_max = self.data["dams"][idx]["flow_max"]
+        return copy(flow_max)
 
     def get_flow_limit_obs_for_channel(self, idx: str) -> dict[str, list[float]]:
 
@@ -620,10 +638,8 @@ class Instance(InstanceCore):
 
         if self.data["dams"][idx]["flow_limit"]["exists"]:
             points = {
-                "observed_vols": self.data["dams"][idx]["flow_limit"]["observed_vols"],
-                "observed_flows": self.data["dams"][idx]["flow_limit"][
-                    "observed_flows"
-                ],
+                "observed_vols": copy(self.data["dams"][idx]["flow_limit"]["observed_vols"]),
+                "observed_flows": copy(self.data["dams"][idx]["flow_limit"]["observed_flows"]),
             }
         else:
             points = None
@@ -639,10 +655,8 @@ class Instance(InstanceCore):
         """
 
         points = {
-            "observed_flows": self.data["dams"][idx]["turbined_flow"]["observed_flows"],
-            "observed_powers": self.data["dams"][idx]["turbined_flow"][
-                "observed_powers"
-            ],
+            "observed_flows": copy(self.data["dams"][idx]["turbined_flow"]["observed_flows"]),
+            "observed_powers": copy(self.data["dams"][idx]["turbined_flow"]["observed_powers"]),
         }
 
         return points
@@ -666,7 +680,8 @@ class Instance(InstanceCore):
         When the turbined flow exceeds one of these flows, an additional power group unit is activated
         """
 
-        return self.data["dams"][idx]["startup_flows"]
+        startup_flows = self.data["dams"][idx]["startup_flows"]
+        return copy(startup_flows)
 
     def get_max_num_power_groups(self, idx: str) -> int:
 
@@ -687,7 +702,8 @@ class Instance(InstanceCore):
         When the turbined flow falls behind one of these flows,one of the power group units is deactivated
         """
 
-        return self.data["dams"][idx]["shutdown_flows"]
+        shutdown_flows = self.data["dams"][idx]["shutdown_flows"]
+        return copy(shutdown_flows)
 
     def get_unregulated_flow_of_dam(
         self, time: int, idx: str, num_steps: int = 1
@@ -729,8 +745,7 @@ class Instance(InstanceCore):
         """
         
         unreg_flows = self.data["dams"][idx]["unregulated_flows"]
-        
-        return unreg_flows
+        return copy(unreg_flows)
     
     def get_all_prices(self) -> list[float]:
         
@@ -740,8 +755,7 @@ class Instance(InstanceCore):
         """
         
         prices = self.data["energy_prices"]
-        
-        return prices
+        return copy(prices)
 
     def get_max_unregulated_flow_of_dam(self, idx: str) -> float:
 
@@ -751,7 +765,8 @@ class Instance(InstanceCore):
         :return: Maximum unregulated flow that can enter the dam (in any date) (m3/s)
         """
 
-        return self.data["dams"][idx]["unregulated_flow_max"]
+        max_unreg_flow = self.data["dams"][idx]["unregulated_flow_max"]
+        return copy(max_unreg_flow)
 
     def get_incoming_flow(
         self, time: int, num_steps: int = 1
@@ -787,9 +802,8 @@ class Instance(InstanceCore):
         :return: All the flows (m3/s) entering the first dam in the time bands within the decision horizon
         """
         
-        prices = self.data["incoming_flows"]
-        
-        return prices
+        incoming_flows = self.data["incoming_flows"]
+        return copy(incoming_flows)
 
     def get_max_incoming_flow(self) -> float:
 
@@ -798,7 +812,8 @@ class Instance(InstanceCore):
         :return: Maximum possible value for the incoming flow (in any date) (m3/s)
         """
 
-        return self.data["incoming_flow_max"]
+        incoming_max_flow = self.data["incoming_flow_max"]
+        return copy(incoming_max_flow)
 
     def get_price(self, time: int, num_steps: int = 1) -> float | list[float] | None:
 

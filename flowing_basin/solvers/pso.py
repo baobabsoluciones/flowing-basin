@@ -372,13 +372,21 @@ class PSO(Experiment):
         # Assert optimal party is between bounds
         assert (swarm.best_pos >= self.bounds[0]).all() and (swarm.best_pos <= self.bounds[1]).all()
 
-        # Get clipped optimal flows, and the corresponding volumes and powers of each dam
+        # Execute simulator with optimal particle
         self.river_basin.deep_update(
             self.reshape_as_flows_or_relvars(swarm=swarm.best_pos.reshape(1, -1)),
             is_relvars=self.config.use_relvars,
         )
-        optimal_flows = self.river_basin.all_past_clipped_flows  # Array of shape num_time_steps x num_dams x 1
+
+        # Optimal smoothed flows
+        # We consider the smoothed flows so the resulting solution complies with the flow smoothing parameter
+        # We also store the actual (clipped) exiting flows that would result from these assigned flows
+        optimal_flows = self.river_basin.all_past_smoothed_flows  # Array of shape num_time_steps x num_dams x 1
         optimal_flows = np.transpose(optimal_flows)[0]  # Array of shape num_dams x num_time_steps
+        clipped_flows = self.river_basin.all_past_clipped_flows
+        clipped_flows = np.transpose(clipped_flows)[0]
+
+        # Volumes and powers of each dam
         volumes = dict()
         powers = dict()
         for dam_id in self.instance.get_ids_of_dams():
@@ -414,6 +422,7 @@ class PSO(Experiment):
                     dict(
                         id=dam_id,
                         flows=optimal_flows[self.instance.get_order_of_dam(dam_id) - 1].tolist(),
+                        flows_predicted=clipped_flows[self.instance.get_order_of_dam(dam_id) - 1].tolist(),
                         power=powers[dam_id].tolist(),
                         volume=volumes[dam_id].tolist(),
                         objective_function_details={

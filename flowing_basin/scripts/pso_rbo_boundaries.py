@@ -6,6 +6,8 @@ from itertools import product
 # Values of discrete parameters to consider
 USE_RELVARS = [True, False]
 BOUNDARIES = ['periodic', 'nearest', 'intermediate', 'shrink', 'reflective']
+FRACTION_RBO_INIT = 0.5
+TIME_LIMIT_MINS = 15
 
 # Instances to solve
 INSTANCES = ['Percentile25', 'Percentile75']
@@ -25,7 +27,7 @@ for relvar, boundary, example, num_dams in product(USE_RELVARS, BOUNDARIES, INST
         volume_shortage_penalty=3,
         volume_exceedance_bonus=0,
         startups_penalty=50,
-        limit_zones_penalty=0,
+        limit_zones_penalty=50,
         volume_objectives={
             dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
         },
@@ -41,8 +43,8 @@ for relvar, boundary, example, num_dams in product(USE_RELVARS, BOUNDARIES, INST
         prob_below_half=0.15,
         random_biased_sorting=True,
         common_ratio=0.6,
-        fraction_rbo_init=0.5,
-        max_time=15 * 60,
+        fraction_rbo_init=FRACTION_RBO_INIT,
+        max_time=TIME_LIMIT_MINS * 60,
         flow_smoothing=2,
         mode="linear",
     )

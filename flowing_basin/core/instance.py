@@ -812,12 +812,16 @@ class Instance(InstanceCore):
         """
         Get the largest price value for the instance.
 
-        :return: Maximum price of the decision interval (not the whole information interval)
+        :return: Maximum price of the information interval
         """
 
-        max_price = max(
-            self.data["energy_prices"][self.get_start_information_offset(): -self.get_end_information_offset()]
-        )
+        max_price = max(self.data["energy_prices"])
+
+        # To get the largest price of only the decision interval, not the whole information interval:
+        # max(self.data["energy_prices"][self.get_start_information_offset(): -self.get_end_information_offset()])
+        # But this isn't necessary in RL since the max price affects both the observation normalization and the reward,
+        # so it should be transparent for the agent
+
         return max_price
 
     def calculate_total_avg_inflow(self) -> float:

@@ -1,5 +1,5 @@
 from flowing_basin.core import Instance
-from flowing_basin.tools import RiverBasin
+from flowing_basin.tools import RiverBasin, PowerGroup
 from flowing_basin.solvers.rl import RLConfiguration
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
@@ -869,28 +869,40 @@ class RLEnvironment(gym.Env):
             data["dams"][order]["initial_lags"] = initial_lags
 
             if initial_row_info != initial_row_decisions:
+
                 # Get the necessary data to bring the simulator to the decision point
                 # Most recent value comes last, so we get the values in timesteps -info_offset, ..., -2, -1
+
                 starting_flows = np.clip(historical_data.loc[
                     initial_row_info: initial_row_decisions - 1, dam_id + "_flow"
                 ].values, None, constants.get_max_flow_of_channel(dam_id))
                 data["dams"][order]["starting_flows"] = starting_flows.tolist()
+
                 starting_flows_rolled = np.clip(historical_data.loc[
                     initial_row_info - 1: initial_row_decisions - 2, dam_id + "_flow"
                 ].values, None, constants.get_max_flow_of_channel(dam_id))
                 data["dams"][order]["starting_variations"] = (starting_flows - starting_flows_rolled).tolist()
+
                 data["dams"][order]["starting_volumes"] = np.clip(historical_data.loc[
                     initial_row_info: initial_row_decisions - 1, dam_id + "_vol"
                 ].values, None, constants.get_max_vol_of_dam(dam_id)).tolist()
+
                 data["dams"][order]["starting_powers"] = np.clip(historical_data.loc[
                     initial_row_info: initial_row_decisions - 1, dam_id + "_power"
                 ].values, None, constants.get_max_power_of_power_group(dam_id)).tolist()
-                data["dams"][order]["starting_turbined"] = np.clip(historical_data.loc[
+
+                starting_turbined_flows = np.clip(historical_data.loc[
                     initial_row_info: initial_row_decisions - 1, dam_id + "_turbined_flow"
-                ].values, None, constants.get_max_flow_of_channel(dam_id)).tolist()
-                data["dams"][order]["starting_groups"] = [
-                    1 for _ in range(initial_row_decisions - initial_row_info)
-                ]  # TODO: get the actual number of starting power groups (merge branch pso-rbo-parameters-and-milp-comparison?)
+                ].values, None, constants.get_max_flow_of_channel(dam_id))
+                data["dams"][order]["starting_turbined"] = starting_turbined_flows.tolist()
+
+                turbined_bins, turbined_bin_groups = PowerGroup.get_turbined_bins_and_groups(
+                    startup_flows=constants.get_startup_flows_of_power_group(dam_id),
+                    shutdown_flows=constants.get_shutdown_flows_of_power_group(dam_id)
+                )
+                bin_indices = np.digitize(starting_turbined_flows, turbined_bins)
+                num_active_power_groups = turbined_bin_groups[bin_indices]
+                data["dams"][order]["starting_groups"] = num_active_power_groups
 
             # Unregulated flow
             # We will only consider the unregulated flow of the original dams,

@@ -1,9 +1,7 @@
 """
 RL MILP Baseline
 This script evaluates the optimality of the "MILP" baseline.
-The solutions themselves are not calculated here, but in the
-`pso-rbo-parameters-and-milp-comparison` branch
-(which has the most updated version of the MILP model)
+The solutions themselves are calculated in `flowing_basin/scripts/lp_rl_baseline.py`
 """
 
 from flowing_basin.solvers.rl import ReinforcementLearning
@@ -23,7 +21,7 @@ for general in general_configs:
     instance_gap = []
     for baseline in ReinforcementLearning.get_all_baselines(general):
         if baseline.get_solver() == "MILP":
-            instance_gap.append((baseline.get_instance_name(), baseline.get_final_gap()))
+            instance_gap.append((baseline.get_instance_name(), baseline.get_final_gap_value()))
     instance_gap.sort(key=extract_percentile)  # Sort by instance percentile
     instances = [item[0] for item in instance_gap]
     final_gaps = [item[1] for item in instance_gap]

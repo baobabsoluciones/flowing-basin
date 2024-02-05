@@ -497,6 +497,23 @@ class Instance(InstanceCore):
 
         return starting_flows
 
+    def get_starting_variations(self, idx: str) -> list[float] | None:
+
+        """
+
+        :param idx: ID of the dam in the river basin
+        :return:
+            Flow variation in the time steps prior to the start of decisions,
+            in ascending order (i.e., variation in time steps -info_offset, ..., -1).
+            A variation in time step t is defined as flow(t) - flow(t-1). (m3/s)
+        """
+
+        starting_variations = self.data["dams"][idx].get("starting_variations")
+        if starting_variations is not None:
+            starting_variations = copy(starting_variations)
+
+        return starting_variations
+
     def get_starting_volumes(self, idx: str) -> list[float] | None:
 
         """

@@ -38,6 +38,7 @@ class Dam:
         self.flow_out_smoothed = None
         self.flow_out_clipped1 = None
         self.flow_out_clipped2 = None
+        self.current_actual_variation = None
 
         # Initialize the time-dependent attributes (variables)
         self._reset_variables(instance)
@@ -83,6 +84,7 @@ class Dam:
         self.flow_out_smoothed = None
         self.flow_out_clipped1 = None
         self.flow_out_clipped2 = None
+        self.current_actual_variation = None
 
         return
 
@@ -198,9 +200,9 @@ class Dam:
 
         # Values to smooth flow in next time step ---- #
 
-        current_actual_variation = self.flow_out_clipped2 - self.previous_flow_out
+        self.current_actual_variation = self.flow_out_clipped2 - self.previous_flow_out
         self.all_previous_variations = np.concatenate(
-            [self.all_previous_variations, current_actual_variation.reshape(1, -1)],
+            [self.all_previous_variations, self.current_actual_variation.reshape(1, -1)],
             axis=0,
         )
         self.previous_flow_out = self.flow_out_clipped2.copy()

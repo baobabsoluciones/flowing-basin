@@ -385,10 +385,10 @@ class RLEnvironment(gym.Env):
             ),
 
             "past_variations": lambda dam_id: np.flip(
-                self.river_basin.dams[self.instance.get_order_of_dam(dam_id) - 1].all_previous_variations.squeeze()[
+                self.river_basin.all_past_variations[dam_id].squeeze()[
                 -self.config.num_steps_sight["past_variations", dam_id]:
                 ]
-            ),  # TODO: replace this with something that can be extracted from data
+            ),
 
             "past_prices": lambda dam_id: np.flip(
                 self.instance.get_all_prices()[
@@ -871,9 +871,14 @@ class RLEnvironment(gym.Env):
             if initial_row_info != initial_row_decisions:
                 # Get the necessary data to bring the simulator to the decision point
                 # Most recent value comes last, so we get the values in timesteps -info_offset, ..., -2, -1
-                data["dams"][order]["starting_flows"] = np.clip(historical_data.loc[
+                starting_flows = np.clip(historical_data.loc[
                     initial_row_info: initial_row_decisions - 1, dam_id + "_flow"
-                ].values, None, constants.get_max_flow_of_channel(dam_id)).tolist()
+                ].values, None, constants.get_max_flow_of_channel(dam_id))
+                data["dams"][order]["starting_flows"] = starting_flows.tolist()
+                starting_flows_rolled = np.clip(historical_data.loc[
+                    initial_row_info - 1: initial_row_decisions - 2, dam_id + "_flow"
+                ].values, None, constants.get_max_flow_of_channel(dam_id))
+                data["dams"][order]["starting_variations"] = (starting_flows - starting_flows_rolled).tolist()
                 data["dams"][order]["starting_volumes"] = np.clip(historical_data.loc[
                     initial_row_info: initial_row_decisions - 1, dam_id + "_vol"
                 ].values, None, constants.get_max_vol_of_dam(dam_id)).tolist()

@@ -54,6 +54,7 @@ class RiverBasin:
         self.time = None
         self.all_past_flows = None
         self.all_past_clipped_flows = None
+        self.all_past_variations = None
         self.all_past_volumes = None
         self.all_past_powers = None
         self.all_past_turbined = None
@@ -92,6 +93,12 @@ class RiverBasin:
 
             # Record of volumes, powers, turbined flows and power group numbers of each dam,
             # initialized as empty arrays of the correct shape (num_time_steps x num_scenarios)
+            self.all_past_variations = {
+                dam_id: np.array([]).reshape(
+                    (0, self.num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
             self.all_past_volumes = {
                 dam_id: np.array([]).reshape(
                     (0, self.num_scenarios)
@@ -136,6 +143,13 @@ class RiverBasin:
                 ], (2, 1, 0)  # (num_time_steps x num_dams x num_scenarios)
             )
 
+            self.all_past_variations = {
+                dam_id: np.transpose(
+                    [self.instance.get_starting_variations(dam_id) for _ in range(self.num_scenarios)],
+                    (1, 0)  # (num_time_steps x num_scenarios)
+                )
+                for dam_id in self.instance.get_ids_of_dams()
+            }
             self.all_past_volumes = {
                 dam_id: np.transpose(
                     [self.instance.get_starting_volumes(dam_id) for _ in range(self.num_scenarios)],
@@ -503,6 +517,7 @@ class RiverBasin:
             turbined_flow_of_preceding_dam = turbined_flow
 
             # Update all past volumes and powers of dam
+            self.all_past_variations[dam.idx] = np.vstack((self.all_past_variations[dam.idx], dam.current_actual_variation))
             self.all_past_volumes[dam.idx] = np.vstack((self.all_past_volumes[dam.idx], dam.volume))
             self.all_past_powers[dam.idx] = np.vstack((self.all_past_powers[dam.idx], dam.channel.power_group.power))
             self.all_past_turbined[dam.idx] = np.vstack((self.all_past_turbined[dam.idx], dam.channel.power_group.turbined_flow))

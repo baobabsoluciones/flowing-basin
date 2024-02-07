@@ -1,5 +1,6 @@
 from cornflow_client import SolutionCore
 from cornflow_client.core.tools import load_json
+from flowing_basin.core import Configuration
 import os
 import pickle
 from datetime import datetime
@@ -153,10 +154,10 @@ class Solution(SolutionCore):
                 total_income = dam_details["total_income_eur"]
                 computed_income = (
                     dam_details["income_from_energy_eur"]
-                    - dam_details["startups"] * config["startups_penalty"]
-                    - dam_details["limit_zones"] * config["limit_zones_penalty"]
-                    - dam_details["volume_shortage_m3"] * config["volume_shortage_penalty"]
-                    + dam_details["volume_exceedance_m3"] * config["volume_exceedance_bonus"]
+                    - dam_details["startups"] * config.startups_penalty
+                    - dam_details["limit_zones"] * config.limit_zones_penalty
+                    - dam_details["volume_shortage_m3"] * config.volume_shortage_penalty
+                    + dam_details["volume_exceedance_m3"] * config.volume_exceedance_bonus
                 )
                 if abs(total_income - computed_income) > epsilon:
                     inconsistent_dams.append((dam_id, total_income, computed_income))
@@ -525,13 +526,15 @@ class Solution(SolutionCore):
 
         return obj_fun_value
 
-    def get_configuration(self) -> dict | None:
+    def get_configuration(self) -> Configuration | None:
 
         """
         Get the configuration used to find the current solution
         """
 
-        return self.data.get("configuration")
+        config_data = self.data.get("configuration")
+        if config_data is not None:
+            return Configuration(**config_data)
 
     def get_volumes_of_dam(self, idx: str) -> list[float] | None:
 

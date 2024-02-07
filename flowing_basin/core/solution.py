@@ -534,7 +534,7 @@ class Solution(SolutionCore):
 
         config_data = self.data.get("configuration")
         if config_data is not None:
-            return Configuration(**config_data)
+            return Configuration.from_dict(config_data)
 
     def get_volumes_of_dam(self, idx: str) -> list[float] | None:
 

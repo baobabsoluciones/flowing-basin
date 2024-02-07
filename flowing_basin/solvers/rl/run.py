@@ -118,18 +118,6 @@ class RLRun(Experiment):
 
         return dict()
 
-    def get_obj_fun(self) -> float:
-
-        """
-        Get the objective function from the current state of the environment
-        """
-
-        income = self.env.river_basin.get_acc_income()
-        num_startups = self.env.river_basin.get_acc_num_startups()
-        num_limit_zones = self.env.river_basin.get_acc_num_times_in_limit()
-        obj_fun = income - num_startups * self.config.startups_penalty - num_limit_zones * self.config.limit_zones_penalty
-        return obj_fun.item()
-
     def get_solution(self) -> Solution:
 
         """
@@ -151,6 +139,12 @@ class RLRun(Experiment):
             ].tolist()
             for dam_id in self.instance.get_ids_of_dams()
         }
+        power = {
+            dam_id: self.env.river_basin.all_past_powers[dam_id].squeeze()[
+                start_info_offset:
+            ].tolist()
+            for dam_id in self.instance.get_ids_of_dams()
+        }
 
         start_decisions, end_decisions, end_impact, start_info, end_info, solution_datetime = self.get_instance_solution_datetimes()
 
@@ -168,12 +162,19 @@ class RLRun(Experiment):
                 solver=self.solver_name,
                 time_step_minutes=self.instance.get_time_step_seconds() // 60,
                 configuration=self.config.to_dict(),
-                objective_function=self.get_obj_fun(),
+                objective_function=self.env.river_basin.get_objective_function_value(config=self.config).item(),
                 dams=[
                     dict(
                         id=dam_id,
                         flows=clipped_flows[dam_id],
-                        volume=volume[dam_id]
+                        volume=volume[dam_id],
+                        power=power[dam_id],
+                        objective_function_details={
+                            detail_key: detail_value.item()
+                            for detail_key, detail_value in self.env.river_basin.get_objective_function_details(
+                                dam_id, config=self.config
+                            ).items()
+                        }
                     )
                     for dam_id in self.instance.get_ids_of_dams()
                 ],

@@ -150,9 +150,7 @@
                             "total_income_eur",
                             "income_from_energy_eur",
                             "startups",
-                            "limit_zones",
-                            "volume_shortage_m3",
-                            "volume_exceedance_m3"
+                            "limit_zones"
                         ]
                     }
                 },

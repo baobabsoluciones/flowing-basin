@@ -2,7 +2,7 @@ from flowing_basin.core import Instance, Solution, Experiment, Configuration
 from flowing_basin.tools import RiverBasin
 from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import warnings
 import time
 import pyswarms.backend as P
@@ -200,33 +200,7 @@ class PSO(Experiment):
         """
 
         self.check_env_updated()
-
-        dam_index = self.instance.get_order_of_dam(dam_id) - 1
-        dam = self.river_basin.dams[dam_index]
-
-        income = dam.channel.power_group.acc_income
-        startups = dam.channel.power_group.acc_num_startups
-        limit_zones = dam.channel.power_group.acc_num_times_in_limit
-        vol_shortage = np.maximum(0, self.config.volume_objectives[dam_id] - dam.final_volume)
-        vol_exceedance = np.maximum(0, dam.final_volume - self.config.volume_objectives[dam_id])
-        total_income = (
-            income
-            - startups * self.config.startups_penalty
-            - limit_zones * self.config.limit_zones_penalty
-            - vol_shortage * self.config.volume_shortage_penalty
-            + vol_exceedance * self.config.volume_exceedance_bonus
-        )
-
-        obj_values = dict(
-            total_income_eur=total_income,
-            income_from_energy_eur=income,
-            startups=startups,
-            limit_zones=limit_zones,
-            volume_shortage_m3=vol_shortage,
-            volume_exceedance_m3=vol_exceedance
-        )
-
-        return obj_values
+        return self.river_basin.get_objective_function_details(dam_id, config=self.config)
 
     def env_objective_function(self) -> np.ndarray:
 
@@ -240,36 +214,7 @@ class PSO(Experiment):
         """
 
         self.check_env_updated()
-
-        income = self.river_basin.get_acc_income()
-        final_volumes = self.river_basin.get_final_volume_of_dams()
-        volume_shortages = np.array(
-            [
-                np.maximum(
-                    0, self.config.volume_objectives[dam_id] - final_volumes[dam_id]
-                )
-                for dam_id in self.instance.get_ids_of_dams()
-            ]
-        ).sum(axis=0)
-        volume_exceedances = np.array(
-            [
-                np.maximum(
-                    0, final_volumes[dam_id] - self.config.volume_objectives[dam_id]
-                )
-                for dam_id in self.instance.get_ids_of_dams()
-            ]
-        ).sum(axis=0)
-        num_startups = self.river_basin.get_acc_num_startups()
-        num_limit_zones = self.river_basin.get_acc_num_times_in_limit()
-
-        penalty = (
-            self.config.volume_shortage_penalty * volume_shortages
-            + self.config.startups_penalty * num_startups
-            + self.config.limit_zones_penalty * num_limit_zones
-        )
-        bonus = self.config.volume_exceedance_bonus * volume_exceedances
-
-        return income + bonus - penalty
+        return self.river_basin.get_objective_function_value(config=self.config)
 
     def calculate_cost(
         self, swarm: np.ndarray, is_relvars: bool
@@ -411,7 +356,7 @@ class PSO(Experiment):
                 ),
                 solution_datetime=solution_datetime,
                 solver=solver,
-                configuration=asdict(self.config),
+                configuration=self.config.to_dict(),
                 objective_function=self.env_objective_function().item(),
                 objective_history=dict(
                     objective_values_eur=obj_fun_values,

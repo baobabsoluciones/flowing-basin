@@ -156,9 +156,12 @@ class Solution(SolutionCore):
                     dam_details["income_from_energy_eur"]
                     - dam_details["startups"] * config.startups_penalty
                     - dam_details["limit_zones"] * config.limit_zones_penalty
-                    - dam_details["volume_shortage_m3"] * config.volume_shortage_penalty
-                    + dam_details["volume_exceedance_m3"] * config.volume_exceedance_bonus
                 )
+                if "volume_shortage_m3" in dam_details and "volume_exceedance_m3" in dam_details:
+                    computed_income += (
+                        dam_details["volume_exceedance_m3"] * config.volume_exceedance_bonus
+                        - dam_details["volume_shortage_m3"] * config.volume_shortage_penalty
+                    )
                 if abs(total_income - computed_income) > epsilon:
                     inconsistent_dams.append((dam_id, total_income, computed_income))
         if len(inconsistent_dams) > 0:

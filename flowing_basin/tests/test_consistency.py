@@ -46,76 +46,51 @@ class TestBaselinesConsistency(TestCase):
         )
         river_basin.deep_update_flows(solution.get_flows_array())
 
-        volume_shortage = 0.
-        volume_exceedance = 0.
-
+        # Check that the details from the simulator are the same as the details from the solution
         for dam_id in instance.get_ids_of_dams():
-
-            dam_index = instance.get_order_of_dam(dam_id) - 1
-            details = {
-                "income_from_energy_eur": river_basin.dams[dam_index].channel.power_group.acc_income.item(),
-                "startups": river_basin.dams[dam_index].channel.power_group.acc_num_startups.item(),
-                "limit_zones": river_basin.dams[dam_index].channel.power_group.acc_num_times_in_limit.item(),
-            }
-            if config.volume_shortage_penalty > 0. or config.volume_exceedance_bonus > 0.:
-                details = {
-                    **details,
-                    "volume_shortage_m3": max(
-                        0., config.volume_objectives[dam_id] - river_basin.dams[dam_index].final_volume.item()
-                    ),
-                    "volume_exceedance_m3": max(
-                        0., river_basin.dams[dam_index].final_volume.item() - config.volume_objectives[dam_id]
-                    ),
-                }
-                volume_shortage += details["volume_shortage_m3"]
-                volume_exceedance += details["volume_exceedance_m3"]
-
-            # Check details
-            obj_fun_details = solution.get_objective_details(dam_id)
-            if obj_fun_details is None:
+            sol_details = solution.get_objective_details(dam_id)
+            if sol_details is None:
                 warnings.warn(
                     f"The solution of {solution.get_solver()} with config {solution.get_configuration().to_dict()} "
                     f"for instance {solution.get_instance_name()} "
                     f"does not have objective function details."
                 )
             else:
-                for detail, value in details.items():
+                sim_details = river_basin.get_objective_function_details(dam_id, config=config)
+                sim_details = {detail_key: detail_value.item() for detail_key, detail_value in sim_details.items()}
+                for detail, value in sim_details.items():
                     self.assertAlmostEqual(
-                        obj_fun_details[detail],
+                        sol_details[detail],
                         value,
                         msg=f"The solution of {solution.get_solver()} with config {solution.get_configuration().to_dict()} "
                             f"for instance {solution.get_instance_name()} "
-                            f"has a {detail} with value {obj_fun_details[detail]}, "
+                            f"has a {detail} with value {sol_details[detail]}, "
                             f"but the simulator predicts the value {value}."
                     )
 
         # Check global objective function value
         # This test is redundant if details are provided
         # TODO: enforce details in all solvers and remove these lines of code
-        income = river_basin.get_acc_income().item()
-        penalty = (
-                config.volume_shortage_penalty * volume_shortage
-                + config.startups_penalty * river_basin.get_acc_num_startups().item()
-                + config.limit_zones_penalty * river_basin.get_acc_num_times_in_limit().item()
-        )
-        bonus = config.volume_exceedance_bonus * volume_exceedance
-        obj_fun_value = income + bonus - penalty
+        sol_obj_fun = solution.get_objective_function()
+        sim_obj_fun = river_basin.get_objective_function_value(config=config).item()
         self.assertAlmostEqual(
-            solution.get_objective_function(),
-            obj_fun_value,
+            sol_obj_fun,
+            sim_obj_fun,
             msg=f"The solution of {solution.get_solver()} with config {solution.get_configuration().to_dict()} "
                 f"for instance {solution.get_instance_name()} "
-                f"has an objective function value of {solution.get_objective_function()}, "
-                f"but the simulator predicts the value {obj_fun_value}."
+                f"has an objective function value of {sol_obj_fun}, "
+                f"but the simulator predicts the value {sim_obj_fun}."
         )
 
     def test_milp_consistency(self):
 
+        self.assertNotEqual(len(self.solutions["MILP"]), 0, msg="No MILP solutions.")
         for sol in self.solutions["MILP"]:
             self.check_consistency(sol)
 
     def test_heuristic_consistency(self):
 
+        self.assertNotEqual(len(self.solutions["Heuristic"]), 0, msg="No Heuristic solutions.")
         for sol in self.solutions["Heuristic"]:
             self.check_consistency(sol)
 
@@ -124,6 +99,7 @@ class TestBaselinesConsistency(TestCase):
         # for sol in self.solutions["rl-greedy"]:
         #     self.check_consistency(sol)
 
+        self.assertNotEqual(len(self.solutions["rl-greedy_unbiased"]), 0, msg="No rl-greedy solutions.")
         for sol in self.solutions["rl-greedy_unbiased"]:
             self.check_consistency(sol)
 
@@ -132,6 +108,7 @@ class TestBaselinesConsistency(TestCase):
         # for sol in self.solutions["rl-random"]:
         #     self.check_consistency(sol)
 
+        self.assertNotEqual(len(self.solutions["rl-random_unbiased"]), 0, msg="No rl-random solutions.")
         for sol in self.solutions["rl-random_unbiased"]:
             self.check_consistency(sol)
 

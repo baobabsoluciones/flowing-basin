@@ -1,4 +1,4 @@
-from flowing_basin.core import Instance
+from flowing_basin.core import Instance, Configuration
 from .dam import Dam
 import numpy as np
 import pandas as pd
@@ -466,6 +466,79 @@ class RiverBasin:
         """
 
         return {dam.idx: dam.final_volume for dam in self.dams}
+
+    def get_objective_function_details(self, dam_id: str, config: Configuration) -> dict[str, np.ndarray]:
+
+        """
+        Get the objective function details (income, startups, limit zones, and volume shortages)
+        for the given dam and with the given configuration.
+
+        :return: Dict with pairs (detail, array of shape num_scenarios)
+        """
+
+        dam_index = self.instance.get_order_of_dam(dam_id) - 1
+        dam = self.dams[dam_index]
+
+        income = dam.channel.power_group.acc_income
+        startups = dam.channel.power_group.acc_num_startups
+        limit_zones = dam.channel.power_group.acc_num_times_in_limit
+        obj_values = dict(
+            income_from_energy_eur=income,
+            startups=startups,
+            limit_zones=limit_zones,
+        )
+        total_income = income - startups * config.startups_penalty - limit_zones * config.limit_zones_penalty
+
+        if len(config.volume_objectives) > 0:
+            vol_shortage = np.maximum(0, config.volume_objectives[dam_id] - dam.final_volume)
+            vol_exceedance = np.maximum(0, dam.final_volume - config.volume_objectives[dam_id])
+            obj_values = dict(
+                **obj_values,
+                volume_shortage_m3=vol_shortage,
+                volume_exceedance_m3=vol_exceedance
+            )
+            total_income += vol_exceedance * config.volume_exceedance_bonus - vol_shortage * config.volume_shortage_penalty
+
+        obj_values = dict(
+            **obj_values,
+            total_income_eur=total_income,
+        )
+
+        return obj_values
+
+    def get_objective_function_value(self, config: Configuration) -> np.ndarray:
+
+        """
+        Get the objective function value for the current state of the river basin
+
+        :return: Array of shape num_scenarios with the objective function value of each scenario
+        """
+
+        income = self.get_acc_income()
+
+        if len(config.volume_objectives) > 0:
+            volume_shortages = np.array(
+                [
+                    np.maximum(
+                        0, config.volume_objectives[dam_id] - self.get_final_volume_of_dams()[dam_id]
+                    )
+                    for dam_id in self.instance.get_ids_of_dams()
+                ]
+            ).sum(axis=0)
+            volume_exceedances = np.array(
+                [
+                    np.maximum(
+                        0, self.get_final_volume_of_dams()[dam_id] - config.volume_objectives[dam_id]
+                    )
+                    for dam_id in self.instance.get_ids_of_dams()
+                ]
+            ).sum(axis=0)
+            income += config.volume_exceedance_bonus * volume_exceedances - config.volume_shortage_penalty * volume_shortages
+
+        income -= config.startups_penalty * self.get_acc_num_startups()
+        income -= config.limit_zones_penalty * self.get_acc_num_times_in_limit()
+
+        return income
 
     def get_clipped_flows(self) -> np.ndarray:
 

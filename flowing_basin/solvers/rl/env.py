@@ -27,6 +27,7 @@ class RLEnvironment(gym.Env):
             config: RLConfiguration,
             projector: Projector,
             update_observation_record: bool = False,
+            update_to_decisions: bool = False,
             path_constants: str = None,
             path_historical_data: str = None,
             instance: Instance = None,
@@ -65,7 +66,8 @@ class RLEnvironment(gym.Env):
             mode=self.config.mode,
             flow_smoothing=self.config.flow_smoothing if self.config.flow_smoothing_clip else 0,
             paths_power_models=paths_power_models,
-            do_history_updates=self.config.do_history_updates
+            do_history_updates=self.config.do_history_updates,
+            update_to_decisions=update_to_decisions,
         )
 
         # Observation space
@@ -838,8 +840,6 @@ class RLEnvironment(gym.Env):
         data["datetime"]["end_information"] = historical_data.loc[
             last_row_info, "datetime"
         ].strftime("%Y-%m-%d %H:%M")
-
-        print(historical_data.iloc[initial_row_info:last_row_info, :].to_string())
 
         data["incoming_flows"] = historical_data.loc[
             initial_row_info: last_row_info, "incoming_flow"

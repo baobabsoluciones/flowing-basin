@@ -344,7 +344,8 @@
     "datetime": {
         "end_decisions": "2021-05-21 23:45",
         "end_information": "2021-05-22 00:30",
-        "start": "2021-05-21 00:00"
+        "start": "2021-05-21 00:00",
+        "start_information": "2021-05-21 00:00"
     },
     "energy_prices": [
         80.85,
@@ -549,5 +550,6 @@
         4.253959167460317,
         10.790643631873015
     ],
+    "instance_name": "Percentile90",
     "time_step_minutes": 15
 }

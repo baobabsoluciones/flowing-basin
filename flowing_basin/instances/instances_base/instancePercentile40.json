@@ -549,5 +549,6 @@
         2.0459508942857143,
         2.052390720031746
     ],
+    "instance_name": "Percentile40",
     "time_step_minutes": 15
 }

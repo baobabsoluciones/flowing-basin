@@ -10,6 +10,7 @@ import os.path
 instances = [Instance.from_name(f"Percentile{percentile:02}") for percentile in range(0, 110, 10)]
 general_configs = ["G0", "G1"]
 policies = ["random", "greedy"]
+unbiased = True
 
 for general in general_configs:
     baselines_folder = os.path.join(ReinforcementLearning.baselines_folder, general)
@@ -18,7 +19,9 @@ for general in general_configs:
         for instance in instances:
             instance_name = instance.get_instance_name()
             print(f"{general} rl-{policy} Solving {instance_name}...")
-            sol = rl.run_named_policy(policy_name=policy, instance=instance)
-            filename = os.path.join(baselines_folder, f"instance{instance_name}_RL{policy}.json")
+            sol = rl.run_named_policy(policy_name=policy, instance=instance, update_to_decisions=not unbiased)
+            filename = os.path.join(
+                baselines_folder, f"instance{instance_name}_RL{policy}{'_unbiased' if unbiased else ''}.json"
+            )
             sol.to_json(filename)
             print(f"{general} rl-{policy} Saved file {filename}.")

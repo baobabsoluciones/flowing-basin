@@ -344,7 +344,8 @@
     "datetime": {
         "end_decisions": "2021-01-22 23:45",
         "end_information": "2021-01-23 00:30",
-        "start": "2021-01-22 00:00"
+        "start": "2021-01-22 00:00",
+        "start_information": "2021-01-22 00:00"
     },
     "energy_prices": [
         35.95,
@@ -549,5 +550,6 @@
         7.52399346015873,
         6.648150256730159
     ],
+    "instance_name": "Percentile100",
     "time_step_minutes": 15
 }

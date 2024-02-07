@@ -584,7 +584,7 @@ class ReinforcementLearning:
 
         return run
 
-    def run_named_policy(self, policy_name: str, instance: Instance) -> Solution:
+    def run_named_policy(self, policy_name: str, instance: Instance, update_to_decisions: bool = False) -> Solution:
 
         """
         Solve the given instance with a special policy ("random" or "greedy")
@@ -599,7 +599,8 @@ class ReinforcementLearning:
             config=self.config,
             instance=instance,
             projector=self.create_projector(),
-            solver_name=f"rl-{policy_name}"
+            solver_name=f"rl-{policy_name}" + "_unbiased" if not update_to_decisions else "",
+            update_to_decisions=update_to_decisions
         )
         run.solve(policy_name)
         return run.solution

@@ -121,11 +121,17 @@ class TestBaselinesConsistency(TestCase):
 
     def test_rl_greedy_consistency(self):
 
-        for sol in self.solutions["rl-greedy"]:
+        # for sol in self.solutions["rl-greedy"]:
+        #     self.check_consistency(sol)
+
+        for sol in self.solutions["rl-greedy_unbiased"]:
             self.check_consistency(sol)
 
     def test_rl_random_consistency(self):
 
-        for sol in self.solutions["rl-random"]:
+        # for sol in self.solutions["rl-random"]:
+        #     self.check_consistency(sol)
+
+        for sol in self.solutions["rl-random_unbiased"]:
             self.check_consistency(sol)
 

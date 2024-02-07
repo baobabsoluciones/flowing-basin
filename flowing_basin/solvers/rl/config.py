@@ -9,8 +9,6 @@ import numpy as np
 class GeneralConfiguration(Configuration):  # noqa
 
     flow_smoothing_clip: bool  # Whether to clip the actions that do not comply with flow smoothing or not
-    flow_smoothing: int = 0
-
     mode: str = "nonlinear"
     do_history_updates: bool = True
 

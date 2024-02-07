@@ -10,7 +10,6 @@ import warnings
 @dataclass(kw_only=True)
 class HeuristicConfiguration(Configuration):
 
-    flow_smoothing: int = 0
     mode: str = "nonlinear"
 
     # Maximize final volume independently of the objective final volume specified

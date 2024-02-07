@@ -14,8 +14,12 @@ class Instance(InstanceCore):
     )
     schema_checks = get_empty_schema()
 
-    instances_folder = os.path.join(os.path.dirname(__file__), "../instances/instances_rl")
-    instances_filenames = "instance{INSTANCE_NAME}_expanded16steps_backforth.json"
+    # Now RL can work with normal instances, so these two lines are not necessary
+    # instances_folder = os.path.join(os.path.dirname(__file__), "../instances/instances_rl")
+    # instances_filenames = "instance{INSTANCE_NAME}_expanded16steps_backforth.json"
+
+    instances_folder = os.path.join(os.path.dirname(__file__), "../instances/instances_base")
+    instances_filenames = "instance{INSTANCE_NAME}.json"
 
     @classmethod
     def from_dict(cls, data) -> "Instance":

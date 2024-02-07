@@ -1,33 +1,19 @@
-from flowing_basin.core import Instance, Solution, Experiment
+from flowing_basin.core import Instance, Solution, Experiment, Configuration
 import pulp as lp
 from dataclasses import dataclass, asdict
 import tempfile
 import os
 
 
-@dataclass
-class LPConfiguration:
-    # Objective final volumes
-    volume_objectives: dict[str, float]
-
-    # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
-    volume_shortage_penalty: float
-    volume_exceedance_bonus: float
-
-    # Penalty for each power group startup and for each time step with the turbined 
-    #flow in a limit zone (in €/occurrence)
-    startups_penalty: float
-    limit_zones_penalty: float
+# noinspection PyDataclass
+@dataclass(kw_only=True)
+class LPConfiguration(Configuration):
 
     # Gap for the solution
     MIPGap: float
 
     # Solver timeout
     max_time: float
-
-    # Number of periods during which the flow through the channel may not vary
-    # in order to change the sense of the flow's change
-    flow_smoothing: int
 
     # Number of periods during which the flow through the channel may not undergo more than one variation
     # step_min: int = None

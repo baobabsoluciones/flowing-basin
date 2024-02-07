@@ -33,7 +33,6 @@ class PSOConfiguration(Configuration):  # noqa
     max_time: float = None
 
     # RiverBasin simulator options
-    flow_smoothing: int = 0
     mode: str = "nonlinear"
 
     def __post_init__(self):

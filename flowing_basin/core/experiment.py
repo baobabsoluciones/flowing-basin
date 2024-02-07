@@ -79,6 +79,10 @@ class Configuration(BaseConfiguration):
     volume_shortage_penalty: float = 0.
     volume_exceedance_bonus: float = 0.
 
+    # Number of periods during which the flow through the channel may not vary
+    # in order to change the sense of the flow's change
+    flow_smoothing: int = 0
+
 
 class Experiment(ExperimentCore):
     schema_checks = get_empty_schema()

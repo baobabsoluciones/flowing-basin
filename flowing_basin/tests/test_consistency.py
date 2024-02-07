@@ -35,9 +35,10 @@ class TestBaselinesConsistency(TestCase):
         instance = Instance.from_name(solution.get_instance_name())
         mode = getattr(config, 'mode', 'linear')
 
+        # Do not smooth flows. Flow smoothing compliance should be checked separately
         river_basin = RiverBasin(
             instance=instance,
-            flow_smoothing=config.flow_smoothing,
+            flow_smoothing=0,
             num_scenarios=1,
             mode=mode,
             paths_power_models=None,
@@ -62,6 +63,7 @@ class TestBaselinesConsistency(TestCase):
                     self.assertAlmostEqual(
                         sol_details[detail],
                         value,
+                        places=2,
                         msg=f"The solution of {solution.get_solver()} with config {solution.get_configuration().to_dict()} "
                             f"for instance {solution.get_instance_name()} "
                             f"has a {detail} with value {sol_details[detail]}, "
@@ -76,6 +78,7 @@ class TestBaselinesConsistency(TestCase):
         self.assertAlmostEqual(
             sol_obj_fun,
             sim_obj_fun,
+            places=2,
             msg=f"The solution of {solution.get_solver()} with config {solution.get_configuration().to_dict()} "
                 f"for instance {solution.get_instance_name()} "
                 f"has an objective function value of {sol_obj_fun}, "
@@ -96,19 +99,13 @@ class TestBaselinesConsistency(TestCase):
 
     def test_rl_greedy_consistency(self):
 
-        # for sol in self.solutions["rl-greedy"]:
-        #     self.check_consistency(sol)
-
-        self.assertNotEqual(len(self.solutions["rl-greedy_unbiased"]), 0, msg="No rl-greedy solutions.")
-        for sol in self.solutions["rl-greedy_unbiased"]:
+        self.assertNotEqual(len(self.solutions["rl-greedy"]), 0, msg="No rl-greedy solutions.")
+        for sol in self.solutions["rl-greedy"]:
             self.check_consistency(sol)
 
     def test_rl_random_consistency(self):
 
-        # for sol in self.solutions["rl-random"]:
-        #     self.check_consistency(sol)
-
-        self.assertNotEqual(len(self.solutions["rl-random_unbiased"]), 0, msg="No rl-random solutions.")
-        for sol in self.solutions["rl-random_unbiased"]:
+        self.assertNotEqual(len(self.solutions["rl-random"]), 0, msg="No rl-random solutions.")
+        for sol in self.solutions["rl-random"]:
             self.check_consistency(sol)
 

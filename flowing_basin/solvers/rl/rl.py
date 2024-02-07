@@ -599,7 +599,7 @@ class ReinforcementLearning:
             config=self.config,
             instance=instance,
             projector=self.create_projector(),
-            solver_name=f"rl-{policy_name}" + "_unbiased" if not update_to_decisions else "",
+            solver_name=f"rl-{policy_name}" + ("_biased" if update_to_decisions else ""),
             update_to_decisions=update_to_decisions
         )
         run.solve(policy_name)

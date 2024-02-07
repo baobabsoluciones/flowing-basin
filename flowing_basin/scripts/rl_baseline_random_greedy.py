@@ -21,7 +21,7 @@ for general in general_configs:
             print(f"{general} rl-{policy} Solving {instance_name}...")
             sol = rl.run_named_policy(policy_name=policy, instance=instance, update_to_decisions=not unbiased)
             filename = os.path.join(
-                baselines_folder, f"instance{instance_name}_RL{policy}{'_unbiased' if unbiased else ''}.json"
+                baselines_folder, f"instance{instance_name}_RL{policy}{'_biased' if not unbiased else ''}.json"
             )
             sol.to_json(filename)
             print(f"{general} rl-{policy} Saved file {filename}.")

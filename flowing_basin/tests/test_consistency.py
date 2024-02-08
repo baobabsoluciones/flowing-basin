@@ -91,6 +91,12 @@ class TestBaselinesConsistency(TestCase):
         for sol in self.solutions["MILP"]:
             self.check_consistency(sol)
 
+    def test_pso_consistency(self):
+
+        self.assertNotEqual(len(self.solutions["PSO"]), 0, msg="No PSO solutions.")
+        for sol in self.solutions["PSO"]:
+            self.check_consistency(sol)
+
     def test_heuristic_consistency(self):
 
         self.assertNotEqual(len(self.solutions["Heuristic"]), 0, msg="No Heuristic solutions.")

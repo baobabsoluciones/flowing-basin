@@ -37,6 +37,8 @@ class PSOConfiguration(Configuration):  # noqa
 
     def __post_init__(self):
 
+        super(PSOConfiguration, self).__post_init__()
+
         # Assert given string values are valid
         valid_attr_values = dict(
             mode={"linear", "nonlinear"},

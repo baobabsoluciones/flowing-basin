@@ -15,8 +15,8 @@ class PsoRboConfiguration(PSOConfiguration, HeuristicConfiguration):
     def __post_init__(self):
 
         # Call the __post_init__ of parent classes
-        PSOConfiguration.__post_init__(self)
-        HeuristicConfiguration.__post_init__(self)
+        super(PSOConfiguration, self).__post_init__()
+        super(HeuristicConfiguration, self).__post_init__()
 
         if not self.random_biased_flows and not self.random_biased_sorting:
             raise ValueError(

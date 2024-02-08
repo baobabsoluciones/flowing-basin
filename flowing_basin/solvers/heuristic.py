@@ -29,6 +29,9 @@ class HeuristicConfiguration(Configuration):
     avoid_limit_zones: bool = False
 
     def __post_init__(self):
+
+        super(HeuristicConfiguration, self).__post_init__()
+
         valid_modes = {"linear", "nonlinear"}
         if self.mode not in valid_modes:
             raise ValueError(f"Invalid value for 'mode': {self.mode}. Allowed values are {valid_modes}")

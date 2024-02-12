@@ -8,7 +8,6 @@ from cornflow_client.core.tools import load_json
 from stable_baselines3 import SAC
 from stable_baselines3.common.env_checker import check_env
 import torch
-from captum.attr import IntegratedGradients
 import numpy as np
 import math
 from matplotlib import pyplot as plt
@@ -390,6 +389,11 @@ class ReinforcementLearning:
         """
         At the moment, this does nothing, just tests things
         """
+
+        try:
+            from captum.attr import IntegratedGradients
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError("Module 'captum' must be installed to execute this method.")
 
         model = self.load_model()  # type: SAC
         obs_record = self.load_observation_record()  # type: np.ndarray # shape (num_obs, num_features)

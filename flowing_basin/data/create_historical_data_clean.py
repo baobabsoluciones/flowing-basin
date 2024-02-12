@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 SAVE_DATAFRAMES = True
 
-if __name__=="__main__":
+if __name__ == "__main__":
     # Read historical data ---- #
 
     path_data = "history/historical_data.pickle"

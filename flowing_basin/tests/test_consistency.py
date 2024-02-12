@@ -98,8 +98,8 @@ class TestBaselinesConsistency(TestCase):
                 self.assertAlmostEqual(
                     sol_details[detail],
                     value,
-                    delta=delta_obj_fun,
-                    places=places_obj_fun,
+                    delta=delta_obj_fun if detail == "total_income_eur" else None,
+                    places=places_obj_fun if detail == "total_income_eur" else 2,
                     msg=f"The solution of {solution.get_solver()} with config {solution.get_configuration().to_dict()} "
                         f"for instance {solution.get_instance_name()} "
                         f"has a {detail} with value {sol_details[detail]} for dam {dam_id}, "

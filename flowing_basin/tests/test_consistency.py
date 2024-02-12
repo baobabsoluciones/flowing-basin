@@ -5,15 +5,11 @@ from unittest import TestCase
 import warnings
 
 
-class TestBaselinesConsistency(TestCase):
+class TestConsistency(TestCase):
 
-    def setUp(self) -> None:
-
-        solutions = {
-            sol for general_config in ["G0", "G1"] for sol in ReinforcementLearning.get_all_baselines(general_config)
-        }
-        solvers = {sol.get_solver() for sol in solutions}
-        self.solutions = {solver: [sol for sol in solutions if sol.get_solver() == solver] for solver in solvers}
+    """
+    Template for checking the consistency of solutions
+    """
 
     def check_consistency(self, solution: Solution, epsilon: float = 0.005):
 
@@ -121,6 +117,21 @@ class TestBaselinesConsistency(TestCase):
                 f"but the simulator predicts the value {sim_obj_fun}."
         )
 
+
+class TestBaselinesConsistency(TestConsistency):
+
+    """
+    Check the consistency of saved RL baselines
+    """
+
+    def setUp(self) -> None:
+
+        solutions = {
+            sol for general_config in ["G0", "G1"] for sol in ReinforcementLearning.get_all_baselines(general_config)
+        }
+        solvers = {sol.get_solver() for sol in solutions}
+        self.solutions = {solver: [sol for sol in solutions if sol.get_solver() == solver] for solver in solvers}
+
     def test_milp_consistency(self):
 
         self.assertNotEqual(len(self.solutions["MILP"]), 0, msg="No MILP solutions.")
@@ -151,3 +162,34 @@ class TestBaselinesConsistency(TestCase):
         for sol in self.solutions["rl-random"]:
             self.check_consistency(sol)
 
+
+class TestAgentsConsistency(TestConsistency):
+
+    """
+    Check the consistency of trained RL agents (for different General and Action configurations)
+    """
+
+    def setUp(self) -> None:
+
+        # Only different Action and General configurations are susceptible of being inconsistent
+        # In addition, take only the Action configs with the first digit different to avoid the test taking too long
+        action_configs = ReinforcementLearning.get_all_configs("A", relevant_digits=1)
+        general_configs = ReinforcementLearning.get_all_configs("G")
+
+        self.agents = []
+        for action_config in action_configs:
+            for general_config in general_configs:
+                # Get the first agent matching the current Action and General configurations
+                agents = ReinforcementLearning.get_all_agents(f".*{action_config}.*{general_config}.*")
+                if agents:
+                    self.agents.append(agents[0])
+        print("Agents to test:", self.agents)
+
+    def test_agents_consistency(self):
+
+        for agent in self.agents:
+            rl = ReinforcementLearning(agent)
+            for instance in ReinforcementLearning.get_all_fixed_instances():
+                run = rl.run_agent(instance)
+                self.check_consistency(run.solution)
+            print(f"Test passed by agent {agent}.")

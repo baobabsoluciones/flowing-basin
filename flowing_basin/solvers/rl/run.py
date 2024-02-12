@@ -54,8 +54,8 @@ class RLRun(Experiment):
         """
         Load the given model and use it to solve the instance given in the initialization.
 
-        :param policy: A StableBaselines3 policy, a path to a model, or one of the named policies
-            ("random" or "greedy"). You can also give "greedy_0.7" to indicate the degree of greediness,
+        :param policy: A StableBaselines3 policy or one of the named policies ("random" or "greedy").
+            You can also give "greedy_0.7" to indicate the degree of greediness,
             which the percentage of flow that the greedy agent attempts to assign at each period.
         :param options: Unused parameter
         :return: Dictionary with additional information
@@ -65,25 +65,17 @@ class RLRun(Experiment):
         policy_name = None
         greediness = 1.
         if isinstance(policy, str):
+            # A named policy
             policy_parts = policy.split("_")
             policy_name = policy_parts[0]
             if policy_name not in RLRun.named_policies:
-                # Not a named policy, but a path.
-                # To avoid a KeyError, you must indicate the env and its observation_space and action_space
-                # See issue https://github.com/DLR-RM/stable-baselines3/issues/1682#issuecomment-1813338493
-                policy = SAC.load(
-                    policy,
-                    env=self.env,
-                    custom_objects={
-                        'observation_space': self.env.observation_space,
-                        'action_space': self.env.action_space
-                    }
-                ).policy
-            else:
-                # A named policy.
-                if len(policy_parts) > 1:
-                    greediness = float(policy_parts[1])
-                    assert 0. <= greediness <= 1., f"Greediness must be a number between 0 and 1, not {greediness}."
+                raise ValueError(
+                    f"The given policy, '{policy_name}', is not a named policy (it is not in {RLRun.named_policies}). "
+                    f"Please give a SB3 policy or a valid named policy."
+                )
+            if len(policy_parts) > 1:
+                greediness = float(policy_parts[1])
+                assert 0. <= greediness <= 1., f"Greediness must be a number between 0 and 1, not {greediness}."
 
         # Reset the environment (this allows the `solve` method to be called more than once)
         # Remember we must not give the instance directly, but rather create a fresh new one for the same day

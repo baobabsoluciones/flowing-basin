@@ -320,14 +320,18 @@ class ReinforcementLearning:
                 print(f"Using observations from '{self.obs_records_path}' for projector.")
         else:
             if self.config.projector_type != "identity":
-                raise FileNotFoundError(
-                    f"Cannot build projector because the projector type is not 'identity' "
-                    f"and the observations folder '{self.obs_records_path}' does not exist."
+                warnings.warn(
+                    f"For agent {self.agent_name}, projector type is not 'identity' "
+                    f"but the observations folder '{self.obs_records_path}' does not exist. "
+                    f"Running the observation collection method to get the required observation record..."
                 )
+                self.collect_obs()
+                observations = self.load_observation_record()
+                assert observations is not None, "Observation record cannot be None after observation collection."
         projector = Projector.create_projector(self.config, observations)
         return projector
 
-    def load_observation_record(self) -> np.ndarray:
+    def load_observation_record(self) -> np.ndarray | None:
 
         """
         Load the observation record for the agent.
@@ -356,6 +360,10 @@ class ReinforcementLearning:
             or "best_model" (the model with the highest evaluation from StableBaselines3 EcalCallback)
         """
 
+        # In T0, the best model is called "model_best" instead of "best_model"
+        if self.config_names['T'] == 'T0' and model_type == "best_model":
+            model_type = "model_best"
+
         model_path = os.path.join(self.agent_path, f"{model_type}.zip")
         if not os.path.exists(model_path):
             raise FileNotFoundError(
@@ -372,6 +380,10 @@ class ReinforcementLearning:
         :param model_type: See method `get_model_path`
         """
 
+        # To avoid a KeyError, you must indicate the env and its observation_space and action_space
+        # See issue https://github.com/DLR-RM/stable-baselines3/issues/1682#issuecomment-1813338493
+        # You must also pass a lr_schedule to avoid a warning
+        # See pull request https://github.com/DLR-RM/stable-baselines3/pull/336
         model_path = self.get_model_path(model_type)
         env = self.create_train_env()
         model = SAC.load(
@@ -379,7 +391,8 @@ class ReinforcementLearning:
             env=env,
             custom_objects={
                 'observation_space': env.observation_space,
-                'action_space': env.action_space
+                'action_space': env.action_space,
+                'lr_schedule': lambda _: self.config.learning_rate,
             }
         )
         return model
@@ -393,7 +406,7 @@ class ReinforcementLearning:
         try:
             from captum.attr import IntegratedGradients
         except ModuleNotFoundError:
-            raise ModuleNotFoundError("Module 'captum' must be installed to execute this method.")
+            raise ModuleNotFoundError("Module 'captum' must be installed to execute method 'integrated_gradients'.")
 
         model = self.load_model()  # type: SAC
         obs_record = self.load_observation_record()  # type: np.ndarray # shape (num_obs, num_features)
@@ -577,14 +590,14 @@ class ReinforcementLearning:
         if isinstance(instance, str):
             instance = Instance.from_name(instance)
 
-        model_path = self.get_model_path(model_type)
         run = RLRun(
             config=self.config,
             instance=instance,
             projector=self.create_projector(),
             solver_name=self.agent_name
         )
-        run.solve(model_path)
+        model = self.load_model()
+        run.solve(model.policy)
 
         return run
 
@@ -638,7 +651,6 @@ class ReinforcementLearning:
         :return:
         """
 
-        model_path = self.get_model_path()
         agent_name = self.agent_name if named_policy is None else f"rl-{named_policy}"
         values = dict()
 
@@ -663,7 +675,8 @@ class ReinforcementLearning:
                     solver_name=new_agent_name
                 )
                 if named_policy is None:
-                    run.solve(model_path)
+                    model = self.load_model()
+                    run.solve(model.policy)
                 else:
                     run.solve(named_policy)
                 avg_reward = sum(run.rewards) / len(run.rewards)
@@ -847,7 +860,8 @@ class ReinforcementLearning:
 
     @staticmethod
     def print_max_avg_incomes(
-            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None
+            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
+            read_from_data: bool = False
     ) -> list[list[str]] | None:
 
         """
@@ -871,8 +885,20 @@ class ReinforcementLearning:
 
         # Add rows with max average income of agents
         for agent in agents:
-            training_data_agent = ReinforcementLearning.get_training_data(agent)
-            results.append([agent, training_data_agent.get_max_avg_value()])
+            print(f"Calculating average income of {agent}...")
+            if read_from_data:
+                # Get the max avg income saved in the evaluation data (this value is biased in old agents)
+                training_data_agent = ReinforcementLearning.get_training_data(agent)
+                results.append([agent, training_data_agent.get_max_avg_value()])
+            else:
+                # Calculate a fresh avg income using the best model
+                rl = ReinforcementLearning(agent)
+                incomes = []
+                for instance in ReinforcementLearning.get_all_fixed_instances():
+                    run = rl.run_agent(instance)
+                    income = run.solution.get_objective_function()
+                    incomes.append(income)
+                results.append([agent, sum(incomes) / len(incomes)])
 
         training_data_baselines = TrainingData.create_empty()
         all_baselines = ReinforcementLearning.get_all_baselines(general_config)
@@ -1049,6 +1075,30 @@ class ReinforcementLearning:
                 sol = Solution.from_json(full_path)
                 sols.append(sol)
         return sols
+
+    @staticmethod
+    def get_all_configs(config_letter: str, relevant_digits: int = None) -> list[str]:
+
+        """
+        Get all config names (e.g., "A0", "A1", "A110", ...) of the given config letter (e.g., "A")
+        :param config_letter:
+        :param relevant_digits: Number of digits for which two configs are considered different
+            (default is to treat all digits as relevant)
+        :return:
+        """
+
+        config_names = []
+        config_names_explored = set()
+        config_path, _ = ReinforcementLearning.configs_info[config_letter]
+        for file in os.listdir(config_path):
+            if file.endswith('.json'):
+                filename = os.path.basename(file)  # Remove the head (path); Documents/book.txt -> book.txt
+                filename = os.path.splitext(filename)[0]  # Remove the extension; book.txt -> book
+                filename_relevant = filename[:(relevant_digits + 1)] if relevant_digits is not None else filename
+                if filename_relevant not in config_names_explored:
+                    config_names_explored.add(filename_relevant)
+                    config_names.append(filename)
+        return config_names
 
     @staticmethod
     def get_all_fixed_instances() -> list[Instance]:

@@ -96,8 +96,12 @@ class TrainingDataCallback(BaseCallback):
             self.start_timestep_offset = 0
         else:
             self.training_data = training_data
-            self.start_timestamp_offset = self.training_data.get_time_stamps()[-1]
-            self.start_timestep_offset = self.training_data.get_timesteps()[-1]
+            try:
+                self.start_timestamp_offset = self.training_data.get_time_stamps()[-1]
+                self.start_timestep_offset = self.training_data.get_timesteps()[-1]
+            except IndexError:
+                self.start_timestamp_offset = 0.
+                self.start_timestep_offset = 0
 
     def _on_step(self) -> bool:
 

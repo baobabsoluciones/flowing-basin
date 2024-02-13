@@ -7,6 +7,7 @@ from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
 import os
 import warnings
+import re
 
 
 class RLTrain(Experiment):
@@ -27,6 +28,7 @@ class RLTrain(Experiment):
     :param solution:
     :param experiment_id:
     :param verbose:
+    :param num_timesteps: If given, override the number of timesteps in the configuration (only for testing purposes)
     """
 
     def __init__(
@@ -45,6 +47,7 @@ class RLTrain(Experiment):
             solution: Solution = None,
             experiment_id: str = None,
             verbose: int = 1,
+            num_timesteps: int = None
     ):
 
         super().__init__(instance=instance, solution=solution, experiment_id=experiment_id)
@@ -53,23 +56,20 @@ class RLTrain(Experiment):
 
         self.verbose = verbose
         self.config = config
+        self.num_timesteps = num_timesteps if num_timesteps is not None else self.config.num_timesteps
         self.projector = projector
         self.save_replay_buffer = save_replay_buffer
 
         # Path to the folder with all the information about the agent, including the model itself
-        self.path_folder = path_folder
-        if self.path_folder is not None:
-            os.makedirs(self.path_folder, exist_ok=True)
-
-        # Path to files inside the agent folder
-        if self.path_folder is not None:
-            self.path_model = os.path.join(self.path_folder, "model.zip")
-            self.path_replay_buffer = os.path.join(self.path_folder, 'replay_buffer.pickle')
-            self.path_training_data = os.path.join(self.path_folder, "training_data.json")
-        else:
-            self.path_model = None
-            self.path_replay_buffer = None
-            self.path_training_data = None
+        self.path_old_folder = None
+        self.path_old_model = None
+        self.path_old_replay_buffer = None
+        self.path_old_training_data = None
+        self.path_new_folder = None
+        self.path_new_model = None
+        self.path_new_replay_buffer = None
+        self.path_new_training_data = None
+        self._set_agent_files(path_folder)
 
         # Path to tensorboard logging directory
         self.path_tensorboard = path_tensorboard
@@ -84,8 +84,8 @@ class RLTrain(Experiment):
             paths_power_models=paths_power_models,
             instance=instance,
         )
-        if self.path_folder is not None:
-            self.train_env = Monitor(self.train_env, filename=os.path.join(self.path_folder, "."))
+        if self.path_new_folder is not None:
+            self.train_env = Monitor(self.train_env, filename=os.path.join(self.path_new_folder, "."))
         else:
             self.train_env = Monitor(self.train_env)
 
@@ -104,6 +104,44 @@ class RLTrain(Experiment):
             instance=instance,
         )
         self.eval_env = Monitor(self.eval_env)
+
+    def _set_agent_files(self, path_folder: str = None):
+
+        """
+        Create the folder with agent information and set the paths to its files
+        :param path_folder:
+        :return:
+        """
+
+        # Get the old (previous training iteration) and new (current training iteration) agent folders
+        self.path_old_folder = None
+        self.path_new_folder = path_folder
+        if path_folder is not None:
+            # Get the training iteration of the given folder (e.g., for "rl-A113G0O2R1T3_1", it is 1)
+            match = re.search(r"_\d+", path_folder)
+            if match is None:
+                # Either the previous iteration was 0, or there was no previous iteration
+                if os.path.exists(path_folder):
+                    # The previous training iteration is 0 and the new one is 1
+                    self.path_old_folder = path_folder
+                    self.path_new_folder = path_folder + "_1"
+            else:
+                # The previous training iteration was not 0, and we need to replace the number with the new one
+                training_iter = int(match.group()[1:])
+                self.path_old_folder = path_folder
+                self.path_new_folder = re.sub(r"_\d+", f"_{training_iter + 1}", path_folder)
+
+        # Set paths of files inside old folder
+        if self.path_old_folder is not None:
+            self.path_old_model = os.path.join(self.path_old_folder, "model.zip")
+            self.path_old_replay_buffer = os.path.join(self.path_old_folder, 'replay_buffer.pickle')
+            self.path_old_training_data = os.path.join(self.path_old_folder, "training_data.json")
+
+        # Set paths of files inside new folder
+        if self.path_new_folder is not None:
+            self.path_new_model = os.path.join(self.path_new_folder, "model.zip")
+            self.path_new_replay_buffer = os.path.join(self.path_new_folder, 'replay_buffer.pickle')
+            self.path_new_training_data = os.path.join(self.path_new_folder, "training_data.json")
 
     def _initialize_agent(self):
 
@@ -145,10 +183,10 @@ class RLTrain(Experiment):
 
         # Check if training should continue from pre-trained model
         self.from_pretrained = False
-        if self.path_model is not None and os.path.exists(self.path_model):
+        if self.path_old_model is not None and os.path.exists(self.path_old_model):
             self.from_pretrained = True
             if self.verbose >= 1:
-                print(f"The training will continue from a pre-trained model saved in '{self.path_model}'.")
+                print(f"The training will continue from a pre-trained model saved in '{self.path_old_model}'.")
 
         # Define the model
         model_kwargs = dict(
@@ -156,18 +194,18 @@ class RLTrain(Experiment):
             verbose=self.verbose, tensorboard_log=self.path_tensorboard, policy_kwargs=policy_kwargs
         )
         if self.from_pretrained:
-            self.model = SAC.load(self.path_model, env=self.train_env, **model_kwargs)
+            self.model = SAC.load(self.path_old_model, env=self.train_env, **model_kwargs)
         else:
             self.model = SAC(policy_type, self.train_env, **model_kwargs)
 
         # Load replay buffer of pre-trained model
-        if self.path_replay_buffer is not None and os.path.exists(self.path_replay_buffer):
-            self.model.load_replay_buffer(self.path_replay_buffer)
+        if self.path_old_replay_buffer is not None and os.path.exists(self.path_old_replay_buffer):
+            self.model.load_replay_buffer(self.path_old_replay_buffer)
             if self.verbose >= 1:
                 print(f"Loaded replay buffer of pre-trained model with {self.model.replay_buffer.size()} transitions.")
         elif self.from_pretrained:
             warnings.warn(
-                f"Pre-trained model does not have a replay buffer in '{self.path_replay_buffer}'. "
+                f"Pre-trained model does not have a replay buffer in '{self.path_old_replay_buffer}'. "
                 f"Training may not be smooth."
             )
 
@@ -185,10 +223,10 @@ class RLTrain(Experiment):
         # Set callbacks
         callbacks = []
         if self.config.training_data_callback:
-            if self.path_training_data is not None and os.path.exists(self.path_training_data):
-                training_data = TrainingData.from_json(self.path_training_data)
+            if self.path_old_training_data is not None and os.path.exists(self.path_old_training_data):
+                training_data = TrainingData.from_json(self.path_old_training_data)
                 if self.verbose >= 1:
-                    print(f"Loaded training data of pre-trained model from '{self.path_training_data}'.")
+                    print(f"Loaded training data of pre-trained model from '{self.path_old_training_data}'.")
             else:
                 training_data = None
             training_data_callback = TrainingDataCallback(
@@ -204,8 +242,8 @@ class RLTrain(Experiment):
         if self.config.evaluation_callback:
             eval_callback = EvalCallback(
                 self.eval_env,
-                best_model_save_path=self.path_folder if self.config.evaluation_save_best else None,
-                log_path=self.path_folder,
+                best_model_save_path=self.path_new_folder if self.config.evaluation_save_best else None,
+                log_path=self.path_new_folder,
                 eval_freq=self.config.evaluation_timesteps_freq,
                 n_eval_episodes=self.config.evaluation_num_episodes,
                 deterministic=True,
@@ -213,17 +251,17 @@ class RLTrain(Experiment):
                 verbose=self.verbose
             )
             callbacks.append(eval_callback)
-        if self.config.checkpoint_callback and self.path_folder is not None:
+        if self.config.checkpoint_callback and self.path_new_folder is not None:
             checkpoint_callback = SaveOnBestTrainingRewardCallback(
                 check_freq=self.config.checkpoint_timesteps_freq,
-                log_dir=self.path_folder,
+                log_dir=self.path_new_folder,
                 verbose=self.verbose
             )
             callbacks.append(checkpoint_callback)
 
         # Train model
         learn_kwargs = dict(
-            total_timesteps=self.config.num_timesteps,
+            total_timesteps=self.num_timesteps,
             log_interval=self.config.log_episode_freq,
             callback=CallbackList(callbacks),
             tb_log_name=self.experiment_id
@@ -235,24 +273,24 @@ class RLTrain(Experiment):
         self.model.learn(**learn_kwargs)
 
         # Saving the replay buffer allows smoother training later
-        if self.save_replay_buffer and self.path_replay_buffer is not None:
-            self.model.save_replay_buffer(self.path_replay_buffer)
+        if self.save_replay_buffer and self.path_new_replay_buffer is not None:
+            self.model.save_replay_buffer(self.path_new_replay_buffer)
             if self.verbose >= 1:
                 print(
                     f"Saved replay buffer with {self.model.replay_buffer.size()} transitions "
-                    f"in file '{self.path_replay_buffer}'."
+                    f"in file '{self.path_new_replay_buffer}'."
                 )
 
         # Save model
-        if self.path_folder is not None:
-            filepath_agent = os.path.join(self.path_folder, "model.zip")
+        if self.path_new_folder is not None:
+            filepath_agent = self.path_new_model
             self.model.save(filepath_agent)
             if self.verbose >= 1:
                 print(f"Created ZIP file '{filepath_agent}'.")
 
         # Save training data
-        if self.config.training_data_callback and self.path_training_data is not None:
-            training_data_callback.training_data.to_json(self.path_training_data)  # noqa
+        if self.config.training_data_callback and self.path_new_training_data is not None:
+            training_data_callback.training_data.to_json(self.path_new_training_data)  # noqa
 
         return dict()
 

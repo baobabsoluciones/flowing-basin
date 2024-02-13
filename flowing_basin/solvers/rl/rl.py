@@ -55,7 +55,6 @@ class ReinforcementLearning:
 
         self.config = self.get_config(self.config_names)
         self.agent_name = f"rl-{self.config_full_name}"
-        self.agent_path = os.path.join(ReinforcementLearning.models_folder, self.agent_name)
         self.constants = Instance.from_dict(load_json(ReinforcementLearning.constants_path))
 
         # The first two digits in the observation name (e.g., "O211" -> "O21")
@@ -70,7 +69,9 @@ class ReinforcementLearning:
             folder_name += f"_block{self.config.num_actions_block}"
         self.obs_records_path = os.path.join(ReinforcementLearning.observation_records_folder, folder_name)
 
-    def train(self, save_agent: bool = True, save_replay_buffer: bool = False, save_obs: bool = False) -> RLTrain | None:
+    def train(
+            self, save_agent: bool = True, save_replay_buffer: bool = False, save_obs: bool = False, num_timesteps: int = None
+    ) -> RLTrain | None:
 
         """
         Train an agent with the given configuration.
@@ -81,6 +82,7 @@ class ReinforcementLearning:
             (the replay buffer may occupy several GB for big observation spaces).
         :param save_obs: Whether to save the observations experienced during training or not
             (these observations may occupy several GB for big observation spaces).
+        :param num_timesteps: If given, override the number of timesteps in the configuration (only for testing purposes)
         """
 
         # Define model
@@ -94,10 +96,11 @@ class ReinforcementLearning:
             path_constants=ReinforcementLearning.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
-            path_folder=self.agent_path if save_agent else None,
+            path_folder=self.get_agent_folder_path() if save_agent else None,
             path_tensorboard=ReinforcementLearning.tensorboard_folder if save_agent else None,
             experiment_id=self.agent_name,
-            verbose=self.verbose
+            verbose=self.verbose,
+            num_timesteps=num_timesteps
         )
 
         # Train model
@@ -114,7 +117,7 @@ class ReinforcementLearning:
         # Saving the observations allows studying them later
         if save_obs and save_agent:
             for obs_record in ReinforcementLearning.observation_records:
-                obs_record_path = os.path.join(self.agent_path, f'{obs_record}.npy')
+                obs_record_path = os.path.join(self.get_agent_folder_path(), f'{obs_record}.npy')
                 obs = np.array(getattr(train.train_env, obs_record))
                 np.save(obs_record_path, obs)
                 if self.verbose >= 1:
@@ -351,6 +354,34 @@ class ReinforcementLearning:
 
         return observations
 
+    def get_agent_folder_path(self, training_iter: int = None):
+
+        """
+        Get the path to the folder of the RL agent.
+        :param training_iter: Training iteration of the agent; default is to take the last one.
+        :return:
+        """
+
+        def get_full_agent_path(i: int):
+            agent_path = os.path.join(ReinforcementLearning.models_folder, self.agent_name)
+            suffix = f"_{i}" if i > 0 else ""
+            return agent_path + suffix
+
+        if training_iter is not None:
+            # Get the folder of the specified training iteration
+            full_agent_path = get_full_agent_path(training_iter)
+
+        else:
+            # Get the folder of the last training iteration (i.e., of the last folder saved in disk)
+            i = 0
+            full_agent_path = get_full_agent_path(i)
+            i += 1
+            while os.path.exists(get_full_agent_path(i)):
+                full_agent_path = get_full_agent_path(i)
+                i += 1
+
+        return full_agent_path
+
     def get_model_path(self, model_type: str = "best_model"):
 
         """
@@ -364,7 +395,7 @@ class ReinforcementLearning:
         if self.config_names['T'] == 'T0' and model_type == "best_model":
             model_type = "model_best"
 
-        model_path = os.path.join(self.agent_path, f"{model_type}.zip")
+        model_path = os.path.join(self.get_agent_folder_path(), f"{model_type}.zip")
         if not os.path.exists(model_path):
             raise FileNotFoundError(
                 f"There is no trained model {self.agent_name}. File {model_path} doesn't exist."
@@ -513,7 +544,7 @@ class ReinforcementLearning:
 
         obs_normalized = None
         for obs_record in ReinforcementLearning.observation_records:
-            obs_folder = os.path.join(self.agent_path, f'{obs_record}.npy')
+            obs_folder = os.path.join(self.get_agent_folder_path(), f'{obs_record}.npy')
             try:
                 obs = np.load(obs_folder)
             except FileNotFoundError:

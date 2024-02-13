@@ -15,8 +15,8 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 # print(rl.run_agent("Percentile50").to_dict())
 
-general = "G0"
-regex = [f".*A2.{general}.*"]
+general = "G1"
+regex = [f".*{general}.*"]
 # ReinforcementLearning.barchart_training_times(regex)
 # regex = [agent.replace(".", "1") for agent in regex]
 path = f"reports/results_{general}.csv"

@@ -615,7 +615,7 @@ class ReinforcementLearning:
         Solve the given instance with the current agent
 
         :param instance: Instance to solve, or its name
-        :param model_type: See method `get_model_path`
+        :param model_type: See method `load_model`
         """
 
         if isinstance(instance, str):
@@ -627,7 +627,7 @@ class ReinforcementLearning:
             projector=self.create_projector(),
             solver_name=self.agent_name
         )
-        model = self.load_model()
+        model = self.load_model(model_type)
         run.solve(model.policy)
 
         return run
@@ -927,7 +927,12 @@ class ReinforcementLearning:
                 incomes = []
                 for instance in ReinforcementLearning.get_all_fixed_instances():
                     run = rl.run_agent(instance)
-                    income = run.solution.get_objective_function()
+                    if rl.config.action_type == "adjustments":
+                        # Get the best solution achieved, not the latest one
+                        sol = max(run.solutions, key=lambda s: s.get_objective_function())
+                    else:
+                        sol = run.solution
+                    income = sol.get_objective_function()
                     incomes.append(income)
                 results.append([agent, sum(incomes) / len(incomes)])
 

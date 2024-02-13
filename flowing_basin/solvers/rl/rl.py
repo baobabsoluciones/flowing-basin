@@ -318,12 +318,13 @@ class ReinforcementLearning:
         assuming the required observations folder exists.
         """
 
-        observations = self.load_observation_record()
-        if observations is not None:
-            if self.verbose >= 1:
-                print(f"Using observations from '{self.obs_records_path}' for projector.")
-        else:
-            if self.config.projector_type != "identity":
+        observations = None
+        if self.config.projector_type != "identity":
+            observations = self.load_observation_record()
+            if observations is not None:
+                if self.verbose >= 1:
+                    print(f"Using observations from '{self.obs_records_path}' for projector.")
+            else:
                 warnings.warn(
                     f"For agent {self.agent_name}, projector type is not 'identity' "
                     f"but the observations folder '{self.obs_records_path}' does not exist. "
@@ -610,28 +611,40 @@ class ReinforcementLearning:
                       f"{self.config.projector_type} {indicate_variance(self.config.projector_type)}"
             )
 
-    def run_agent(self, instance: Instance | str, model_type: str = "best_model") -> RLRun:
+    def run_agent(
+            self, instance: Instance | str | list[Instance | str], model_type: str = "best_model"
+    ) -> RLRun | list[RLRun]:
 
         """
         Solve the given instance with the current agent
 
-        :param instance: Instance to solve, or its name
+        :param instance: Instance to solve, its name, or a list of instances/names
         :param model_type: See method `load_model`
+        :return: Run or list of runs (depending on whether a single or multiple instances where given)
         """
 
-        if isinstance(instance, str):
-            instance = Instance.from_name(instance)
+        if not isinstance(instance, list):
+            instance = [instance]
 
-        run = RLRun(
-            config=self.config,
-            instance=instance,
-            projector=self.create_projector(),
-            solver_name=self.agent_name
-        )
+        runs = []
         model = self.load_model(model_type)
-        run.solve(model.policy)
+        projector = self.create_projector()
+        for inst in instance:
+            if isinstance(inst, str):
+                inst = Instance.from_name(inst)
+            run = RLRun(
+                config=self.config,
+                instance=inst,
+                projector=projector,
+                solver_name=self.agent_name
+            )
+            run.solve(model.policy)
+            runs.append(run)
 
-        return run
+        if len(runs) == 1:
+            runs = runs.pop()
+
+        return runs
 
     def run_named_policy(self, policy_name: str, instance: Instance, update_to_decisions: bool = False) -> Solution:
 
@@ -928,8 +941,8 @@ class ReinforcementLearning:
                 # Calculate a fresh avg income using the best model
                 rl = ReinforcementLearning(agent)
                 incomes = []
-                for instance in ReinforcementLearning.get_all_fixed_instances():
-                    run = rl.run_agent(instance)
+                runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+                for run in runs:
                     if rl.config.action_type == "adjustments":
                         # Get the best solution achieved, not the latest one
                         sol = max(run.solutions, key=lambda s: s.get_objective_function())

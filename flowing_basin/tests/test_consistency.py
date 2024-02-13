@@ -189,7 +189,7 @@ class TestAgentsConsistency(TestConsistency):
 
         for agent in self.agents:
             rl = ReinforcementLearning(agent)
-            for instance in ReinforcementLearning.get_all_fixed_instances():
-                run = rl.run_agent(instance)
+            runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+            for run in runs:
                 self.check_consistency(run.solution)
             print(f"Test passed by agent {agent}.")

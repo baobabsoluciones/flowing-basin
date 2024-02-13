@@ -16,6 +16,7 @@ import re
 import warnings
 from time import perf_counter
 from datetime import datetime
+import csv
 
 
 class ReinforcementLearning:
@@ -46,7 +47,7 @@ class ReinforcementLearning:
     obs_collection_pos = 2  # Position of the digit that MAY indicate a collection method (e.g., "O12" -> "2")
     obs_collection_codes = {'1', '2'}  # Digits that DO indicate a collection method (e.g., not "0" in "O10")
 
-    def __init__(self, config_name: str, verbose: int = 1):
+    def __init__(self, config_name: str, verbose: int = 2):
 
         self.verbose = verbose
         config_name = config_name
@@ -892,7 +893,7 @@ class ReinforcementLearning:
     @staticmethod
     def print_max_avg_incomes(
             agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
-            read_from_data: bool = False
+            read_from_data: bool = False, csv_filepath: str = None
     ) -> list[list[str]] | None:
 
         """
@@ -916,6 +917,8 @@ class ReinforcementLearning:
 
         # Add rows with max average income of agents
         for agent in agents:
+
+            # Get the avg income of the agent
             print(f"Calculating average income of {agent}...")
             if read_from_data:
                 # Get the max avg income saved in the evaluation data (this value is biased in old agents)
@@ -936,6 +939,12 @@ class ReinforcementLearning:
                     incomes.append(income)
                 results.append([agent, sum(incomes) / len(incomes)])
 
+            # Add it to the csv file, if given
+            if csv_filepath is not None:
+                with open(csv_filepath, 'a', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(results[-1])
+
         training_data_baselines = TrainingData.create_empty()
         all_baselines = ReinforcementLearning.get_all_baselines(general_config)
         for baseline in all_baselines:
@@ -945,6 +954,10 @@ class ReinforcementLearning:
         # Add rows with baseline average incomes
         for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
             results.append([baseline_solver, baseline_avg_income])
+            if csv_filepath is not None:
+                with open(csv_filepath, 'a', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(results[-1])
 
         # Expand each row with the performance w.r.t. the baselines
         for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa

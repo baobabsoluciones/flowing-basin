@@ -11,8 +11,8 @@
 and with past_flows_raw instead of past_clipped.
 
 In all of these, `X` can be either `1` or `2`:
-- If `X` is `1`, the PCA projector is trained with observations obtained from a SAC agent.
-- If `X` is `2`, the PCA projector is trained with observations obtained from a random agent.
+- If `X` is `1`, the PCA projector or QuantilePseudoDiscretizer is trained with observations obtained from a SAC agent.
+- If `X` is `2`, the PCA projector or QuantilePseudoDiscretizer is trained with observations obtained from a random agent.
 
 Observations with randomized features (for testing purposes):
 - `O10`: observation O1 with all features randomized.

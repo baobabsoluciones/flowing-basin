@@ -7,6 +7,9 @@
 - `O2X`: observation O2 with a PCA projector.
 - `O2X1`: observation O2 with a QuantilePseudoDiscretizer followed by a PCA projector.
 - `O2X2`: observation O2 with a QuantilePseudoDiscretizer.
+- `O231`: observation O2 with a sight of 32 steps (instead of 16).
+- `O232`: observation O2 with a sight of 64 steps (instead of 16).
+- `O233`: observation O2 with a sight of 96 steps (instead of 16).
 - `O3`: like O2, but with past_prices and past_inflows instead of future_prices and future_inflows,
 and with past_flows_raw instead of past_clipped.
 

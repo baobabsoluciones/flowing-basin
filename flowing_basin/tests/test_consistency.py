@@ -1,5 +1,5 @@
 from flowing_basin.solvers.rl import ReinforcementLearning
-from flowing_basin.core import Instance, Solution
+from flowing_basin.core import Instance, Solution, Configuration
 from flowing_basin.tools import RiverBasin
 from unittest import TestCase
 import warnings
@@ -161,6 +161,53 @@ class TestBaselinesConsistency(TestConsistency):
         self.assertNotEqual(len(self.solutions["rl-random"]), 0, msg="No rl-random solutions.")
         for sol in self.solutions["rl-random"]:
             self.check_consistency(sol)
+
+    def test_config_concordance(self):
+
+        """
+        Test that all general configurations in each environment (real G0 or simplified G1)
+        is the same.
+        :return:
+        """
+
+        def flatten_dict(d: dict):
+            """Flattens a dictionary for one layer."""
+            d_flattened = dict()
+            for k_outer, v_outer in d.items():
+                if isinstance(v_outer, dict):
+                    for k_inner, v_inner in v_outer.items():
+                        d_flattened[str(k_outer) + "_" + str(k_inner)] = v_inner
+                else:
+                    d_flattened[k_outer] = v_outer
+            return d_flattened
+
+        for general_config in ["G0", "G1"]:
+
+            sols = ReinforcementLearning.get_all_baselines(general_config)
+            configs = set()
+
+            for sol in sols:
+
+                config = sol.get_configuration().to_dict()
+
+                # Remove any solver-specific configs by creating a Configuration object
+                config_filtered = Configuration.from_dict(config).to_dict()
+
+                # If there is no exceedance bonus or shortage penalty, volume objectives do not matter
+                if config_filtered['volume_exceedance_bonus'] == 0. and config_filtered['volume_shortage_penalty'] == 0.:
+                    del config_filtered['volume_objectives']
+
+                # If volume objectives do matter, this inner dictionary must be flattened
+                config_flattened = flatten_dict(config_filtered)
+
+                config_hashable = tuple(sorted(config_flattened.items()))
+                configs.add(config_hashable)
+
+            self.assertEqual(
+                len(configs), 1,
+                msg=f"The configurations under {general_config} are not unique: "
+                    f"{'\n'.join([str(config) for config in configs])}."
+            )
 
 
 class TestAgentsConsistency(TestConsistency):

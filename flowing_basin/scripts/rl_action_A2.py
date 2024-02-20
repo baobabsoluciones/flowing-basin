@@ -11,7 +11,7 @@ baseline_colors = {
     'MILP': 'black',
     'rl-greedy': 'gray'
 }
-rl = ReinforcementLearning("rl-A21G0O3R1T33", verbose=2)
+rl = ReinforcementLearning("rl-A23G0O3R1T3", verbose=2)
 instances = rl.get_all_fixed_instances()
 num_cols = math.ceil(math.sqrt(len(instances)))
 num_rows = math.ceil(len(instances) / num_cols)
@@ -21,7 +21,7 @@ for row in range(num_rows):
     for col in range(num_cols):
         if i < len(instances):
             instance = instances[i]
-            run = rl.run_agent(instance, model_type="model")
+            run = rl.run_agent(instance)
             incomes = [sol.get_objective_function() for sol in run.solutions]
             total_rewards = [total_reward * instance.get_largest_price() for total_reward in run.total_rewards]
             ax = axs[row, col]

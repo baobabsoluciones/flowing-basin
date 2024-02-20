@@ -1,3 +1,5 @@
+import numpy as np
+
 from flowing_basin.core import Instance, Solution, Experiment
 from flowing_basin.solvers.rl import RLConfiguration, RLEnvironment
 from flowing_basin.solvers.rl.feature_extractors import Projector
@@ -42,20 +44,21 @@ class RLRun(Experiment):
             instance=None,
             initial_row=self.instance.get_start_decisions_datetime(),
             projector=projector,
-            config=config,
+            config=self.config,
             paths_power_models=paths_power_models,
             path_constants=RLRun.constants_path,
             path_historical_data=RLRun.historical_data_path,
             update_to_decisions=update_to_decisions,
         )
 
-    def solve(self, policy: BasePolicy | str, options: dict = None) -> dict:
+    def solve(self, policy: BasePolicy | str | Solution, options: dict = None) -> dict:
 
         """
         Load the given model and use it to solve the instance given in the initialization.
 
-        :param policy: A StableBaselines3 policy or one of the named policies ("random" or "greedy").
-            You can also give "greedy_0.7" to indicate the degree of greediness,
+        :param policy: A StableBaselines3 policy, one of the named policies ("random" or "greedy"),
+            or a solution to imitate.
+            If you use "greedy", you can also give "greedy_0.7" to indicate the degree of greediness,
             which the percentage of flow that the greedy agent attempts to assign at each period.
         :param options: Unused parameter
         :return: Dictionary with additional information
@@ -76,6 +79,21 @@ class RLRun(Experiment):
             if len(policy_parts) > 1:
                 greediness = float(policy_parts[1])
                 assert 0. <= greediness <= 1., f"Greediness must be a number between 0 and 1, not {greediness}."
+
+        # Define the policy if input is a Solution
+        update_as_flows = False
+        i = None
+        actions = None
+        if isinstance(policy, Solution):
+            update_as_flows = True
+            actions = np.array([
+                np.array(policy.get_exiting_flows_of_dam(dam_id)) / self.instance.get_max_flow_of_channel(dam_id)
+                for dam_id in self.instance.get_ids_of_dams()
+            ])
+            actions = 2. * actions - 1.  # from the range [0, 1] to the range [-1, 1]
+            actions = np.transpose(actions, (1, 0))  # from (dam, period) to (period, dam)
+            actions = actions.reshape((-1, self.config.num_actions_block * self.instance.get_num_dams()))
+            i = 0
 
         # Reset the environment (this allows the `solve` method to be called more than once)
         # Remember we must not give the instance directly, but rather create a fresh new one for the same day
@@ -98,9 +116,12 @@ class RLRun(Experiment):
                 action = self.env.action_space.sample()
             elif policy_name == "greedy":
                 action = (greediness * 2 - 1) * self.env.action_space.high  # noqa
+            elif isinstance(policy, Solution):
+                action = actions[i]
+                i += 1
             else:
                 action, _ = policy.predict(obs, deterministic=True)
-            obs, reward, done, _, _ = self.env.step(action)
+            obs, reward, done, _, _ = self.env.step(action, update_as_flows=update_as_flows)
             self.rewards.append(reward)
 
         self.solution = self.get_solution()

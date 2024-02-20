@@ -667,6 +667,21 @@ class ReinforcementLearning:
         run.solve(policy_name)
         return run.solution
 
+    def run_imitator(self, solution: Solution, instance: Instance) -> RLRun:
+
+        """
+        Solve the given instance with the agent that imitates the given solution.
+        """
+
+        run = RLRun(
+            config=self.config,
+            instance=instance,
+            projector=self.create_projector(),
+            solver_name=f"{self.agent_name}_imitating_{solution.get_solver()}"
+        )
+        run.solve(solution)
+        return run
+
     def plot_training_curve_agent(
             self, agents: list[str] = None, baselines: list[str] = None,
             values: list[str] = None, instances: str | list[str] = 'fixed'

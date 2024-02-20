@@ -661,17 +661,27 @@ class RLEnvironment(gym.Env):
 
         return reward
 
+    def simulator_is_done(self) -> bool:
+
+        """
+        Indicates whether the simulator finished.
+        This is the same as the end of the environment, except for the "adjustments" action type.
+        """
+
+        done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
+        return bool(done)
+
     def is_done(self, update_as_flows: bool = False) -> bool:
 
         """
-        Indicates whether the environment finished
+        Indicates whether the environment finished.
 
         :param update_as_flows: Whether to treat the action as flows, independently of the configuration.
         """
 
         if self.config.action_type != "adjustments" or update_as_flows:
             # Stop when instance finishes
-            done = self.river_basin.time >= self.instance.get_largest_impact_horizon() - 1
+            done = self.simulator_is_done()
         else:
             # Stop when solution gets worse or the maximum number of iterations is exceeded
             assert len(self.total_rewards) >= 2, "There is no baseline for the current total reward."
@@ -697,7 +707,10 @@ class RLEnvironment(gym.Env):
         rewards = []
         flows_block = []
 
-        if self.config.action_type == "adjustments" and not update_as_flows:
+        if self.simulator_is_done():
+            assert self.config.action_type == "adjustments", (
+                f"Simulator is done before the step, but the action type is not 'adjustments': {self.config.action_type}"
+            )
             self.river_basin.reset()
 
         # Execute all actions of the block sequentially
@@ -707,13 +720,13 @@ class RLEnvironment(gym.Env):
 
             # Transform action to flows
             # Remember action is bounded between -1 and 1 in any case
-            if self.config.action_type == "exiting_relvars":
+            if self.config.action_type == "exiting_flows" or update_as_flows:
+                # Flows directly (but action is between -1 and 1, not 0 and 1)
+                new_flows = (action + 1.) / 2. * self.max_flows
+            elif self.config.action_type == "exiting_relvars":
                 # Relvars over the flows of the previos timestep
                 old_flows = self.river_basin.get_clipped_flows().reshape(-1)
                 new_flows = old_flows + action * self.max_flows  # noqa
-            elif self.config.action_type == "exiting_flows" or update_as_flows:
-                # Flows directly (but action is between -1 and 1, not 0 and 1)
-                new_flows = (action + 1.) / 2. * self.max_flows
             elif self.config.action_type == "adjustments":
                 # Adjustments are configured as relvars over the unclipped flows of the previous iteration
                 new_flows = np.clip(last_flow + action * self.max_flows, 0, self.max_flows)
@@ -724,11 +737,10 @@ class RLEnvironment(gym.Env):
             self.river_basin.update(new_flows.reshape(-1, 1))
             rewards.append(self.get_reward(greedy_reference))
 
-            if self.config.action_type != "adjustments":
-                # Do not execute whole block of action if episode finishes in the middle
-                # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)
-                if self.is_done(update_as_flows):
-                    break
+            # Do not execute whole block of action if episode finishes in the middle
+            # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)
+            if self.simulator_is_done():
+                break
 
         # Total reward obtained with the given actions
         total_reward = sum(rewards)

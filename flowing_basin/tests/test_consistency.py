@@ -3,6 +3,7 @@ from flowing_basin.core import Instance, Solution, Configuration
 from flowing_basin.tools import RiverBasin
 from unittest import TestCase
 import warnings
+import random
 
 
 class TestConsistency(TestCase):
@@ -220,7 +221,8 @@ class TestAgentsConsistency(TestConsistency):
 
         # Only different Action and General configurations are susceptible of being inconsistent
         # In addition, take only the Action configs with the first digit different to avoid the test taking too long
-        action_configs = ReinforcementLearning.get_all_configs("A", relevant_digits=1)
+        # action_configs = ReinforcementLearning.get_all_configs("A", relevant_digits=1)
+        action_configs = ['A1', 'A113', 'A21']
         general_configs = ReinforcementLearning.get_all_configs("G")
 
         self.agents = []
@@ -240,3 +242,36 @@ class TestAgentsConsistency(TestConsistency):
             for run in runs:
                 self.check_consistency(run.solution)
             print(f"Test passed by agent {agent}.")
+
+    def test_imitator_consistency(self, epsilon: float = 0.005):
+
+        """
+        When the agent imitates another solution, it should give the same objetive function as that solution
+        """
+
+        for agent in self.agents:
+
+            rl = ReinforcementLearning(agent)
+            solution = random.choice(rl.get_all_baselines(rl.config_names['G']))
+            instance = Instance.from_name(solution.get_instance_name())
+            run = rl.run_imitator(solution=solution, instance=instance)
+
+            # Detect the edge case
+            delta_obj_fun = None
+            places_obj_fun = 4
+            if solution.get_solver() == "MILP":
+                sol_value = solution.get_objective_details("dam1")["startups"]
+                run_value = run.solution.get_objective_details("dam1")["startups"]
+                if abs(sol_value - run_value) == 1:
+                    delta_obj_fun = solution.get_configuration().startups_penalty + epsilon
+                    places_obj_fun = None
+                    warnings.warn(
+                        f"Allowing a difference of {delta_obj_fun} in the objective function value due to edge case."
+                    )
+
+            self.assertAlmostEqual(
+                run.solution.get_objective_function(), solution.get_objective_function(),
+                delta=delta_obj_fun, places=places_obj_fun
+            )
+            print(f"Test passed by agent {agent} "
+                  f"imitating {solution.get_solver()} in instance {instance.get_instance_name()}.")

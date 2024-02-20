@@ -18,7 +18,6 @@ baseline_colors = {
 training_data_baselines = TrainingData.create_empty()
 for baseline in ReinforcementLearning.get_all_baselines(general_config):
     training_data_baselines += baseline
-
 baseline_instances_values = training_data_baselines.get_baseline_instances_values()
 
 sorted_values = dict(sorted(baseline_instances_values['rl-greedy'].items()))

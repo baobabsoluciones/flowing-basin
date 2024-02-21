@@ -4,7 +4,7 @@ This script analyses the relationship between the average reward of rl-greedy
 and the average reward of MILP and rl-random
 """
 
-from flowing_basin.core import TrainingData
+from flowing_basin.core import TrainingData, Instance
 from flowing_basin.solvers.rl import ReinforcementLearning
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,11 +14,37 @@ baseline_colors = {
     'MILP': 'blue',
     'rl-random': 'red'
 }
+study_incomes = True  # Study incomes instead of rewards
+agent = f"rl-A1{general_config}O2R1T1"  # Agent used to calculate rewards
 
-training_data_baselines = TrainingData.create_empty()
-for baseline in ReinforcementLearning.get_all_baselines(general_config):
-    training_data_baselines += baseline
-baseline_instances_values = training_data_baselines.get_baseline_instances_values()
+if study_incomes:
+
+    # Get dict[baseline, dict[instance, income]] using TrainingData class
+    axis_name = "Income"
+    training_data_baselines = TrainingData.create_empty()
+    for baseline in ReinforcementLearning.get_all_baselines(general_config):
+        training_data_baselines += baseline
+    baseline_instances_values = training_data_baselines.get_baseline_instances_values()
+
+else:
+
+    # Get dict[baseline, dict[instance, avg_reward]] using imitator agent
+    rl = ReinforcementLearning(agent)
+    axis_name = f"Average reward {rl.config_names['R']}"
+    baseline_instances_values = dict()
+    for baseline in ReinforcementLearning.get_all_baselines(general_config):
+
+        # Get the reward per timestep
+        run = rl.run_imitator(solution=baseline, instance=Instance.from_name(baseline.get_instance_name()))
+        avg_reward = sum(run.rewards) / len(run.rewards)
+        avg_reward /= rl.config.num_actions_block
+
+        # Add to results
+        if baseline_instances_values.get(baseline.get_solver()) is None:
+            baseline_instances_values[baseline.get_solver()] = dict()
+        baseline_instances_values[baseline.get_solver()][baseline.get_instance_name()] = avg_reward
+
+print(baseline_instances_values)
 
 sorted_values = dict(sorted(baseline_instances_values['rl-greedy'].items()))
 x = np.array(list(sorted_values.values()))
@@ -32,9 +58,10 @@ for solver, color in baseline_colors.items():
     ax.plot(x, slope * x + intercept, color=color, linestyle='--')
     for i, instance_name in enumerate(sorted_values.keys()):
         ax.annotate(instance_name, (x[i], y[i]), color=color, xytext=(5, -5), textcoords='offset points')
-ax.set_xlabel('Income of rl-greedy')
-ax.set_ylabel('Income of solver')
-ax.set_title(f'Income structure in {general_config}')
+ax.plot(x, x, color='grey', linestyle='-', label='rl-greedy')
+ax.set_xlabel(f'{axis_name} of rl-greedy')
+ax.set_ylabel(f'{axis_name} of solver')
+ax.set_title(f'{axis_name} structure in {general_config}')
 ax.legend()
 ax.grid(True)
 plt.show()

@@ -463,13 +463,14 @@ class ReinforcementLearning:
         evaluation_critic1 = model.policy.critic.q_networks[0](obs_action_pair)
         print(evaluation_critic1)
 
-    def plot_histogram(self, obs: np.ndarray, projected: bool, title: str):
+    def plot_histogram(self, obs: np.ndarray, projected: bool, title: str, show_lookback: bool = True):
 
         """
 
         :param obs: Array of shape num_observations x num_features with the flattened observations
         :param projected: Indicates if the observations are projected observations or raw/normalized observations
         :param title: Title of the histogram
+        :param show_lookback: Whether to show all the lagged versions of the variable or not
         """
 
         # Method 'auto' raises an error for giving almost 0 width bins
@@ -481,23 +482,80 @@ class ReinforcementLearning:
 
         # Raw or normalized flattened observation
         if not projected:
+
             indices = self.config.get_obs_indices(flattened=True)
+            num_features = len(self.config.features)
+
+            # When show_lookback=False, all dams are plotted on the same histogram
+            # and there is an additional column at the beginning to indicate the dam
+            if not show_lookback:
+                fig, axs = plt.subplots(
+                    self.constants.get_num_dams(), num_features + 1, figsize=(12, int(0.5 * num_features)),
+                    gridspec_kw={'width_ratios': [0.4] + [1] * num_features}
+                )
+                fig.suptitle(f"Histogram of original state variables")
+
             for dam_id in self.constants.get_ids_of_dams():
+
                 max_sight = max(self.config.num_steps_sight[feature, dam_id] for feature in self.config.features)
-                num_features = len(self.config.features)
-                fig, axs = plt.subplots(max_sight, num_features)
-                fig.suptitle(f"Histograms of {title} for {dam_id}")
+                dam_index = self.constants.get_order_of_dam(dam_id) - 1
+
+                if show_lookback:
+                    fig, axs = plt.subplots(max_sight, num_features)
+                    fig.suptitle(f"Histograms of {title} for {dam_id}")
+                else:
+                    fig.text(0.05, 0.2 + dam_index / self.constants.get_num_dams(), dam_id, va='center', ha='center',
+                             rotation=90)
+
                 for feature_index, feature in enumerate(self.config.features):
                     for lookback in range(self.config.num_steps_sight[feature, dam_id]):
-                        ax = axs[lookback, feature_index]
+
+                        # When show_lookback=False, the vertical dimension is used for dams instead of lookback
+                        if show_lookback:
+                            ax = axs[lookback, feature_index]
+                        else:
+                            ax = axs[dam_index, feature_index + 1]
+
                         if self.constants.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features:
                             index = indices[dam_id, feature, lookback]
-                            ax.hist(obs[:, index], bins=bins_method)
+                            if feature == "past_clipped":
+                                # The automatic bin method does not work correctly with this feature
+                                ax.hist(obs[:, index], bins=10)
+                            else:
+                                ax.hist(obs[:, index], bins=bins_method)
+
+                        ax.set_xlim(0, 1)
+                        ax.set_xticks([0, 1])
                         ax.set_yticklabels([])  # Hide y-axis tick labels
                         ax.yaxis.set_ticks_position('none')  # Hide y-axis tick marks
                         if lookback == 0:
-                            ax.set_title(feature)
+                            if show_lookback:
+                                ax.set_title(feature)
+                            else:
+                                # Change feature names to make it more descriptive
+                                name_map = {
+                                    "vols": "volumes",
+                                    "flows": "outflows",
+                                    "turbined": "turbine flows",
+                                    "groups": "turbines",
+                                    "clipped": "outflow cuts"
+                                }
+                                feature_name = feature.split("_")[-1]
+                                ax.set_title(name_map[feature_name] if feature_name in name_map else feature_name)
+                                break
+
+                if show_lookback:
+                    # Plot dam by dam
+                    plt.tight_layout()
+                    plt.show()
+                else:
+                    # Hide the first column, which should be left free for the dam label
+                    axs[dam_index, 0].axis('off')
+
+            # Plot all dams at the same time
+            if not show_lookback:
                 plt.tight_layout()
+                plt.savefig(f"reports/histograms_{self.config_names['O']}.eps", format="eps")
                 plt.show()
 
         # Projected observation
@@ -522,7 +580,7 @@ class ReinforcementLearning:
             plt.tight_layout()
             plt.show()
 
-    def plot_histograms_projector_obs(self):
+    def plot_histograms_projector_obs(self, show_lookback: bool = True, show_projected: bool = True):
 
         """
         Plot the histograms of the observations used to train the projector,
@@ -532,8 +590,12 @@ class ReinforcementLearning:
         projector = self.create_projector()
         obs_type = self.config_names['O'][:ReinforcementLearning.obs_type_length]
 
-        self.plot_histogram(projector.observations, projected=False, title=f"Original observations {obs_type}")
-        self.plot_histograms_projected(projector.observations, projector, title=str(obs_type))
+        self.plot_histogram(
+            projector.observations, projected=False,
+            title=f"Original observations {obs_type}", show_lookback=show_lookback
+        )
+        if show_projected:
+            self.plot_histograms_projected(projector.observations, projector, title=str(obs_type))
 
     def plot_histograms_agent_obs(self, apply_projections: bool = True):
 

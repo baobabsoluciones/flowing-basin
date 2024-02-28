@@ -504,8 +504,9 @@ class ReinforcementLearning:
                     fig, axs = plt.subplots(max_sight, num_features)
                     fig.suptitle(f"Histograms of {title} for {dam_id}")
                 else:
-                    fig.text(0.05, 0.2 + dam_index / self.constants.get_num_dams(), dam_id, va='center', ha='center',
-                             rotation=90)
+                    # Put the dam ID to the left
+                    fig.text(0.05, 1.0 - (0.35 + dam_index / self.constants.get_num_dams()), dam_id,
+                             va='bottom', ha='center', rotation=90)
 
                 for feature_index, feature in enumerate(self.config.features):
                     for lookback in range(self.config.num_steps_sight[feature, dam_id]):
@@ -518,9 +519,9 @@ class ReinforcementLearning:
 
                         if self.constants.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features:
                             index = indices[dam_id, feature, lookback]
-                            if feature == "past_clipped":
-                                # The automatic bin method does not work correctly with this feature
-                                ax.hist(obs[:, index], bins=10)
+                            if feature == "past_clipped" or feature == "past_vols":
+                                # The automatic bin method does not work correctly with these features
+                                ax.hist(obs[:, index], bins=15)
                             else:
                                 ax.hist(obs[:, index], bins=bins_method)
 

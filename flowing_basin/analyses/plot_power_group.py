@@ -25,7 +25,7 @@ def lighten_color(color, amount=0.5):
 
 
 instance = Instance.from_name("Percentile50")
-fig, axs = plt.subplots(1, instance.get_num_dams(), figsize=(10, 5))
+fig, axs = plt.subplots(1, instance.get_num_dams(), figsize=(12, 5))
 
 for i, dam_id in enumerate(instance.get_ids_of_dams()):
 

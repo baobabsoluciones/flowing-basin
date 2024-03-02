@@ -897,7 +897,10 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
-    def barchart_instances_incomes(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'):
+    def barchart_instances_incomes(
+            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
+            read_from_data: bool = False
+    ):
 
         """
         Show a barchart with the income across all fixed instances
@@ -905,8 +908,13 @@ class ReinforcementLearning:
 
         :param agents_regex_filter:
         :param permutation:
+        :param baselines:
+        :param read_from_data:
         :return:
         """
+
+        if baselines is None:
+            baselines = ['MILP', 'rl-random', 'rl-greedy']
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         general_config = ReinforcementLearning.common_general_config(
@@ -918,15 +926,32 @@ class ReinforcementLearning:
         # Agent values
         values = dict()
         for agent in agents:
-            training_data_agent = ReinforcementLearning.get_training_data(agent)
-            values[training_data_agent.handle_no_agent_id()] = training_data_agent.get_agent_best_instances_values()
+            if read_from_data:
+                # Get the max avg income saved in the evaluation data (this value is biased in old agents)
+                training_data_agent = ReinforcementLearning.get_training_data(agent)
+                values[training_data_agent.handle_no_agent_id()] = training_data_agent.get_agent_best_instances_values()
+            else:
+                # Calculate a fresh avg income using the best model
+                rl = ReinforcementLearning(agent)
+                values[agent] = dict()
+                runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+                for run in runs:
+                    if rl.config.action_type == "adjustments":
+                        # Get the best solution achieved, not the latest one
+                        sol = max(run.solutions, key=lambda s: s.get_objective_function())
+                    else:
+                        sol = run.solution
+                    income = sol.get_objective_function()
+                    values[agent][run.instance.get_instance_name()] = income
 
         # Baseline values
         training_data_baselines = TrainingData.create_empty()
-        baselines = ReinforcementLearning.get_all_baselines(general_config)
-        for baseline in baselines:
-            training_data_baselines += baseline
+        all_baselines = ReinforcementLearning.get_all_baselines(general_config)
+        for baseline in all_baselines:
+            if baseline.get_solver() in baselines:
+                training_data_baselines += baseline
         values.update(training_data_baselines.get_baseline_instances_values())
+        print("Plotting the values:", values)
 
         # Plot the values gathered
         ReinforcementLearning.barchart_instances(
@@ -957,8 +982,12 @@ class ReinforcementLearning:
         # Plot the bars for all instances, one solver at a time
         fig, ax = plt.subplots()
         for solver, offset in zip(solvers, offsets):
-            # Order is important
-            sorted_values = dict(sorted(values[solver].items()))  # noqa
+            # Items must be ordered according to their instance percentile number (e.g. 'Percentile70' -> 70)
+            # in order to match the x labels
+            sorted_values = dict(sorted(
+                values[solver].items(), key=lambda item: int(re.search(r'\d+', item[0]).group())
+            ))  # noqa
+            print(f"Histogram values for {solver}:", x_values + offset, list(sorted_values.values()))
             ax.bar(x_values + offset, list(sorted_values.values()), width=bar_width, label=solver)
         ax.set_xticks(x_values + bar_width / 2)
         ax.set_xticklabels(instances, rotation='vertical')
@@ -984,7 +1013,7 @@ class ReinforcementLearning:
     @staticmethod
     def print_max_avg_incomes(
             agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
-            read_from_data: bool = False, csv_filepath: str = None
+            read_from_data: bool = False, take_average: bool = True, csv_filepath: str = None
     ) -> list[list[str]] | None:
 
         """
@@ -1006,6 +1035,12 @@ class ReinforcementLearning:
         if general_config is None:
             return
 
+        def append_last_row_to_file():
+            if csv_filepath is not None:
+                with open(csv_filepath, 'a', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(results[-1])
+
         # Add rows with max average income of agents
         for agent in agents:
 
@@ -1014,7 +1049,13 @@ class ReinforcementLearning:
             if read_from_data:
                 # Get the max avg income saved in the evaluation data (this value is biased in old agents)
                 training_data_agent = ReinforcementLearning.get_training_data(agent)
-                results.append([agent, training_data_agent.get_max_avg_value()])
+                if take_average:
+                    results.append([agent, training_data_agent.get_max_avg_value()])
+                    append_last_row_to_file()
+                else:
+                    for instance_name, income in training_data_agent.get_agent_best_instances_values().items():
+                        results.append([f"{agent}_{instance_name}", training_data_agent.get_max_avg_value()])
+                        append_last_row_to_file()
             else:
                 # Calculate a fresh avg income using the best model
                 rl = ReinforcementLearning(agent)
@@ -1027,14 +1068,14 @@ class ReinforcementLearning:
                     else:
                         sol = run.solution
                     income = sol.get_objective_function()
-                    incomes.append(income)
-                results.append([agent, sum(incomes) / len(incomes)])
-
-            # Add it to the csv file, if given
-            if csv_filepath is not None:
-                with open(csv_filepath, 'a', newline='') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow(results[-1])
+                    if take_average:
+                        incomes.append(income)
+                    else:
+                        results.append([f"{agent}_{run.instance.get_instance_name()}", income])
+                        append_last_row_to_file()
+                if take_average:
+                    results.append([agent, sum(incomes) / len(incomes)])
+                    append_last_row_to_file()
 
         training_data_baselines = TrainingData.create_empty()
         all_baselines = ReinforcementLearning.get_all_baselines(general_config)
@@ -1043,23 +1084,33 @@ class ReinforcementLearning:
                 training_data_baselines += baseline
 
         # Add rows with baseline average incomes
-        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
-            results.append([baseline_solver, baseline_avg_income])
-            if csv_filepath is not None:
-                with open(csv_filepath, 'a', newline='') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow(results[-1])
+        if take_average:
+            for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
+                results.append([baseline_solver, baseline_avg_income])
+                append_last_row_to_file()
+        else:
+            for baseline_solver, baseline_values in training_data_baselines.get_baseline_instances_values().items():  # noqa
+                for instance_name, value in baseline_values.items():
+                    results.append([f"{baseline_solver}_{instance_name}", value])
+                    append_last_row_to_file()
 
         # Expand each row with the performance w.r.t. the baselines
-        for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
-
-            # Add the baseline to the table header
-            results[0] += [baseline_solver]
-
-            for result in results[1:]:
-                result_avg_income = result[1]
-                perf_over_baseline = (result_avg_income - baseline_avg_income) / baseline_avg_income  # noqa
-                result += [f"{perf_over_baseline:+.2%}"]
+        if take_average:
+            for baseline_solver, baseline_avg_income in training_data_baselines.get_baseline_avg_values().items():  # noqa
+                results[0] += [baseline_solver]  # Add the baseline to the table header
+                for result in results[1:]:
+                    result_avg_income = result[1]
+                    perf_over_baseline = (result_avg_income - baseline_avg_income) / baseline_avg_income  # noqa
+                    result += [f"{perf_over_baseline:+.2%}"]
+        else:
+            for baseline_solver, baseline_values in training_data_baselines.get_baseline_instances_values().items():  # noqa
+                results[0] += [baseline_solver]
+                for result in results[1:]:
+                    result_instance = result[0].split("_")[1]
+                    result_income = result[1]
+                    baseline_income = baseline_values[result_instance]
+                    perf_over_baseline = (result_income - baseline_income) / baseline_income  # noqa
+                    result += [f"{perf_over_baseline:+.2%}"]
 
         # Turn results to string and print them
         for line in results:

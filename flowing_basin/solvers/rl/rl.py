@@ -1303,6 +1303,76 @@ class ReinforcementLearning:
         return instances
 
     @staticmethod
+    def get_slope_intercept(agent: str, solver: str) -> tuple[float, float]:
+
+        """
+        Get the slope and intercept of the given solver's reward with respect to rl-greedy's reward
+        :param agent:
+        :param solver:
+        :return:
+        """
+
+        def get_solution_avg_reward(sol: Solution) -> float:
+            """
+            Get the reward per timestep of an agent imitating the solution
+            :param sol:
+            :return:
+            """
+            run = rl.run_imitator(solution=sol, instance=Instance.from_name(sol.get_instance_name()))
+            avg_reward = sum(run.rewards) / len(run.rewards)
+            avg_reward /= rl.config.num_actions_block
+            return avg_reward
+
+        rl = ReinforcementLearning(agent)
+        solver_values = dict()
+        greedy_values = dict()
+        for baseline in ReinforcementLearning.get_all_baselines(rl.config_names['G']):
+            if baseline.get_solver() == solver:
+                solver_values[baseline.get_instance_name()] = get_solution_avg_reward(baseline)
+            elif baseline.get_solver() == 'rl-greedy':
+                greedy_values[baseline.get_instance_name()] = get_solution_avg_reward(baseline)
+
+        sorted_greedy_values = dict(sorted(greedy_values.items()))
+        print(f"Instance values of rl-greedy:", sorted_greedy_values)
+        x = np.array(list(sorted_greedy_values.values()))
+
+        sorted_solver_values = dict(sorted(solver_values.items()))
+        print(f"Instance values of solver {solver}:", sorted_solver_values)
+        y = np.array(list(sorted_solver_values.values()))
+
+        slope, intercept = np.polyfit(x, y, 1)
+        print(
+            f"Fitted line for solver {solver} in {rl.config_names['G']}: "
+            f"{slope} * x + {intercept} | R = {np.corrcoef(x, y)[0, 1]}"
+        )
+        return slope, intercept
+
+    @staticmethod
+    def process_config(config: RLConfiguration, config_names: dict[str, str]) -> RLConfiguration:
+
+        """
+        Add missing information to the configuration,
+        such as the MILP or rl-random reward structures in the reward R23 and R24
+        :param config:
+        :param config_names:
+        :return:
+        """
+
+        # Define the agent used to calculate the reward R1 structure of MILP and rl-random
+        # Note that if the reward R23 or R24 is left unchanged, there would be an infinite loop of processing configs
+        updated_config_names = config_names.copy()
+        updated_config_names['R'] = 'R1'
+        agent = ''.join(updated_config_names.values())
+
+        if config.milp_reference and (config.milp_slope is None or config.milp_intercept is None):
+            slope, intercept = ReinforcementLearning.get_slope_intercept(agent=agent, solver='MILP')
+            config.milp_slope = slope
+            config.milp_intercept = intercept
+            print(f"Set MILP's slope to {config.milp_slope} and its intercept to {config.milp_intercept}.")
+
+        return config
+
+    @staticmethod
     def extract_substrings(input_string: str) -> dict[str, str]:
 
         """
@@ -1338,6 +1408,7 @@ class ReinforcementLearning:
             config_path = os.path.join(config_folder, config_name + ".json")
             configs.append(config_class.from_json(config_path))
         config = RLConfiguration.from_components(configs)
+        config = ReinforcementLearning.process_config(config, config_names)
         return config
 
 

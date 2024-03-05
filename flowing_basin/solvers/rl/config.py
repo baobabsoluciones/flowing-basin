@@ -226,25 +226,31 @@ class RewardConfiguration(BaseConfiguration):  # noqa
     :param greedy_reference:
         If True, use rl-greedy's average performance on the episode as a reference to compute the reward
     :param reference_ratio:
-        Can only be None when greedy_reference is False
+        If None, this parameter has no effect
         If False, `reward = rew_agent - max(0, avg_rew_greedy)`;
         if True, `reward = (rew_agent - max(0., avg_rew_greedy)) / max(1., avg_rew_greedy)`
+    :param milp_reference:
+        If None or False, this parameter has no effect. Can only be None when greedy_reference is False
+        If True, estimate the reward of the MILP based on rl-greedy's reward,
+        to compute a reward that it is +1 when the agent matches the MILP's estimated performance
+    :param milp_slope:
+        Slope of the line used to estimate MILP's reward from rl-greedy's reward. If None, it will be calculated
+    :param milp_intercept:
+        Intercept of the line used to estimate MILP's reward from rl-greedy's reward. If None, it will be calculated
     """
 
     flow_smoothing_penalty: float
+
     greedy_reference: bool = False
     reference_ratio: bool = None
+
+    milp_reference: bool = False
+    milp_slope: float = None
+    milp_intercept: float = None
 
     def check(self):
 
         super(RewardConfiguration, self).check()
-
-        # Check self.reference_ratio
-        if self.greedy_reference:
-            if self.reference_ratio is None:
-                raise ValueError(
-                    f"Reference ratio must be specified if {self.greedy_reference=}, but {self.reference_ratio=}."
-                )
 
 
 # noinspection PyDataclass

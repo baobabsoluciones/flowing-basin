@@ -654,10 +654,14 @@ class RLEnvironment(gym.Env):
         reward = reward / self.instance.get_largest_price()
 
         if greedy_reference and self.config.greedy_reference:
-            if not self.config.reference_ratio:
-                reward = reward - max(0., self.avg_rew_greedy)
-            else:
-                reward = (reward - max(0., self.avg_rew_greedy)) / max(1., self.avg_rew_greedy)
+            if self.config.reference_ratio is not None:
+                if not self.config.reference_ratio:
+                    reward = reward - max(0., self.avg_rew_greedy)
+                else:
+                    reward = (reward - max(0., self.avg_rew_greedy)) / max(1., self.avg_rew_greedy)
+            elif self.config.milp_reference:
+                avg_rew_milp = self.avg_rew_greedy * self.config.milp_slope + self.config.milp_intercept
+                reward = (reward - self.avg_rew_greedy) / (avg_rew_milp - self.avg_rew_greedy)
 
         return reward
 

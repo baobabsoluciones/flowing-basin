@@ -237,6 +237,14 @@ class RewardConfiguration(BaseConfiguration):  # noqa
         Slope of the line used to estimate MILP's reward from rl-greedy's reward. If None, it will be calculated
     :param milp_intercept:
         Intercept of the line used to estimate MILP's reward from rl-greedy's reward. If None, it will be calculated
+    :param random_reference:
+        If None or False, this parameter has no effect. Can only be None when greedy_reference is False
+        If True, estimate the reward of rl-random based on rl-greedy's reward,
+        to compute a reward that it is -1 when the agent matches rl-random's estimated performance
+    :param random_slope:
+        Slope of the line used to estimate rl-random's reward from rl-greedy's reward. If None, it will be calculated
+    :param random_intercept:
+        Intercept of the line used to estimate rl-random's reward from rl-greedy's reward. If None, it will be calculated
     """
 
     flow_smoothing_penalty: float
@@ -247,6 +255,10 @@ class RewardConfiguration(BaseConfiguration):  # noqa
     milp_reference: bool = False
     milp_slope: float = None
     milp_intercept: float = None
+
+    random_reference: bool = False
+    random_slope: float = None
+    random_intercept: float = None
 
     def check(self):
 

@@ -802,11 +802,7 @@ class ReinforcementLearning:
                     run.solve(model.policy)
                 else:
                     run.solve(named_policy)
-                avg_reward = sum(run.rewards) / len(run.rewards)
-
-                # Divide by the block size to get consistent results with different action types
-                # This effectively gives the reward per timestep instead of the reward per step
-                avg_reward /= self.config.num_actions_block
+                avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
                 avg_rewards.append(avg_reward)
                 values[reward_config][instance.get_instance_name()] = avg_reward
 
@@ -1319,8 +1315,7 @@ class ReinforcementLearning:
             :return:
             """
             run = rl.run_imitator(solution=sol, instance=Instance.from_name(sol.get_instance_name()))
-            avg_reward = sum(run.rewards) / len(run.rewards)
-            avg_reward /= rl.config.num_actions_block
+            avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
             return avg_reward
 
         rl = ReinforcementLearning(agent)
@@ -1369,6 +1364,12 @@ class ReinforcementLearning:
             config.milp_slope = slope
             config.milp_intercept = intercept
             print(f"Set MILP's slope to {config.milp_slope} and its intercept to {config.milp_intercept}.")
+
+        if config.random_reference and (config.random_slope is None or config.random_intercept is None):
+            slope, intercept = ReinforcementLearning.get_slope_intercept(agent=agent, solver='rl-random')
+            config.random_slope = slope
+            config.random_intercept = intercept
+            print(f"Set rl-random's slope to {config.random_slope} and its intercept to {config.random_intercept}.")
 
         return config
 

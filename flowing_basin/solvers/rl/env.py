@@ -659,9 +659,19 @@ class RLEnvironment(gym.Env):
                     reward = reward - max(0., self.avg_rew_greedy)
                 else:
                     reward = (reward - max(0., self.avg_rew_greedy)) / max(1., self.avg_rew_greedy)
-            elif self.config.milp_reference:
+            elif self.config.milp_reference and not self.config.random_reference:
                 avg_rew_milp = self.avg_rew_greedy * self.config.milp_slope + self.config.milp_intercept
                 reward = (reward - self.avg_rew_greedy) / (avg_rew_milp - self.avg_rew_greedy)
+            elif self.config.milp_reference and self.config.random_reference:
+                avg_rew_milp = self.avg_rew_greedy * self.config.milp_slope + self.config.milp_intercept
+                avg_rew_random = self.avg_rew_greedy * self.config.random_slope + self.config.random_intercept
+                reward = max(min(reward, avg_rew_milp), avg_rew_random)
+                reward = (
+                    (reward - self.avg_rew_greedy) / (avg_rew_milp - self.avg_rew_greedy)
+                    * (reward - avg_rew_random) / (avg_rew_milp - avg_rew_random)
+                    - (reward - self.avg_rew_greedy) / (avg_rew_random - self.avg_rew_greedy)
+                    * (reward - avg_rew_milp) / (avg_rew_random - avg_rew_milp)
+                )
 
         return reward
 

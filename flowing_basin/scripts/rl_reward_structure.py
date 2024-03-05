@@ -16,7 +16,7 @@ baseline_colors = {
     'rl-greedy': 'grey'
 }
 study_incomes = False  # Study incomes instead of rewards
-agent = f"rl-A1{general_config}O2R24T1"  # Agent used to calculate rewards
+agent = f"rl-A113{general_config}O232R23T1"  # Agent used to calculate rewards
 
 if study_incomes:
 
@@ -42,8 +42,7 @@ else:
 
         # Get the reward per timestep
         run = rl_for_solver.run_imitator(solution=baseline, instance=Instance.from_name(baseline.get_instance_name()))
-        avg_reward = sum(run.rewards) / len(run.rewards)
-        avg_reward /= rl_for_solver.config.num_actions_block
+        avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
 
         # Add to results
         solver = baseline.get_solver()
@@ -61,8 +60,7 @@ else:
     for baseline in ReinforcementLearning.get_all_baselines(general_config):
         if baseline.get_solver() == 'rl-greedy':
             run = rl_for_greedy.run_imitator(solution=baseline, instance=Instance.from_name(baseline.get_instance_name()))
-            avg_reward = sum(run.rewards) / len(run.rewards)
-            avg_reward /= rl_for_greedy.config.num_actions_block
+            avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
             greedy_instances_values[baseline.get_instance_name()] = avg_reward
 
 print("Y values:", baseline_instances_values)

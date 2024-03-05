@@ -32,7 +32,8 @@ class RLRun(Experiment):
 
         self.solver_name = solver_name
         self.config = config
-        self.rewards = None
+        self.rewards_per_step = None
+        self.rewards_per_period = None
         if self.config.action_type == "adjustments":
             self.solutions = None
             self.total_rewards = None
@@ -102,7 +103,8 @@ class RLRun(Experiment):
             initial_row=self.instance.get_start_decisions_datetime()
         )
         done = False
-        self.rewards = []
+        self.rewards_per_step = []
+        self.rewards_per_period = []
         if self.config.action_type == "adjustments":
             self.solutions = []
 
@@ -121,8 +123,9 @@ class RLRun(Experiment):
                 i += 1
             else:
                 action, _ = policy.predict(obs, deterministic=True)
-            obs, reward, done, _, _ = self.env.step(action, update_as_flows=update_as_flows)
-            self.rewards.append(reward)
+            obs, reward, done, _, info = self.env.step(action, update_as_flows=update_as_flows)
+            self.rewards_per_step.append(reward)
+            self.rewards_per_period.extend(info['rewards'])
 
         self.solution = self.get_solution()
         if self.config.action_type == "adjustments":

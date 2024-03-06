@@ -241,12 +241,18 @@ class RLEnvironment(gym.Env):
         """
 
         env = deepcopy(self)
-        done = False
         rewards = []
-        while not done:
+        initial_time = env.river_basin.time
+        while True:
             action = (greediness * 2 - 1) * env.action_space.high  # noqa
             _, _, done, _, info = env.step(action, greedy_reference=False, update_as_flows=True)
             rewards.extend(info['rewards'])
+            num_periods = env.river_basin.time - initial_time
+            if done:
+                break
+            if self.config.reference_num_periods is not None:
+                if num_periods >= self.config.reference_num_periods:
+                    break
         avg_reward = sum(rewards) / len(rewards)
         return avg_reward
 
@@ -727,6 +733,10 @@ class RLEnvironment(gym.Env):
             )
             self.river_basin.reset()
 
+        # Recalculate rl-greedy's reward from this point
+        if self.config.recalculate_reference and greedy_reference:
+            self.avg_rew_greedy = self.get_greedy_avg_reward()
+
         # Execute all actions of the block sequentially
         action_block = action_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
         last_flows_block = self.last_flows_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
@@ -749,7 +759,8 @@ class RLEnvironment(gym.Env):
             flows_block.append(new_flows)
 
             self.river_basin.update(new_flows.reshape(-1, 1))
-            rewards.append(self.get_reward(greedy_reference))
+            reward = self.get_reward(greedy_reference)
+            rewards.append(reward)
 
             # Do not execute whole block of action if episode finishes in the middle
             # This happens when largest_impact_horizon % num_actions_block != 0 (e.g., with action A111)

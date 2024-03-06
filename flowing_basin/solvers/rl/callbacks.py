@@ -115,7 +115,7 @@ class TrainingDataCallback(BaseCallback):
 
                 run.solve(self.model.policy)
                 income = run.solution.get_objective_function()
-                acc_reward = sum(run.rewards)
+                acc_reward = sum(run.rewards_per_step)
 
                 incomes.append(income)
                 acc_rewards.append(acc_reward)

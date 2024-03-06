@@ -1,0 +1,6 @@
+{
+  "flow_smoothing_penalty": 25.0,
+  "greedy_reference": true,
+  "reference_ratio": true,
+  "recalculate_reference": true
+}

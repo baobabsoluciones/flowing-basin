@@ -16,7 +16,7 @@ baseline_colors = {
     'rl-greedy': 'grey'
 }
 study_incomes = False  # Study incomes instead of rewards
-agent = f"rl-A113{general_config}O232R23T1"  # Agent used to calculate rewards
+agent = f"rl-A1{general_config}O232R232T1"  # Agent used to calculate rewards
 
 if study_incomes:
 

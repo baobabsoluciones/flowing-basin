@@ -225,6 +225,12 @@ class RewardConfiguration(BaseConfiguration):  # noqa
         Penalty for not fulfilling the flow smoothing parameter
     :param greedy_reference:
         If True, use rl-greedy's average performance on the episode as a reference to compute the reward
+    :param recalculate_reference:
+        If True, on each timestep recalculate rl-greedy's average performance on the rest of the episode
+    :param reference_num_periods:
+        Number of subsequent periods for which rl-greedy is executed and its average reward calculated.
+        If None, rl-greedy is executed for the whole episode.
+        If a float, it is understood as a fraction of the maximum sight.
     :param reference_ratio:
         If None, this parameter has no effect
         If False, `reward = rew_agent - max(0, avg_rew_greedy)`;
@@ -251,6 +257,8 @@ class RewardConfiguration(BaseConfiguration):  # noqa
 
     greedy_reference: bool = False
     reference_ratio: bool = None
+    recalculate_reference: bool = False
+    reference_num_periods: int | float = None
 
     milp_reference: bool = False
     milp_slope: float = None
@@ -381,6 +389,9 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         for feature in self.features:
             for dam_id in self.dam_ids:
                 self.num_steps_sight[feature, dam_id] += self.num_actions_block - 1
+
+        if isinstance(self.reference_num_periods, float):
+            self.reference_num_periods = int(self.reference_num_periods * max(self.num_steps_sight.values()))
         
     def get_obs_indices(self, flattened: bool = False) -> dict[tuple[str, str, int], int | tuple[int]]:
 

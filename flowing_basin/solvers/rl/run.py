@@ -52,7 +52,7 @@ class RLRun(Experiment):
             update_to_decisions=update_to_decisions,
         )
 
-    def solve(self, policy: BasePolicy | str | Solution, options: dict = None) -> dict:
+    def solve(self, policy: BasePolicy | str | Solution, skip_rewards: bool = False, options: dict = None) -> dict:
 
         """
         Load the given model and use it to solve the instance given in the initialization.
@@ -61,6 +61,7 @@ class RLRun(Experiment):
             or a solution to imitate.
             If you use "greedy", you can also give "greedy_0.7" to indicate the degree of greediness,
             which the percentage of flow that the greedy agent attempts to assign at each period.
+        :param skip_rewards: Whether to skip reward calculation to accelerate inference
         :param options: Unused parameter
         :return: Dictionary with additional information
         """
@@ -123,7 +124,9 @@ class RLRun(Experiment):
                 i += 1
             else:
                 action, _ = policy.predict(obs, deterministic=True)
-            obs, reward, done, _, info = self.env.step(action, update_as_flows=update_as_flows)
+            obs, reward, done, _, info = self.env.step(
+                action, update_as_flows=update_as_flows, skip_rewards=skip_rewards
+            )
             self.rewards_per_step.append(reward)
             self.rewards_per_period.extend(info['rewards'])
 

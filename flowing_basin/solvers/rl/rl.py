@@ -701,7 +701,7 @@ class ReinforcementLearning:
                 projector=projector,
                 solver_name=self.agent_name
             )
-            run.solve(model.policy)
+            run.solve(model.policy, skip_rewards=True)
             runs.append(run)
 
         if len(runs) == 1:

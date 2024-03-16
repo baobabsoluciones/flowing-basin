@@ -712,7 +712,10 @@ class RLEnvironment(gym.Env):
 
         return bool(done)
 
-    def step(self, action_block: np.ndarray, greedy_reference: bool = True, update_as_flows: bool = False) -> tuple[np.ndarray, float, bool, bool, dict]:
+    def step(
+            self, action_block: np.ndarray, greedy_reference: bool = True, update_as_flows: bool = False,
+            skip_rewards: bool = False
+    ) -> tuple[np.ndarray, float, bool, bool, dict]:
 
         """
         Updates the river basin with the given action
@@ -722,6 +725,7 @@ class RLEnvironment(gym.Env):
         :param greedy_reference: Whether to use rl-greedy as a reference for the reward or not.
             If the configuration does not have this on, then no reference is used and this parameter is ignored.
         :param update_as_flows: Whether to treat the action as flows, independently of the configuration.
+        :param skip_rewards: Whether to skip reward calculation to accelerate inference
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
         rewards = []
@@ -735,7 +739,10 @@ class RLEnvironment(gym.Env):
 
         # Recalculate rl-greedy's reward from this point
         if self.config.recalculate_reference and greedy_reference:
-            self.avg_rew_greedy = self.get_greedy_avg_reward()
+            if not skip_rewards:
+                self.avg_rew_greedy = self.get_greedy_avg_reward()
+            else:
+                self.avg_rew_greedy = None
 
         # Execute all actions of the block sequentially
         action_block = action_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
@@ -759,7 +766,10 @@ class RLEnvironment(gym.Env):
             flows_block.append(new_flows)
 
             self.river_basin.update(new_flows.reshape(-1, 1))
-            reward = self.get_reward(greedy_reference)
+            if not skip_rewards:
+                reward = self.get_reward(greedy_reference)
+            else:
+                reward = None
             rewards.append(reward)
 
             # Do not execute whole block of action if episode finishes in the middle
@@ -768,8 +778,11 @@ class RLEnvironment(gym.Env):
                 break
 
         # Total reward obtained with the given actions
-        total_reward = sum(rewards)
-        if self.config.action_type != "adjustments" or update_as_flows:
+        if not skip_rewards:
+            total_reward = sum(rewards)
+        else:
+            total_reward = None
+        if self.config.action_type != "adjustments" or update_as_flows or skip_rewards:
             final_reward = total_reward
         else:
             # Difference with previous total reward

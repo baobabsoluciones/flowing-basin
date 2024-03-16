@@ -18,9 +18,9 @@ for action, general, observation in product(actions, generals, observations):
 
     for reward in rewards:
 
-        training = "T13" if action == "A1" else "T33"
+        training = "T1" if action == "A1" else "T3"
 
         rl = ReinforcementLearning(f"{action}{general}{observation}{reward}{training}", verbose=2)
-        rl.train(save_agent=False)
+        rl.train()
 
 # Note we will train 2(G) * 2(O) * 7(R) + 2(G) * 2(O) = 28 + 4 = 32 agents

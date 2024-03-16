@@ -875,7 +875,7 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
-    def barchart_training_times(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'):
+    def barchart_training_times(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', hours: bool = False):
 
         """
         Show the training time of all agents matching the given regex in a barchart
@@ -883,11 +883,15 @@ class ReinforcementLearning:
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         training_times = ReinforcementLearning.get_training_times(agents)
+        unit = 'min'
+        if hours:
+            training_times = [training_time / 60 for training_time in training_times]
+            unit = 'hours'
 
         plt.bar(agents, training_times)
         plt.xticks(rotation='vertical')  # Put the agent IDs vertically
         plt.xlabel('Agents')
-        plt.ylabel('Training time (min)')
+        plt.ylabel(f'Training time ({unit})')
         plt.title('Training time of agents')
         plt.tight_layout()  # Avoid the agent IDs being cut down at the bottom of the figure
         plt.show()

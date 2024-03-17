@@ -26,27 +26,37 @@ def lighten_color(color, amount=0.5):
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
 
-PLOT_MILP_FLOWS = True
-if PLOT_MILP_FLOWS:
-    GENERAL = 'G1'
-    filename_milp = '_vs_milp_flows'
-    plot_title = f' with MILP flows histogram in {GENERAL}'
+PLOT_SOLVER_FLOWS = True
+SOLVER = "rl-A113G1O232R22T3"  # an agent or "MILP"
+GENERAL = 'G0'  # only matters if PLOT_SOLVER_FLOWS = True and SOLVER = "MILP"
+
+if PLOT_SOLVER_FLOWS:
+    filename_solver = f'_vs_{SOLVER}_flows'
+    plot_title = f' with {SOLVER} flows'
+    if SOLVER == "MILP":
+        plot_title += f' in {GENERAL}'
 else:
-    filename_milp = ''
+    filename_solver = ''
     plot_title = ''
-
-
-filename = f'power_group_charts/power_vs_turbine_flow{filename_milp}.eps'
+filename = f'power_group_charts/power_vs_turbine_flow{filename_solver}.eps'
 constants = Instance.from_dict(load_json(ReinforcementLearning.constants_path))
 
-if PLOT_MILP_FLOWS:
-    milp_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}
+if PLOT_SOLVER_FLOWS and SOLVER == "MILP":
+    solver_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}
     for sol in ReinforcementLearning.get_all_baselines(GENERAL):
         if sol.get_solver() == "MILP":
             for dam_id in sol.get_ids_of_dams():
-                milp_flows[dam_id].extend(sol.get_exiting_flows_of_dam(dam_id))
+                solver_flows[dam_id].extend(sol.get_exiting_flows_of_dam(dam_id))
+elif PLOT_SOLVER_FLOWS:
+    solver_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}
+    rl = ReinforcementLearning(SOLVER)
+    runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+    for run in runs:
+        sol = run.solution
+        for dam_id in sol.get_ids_of_dams():
+            solver_flows[dam_id].extend(sol.get_exiting_flows_of_dam(dam_id))
 else:
-    milp_flows = None
+    solver_flows = None
 
 fig, axs = plt.subplots(1, constants.get_num_dams(), figsize=(12, 5))
 for i, dam_id in enumerate(constants.get_ids_of_dams()):
@@ -90,7 +100,7 @@ for i, dam_id in enumerate(constants.get_ids_of_dams()):
         )
         i += 1
 
-    if PLOT_MILP_FLOWS:
+    if PLOT_SOLVER_FLOWS:
         flows_limits = flow_bins[0]
         flows_limits = np.append(0, np.append(flows_limits, max_flow))
         bins = []
@@ -99,8 +109,8 @@ for i, dam_id in enumerate(constants.get_ids_of_dams()):
         bins.append(flows_limits[-1])
         print(dam_id, "bins:", bins)
         twin_ax = ax.twinx()
-        twin_ax.hist(milp_flows[dam_id], color='orange', alpha=0.5, bins=bins)
-        twin_ax.set_ylabel('MILP flows frequency')
+        twin_ax.hist(solver_flows[dam_id], color='orange', alpha=0.5, bins=bins)
+        twin_ax.set_ylabel(f'{SOLVER} flows frequency')
 
 # Trabs
 plt.tight_layout()

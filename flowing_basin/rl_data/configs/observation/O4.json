@@ -15,7 +15,7 @@
         "past_powers",
         "past_clipped"
     ],
-    "not_expand": [
+    "features_not_expand": [
         "past_vols",
         "past_flows",
         "past_variations",

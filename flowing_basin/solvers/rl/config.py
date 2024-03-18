@@ -28,6 +28,7 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
 
     features: list[str]  # Features included in the observation
     unique_features: list[str]  # Features that should NOT be repeated for each dam
+    features_not_expand: list[str] = field(default_factory=list)  # Features that should NOT be expanded by the action block size
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
     feature_extractor: str  # Either MLP or CNN or mixed
 
@@ -116,6 +117,11 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
         if not set(self.unique_features).issubset(self.features):
             raise ValueError(
                 f"The features marked as unique, {self.unique_features}, "
+                f"should be a subset of the features, {self.features}"
+            )
+        if not set(self.features_not_expand).issubset(self.features):
+            raise ValueError(
+                f"The features not to expand, {self.features_not_expand}, "
                 f"should be a subset of the features, {self.features}"
             )
         if self.feature_extractor == 'CNN' and len(self.unique_features) != 0:
@@ -387,8 +393,9 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         TrainingConfiguration.post_process(self)
 
         for feature in self.features:
-            for dam_id in self.dam_ids:
-                self.num_steps_sight[feature, dam_id] += self.num_actions_block - 1
+            if feature not in self.features_not_expand:
+                for dam_id in self.dam_ids:
+                    self.num_steps_sight[feature, dam_id] += self.num_actions_block - 1
 
         if isinstance(self.reference_num_periods, float):
             self.reference_num_periods = int(self.reference_num_periods * max(self.num_steps_sight.values()))

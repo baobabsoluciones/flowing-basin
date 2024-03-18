@@ -933,8 +933,10 @@ class RLEnvironment(gym.Env):
                 ].values, None, constants.get_max_flow_of_channel(dam_id))
                 data["dams"][order]["starting_variations"] = (starting_flows - starting_flows_rolled).tolist()
 
+                # Starting volumes: since the `volume` column has the volume at the start of each timestep,
+                # the initial volume is not the value for timestep -1 but for timestep 0
                 data["dams"][order]["starting_volumes"] = np.clip(historical_data.loc[
-                    initial_row_info: initial_row_decisions - 1, dam_id + "_vol"
+                    initial_row_info + 1: initial_row_decisions, dam_id + "_vol"
                 ].values, None, constants.get_max_vol_of_dam(dam_id)).tolist()
 
                 data["dams"][order]["starting_powers"] = np.clip(historical_data.loc[

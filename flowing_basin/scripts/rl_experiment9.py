@@ -33,4 +33,5 @@ for action, general, observation, reward, training in product(actions, generals,
     rl.train()
 
 # Note we will train 1(A) * 2(G) * 2(O) * 2(R) * 4(T) - 2 = 30 agents
-# Approximate training time: 30 agents * 5 hours/agent = 150 hours = 6.25 days
+# Approximate training time: 30 agents * 7.5 hours/agent = 225 hours = 9.375 days
+# Half the agents will take 5 hours (T30) and half will take 10 hours (T34), so we consider 7.5 hours/agent

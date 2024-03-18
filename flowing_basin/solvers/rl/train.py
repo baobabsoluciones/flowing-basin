@@ -5,6 +5,7 @@ from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback,
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
+from copy import copy
 import os
 import warnings
 import re
@@ -151,9 +152,17 @@ class RLTrain(Experiment):
 
         if self.config.feature_extractor == 'MLP':
 
+            actor_layers = copy(self.config.actor_layers)
+            if actor_layers[0] == -1:
+                actor_layers[0] = self.train_env.observation_space.shape[0]
+
+            critic_layers = copy(self.config.critic_layers)
+            if critic_layers[0] == -1:
+                critic_layers[0] = self.train_env.observation_space.shape[0]
+
             policy_type = "MlpPolicy"
             policy_kwargs = dict(
-                net_arch=dict(pi=[256, 256], qf=[256, 256])
+                net_arch=dict(pi=actor_layers, qf=critic_layers)
             )
 
         elif self.config.feature_extractor == 'CNN':

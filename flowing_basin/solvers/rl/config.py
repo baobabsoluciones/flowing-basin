@@ -287,6 +287,8 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
     num_timesteps: int  # Nuber of time steps in which to train the agent
     learning_rate: float = 3e-4
     replay_buffer_size: int = 1_000_000
+    actor_layers: list[int] = field(default_factory=lambda: [256, 256])  # Neural network layers for the critic (value-function or Q-function)
+    critic_layers: list[int] = field(default_factory=lambda: [256, 256])  # Neural network layers for the actor (policy, pi)
 
     # Monitor logging: reward of episodes seen during training
     log_episode_freq: int

@@ -7,15 +7,20 @@
 - `O2X`: observation O2 with a PCA projector.
 - `O2X1`: observation O2 with a QuantilePseudoDiscretizer followed by a PCA projector.
 - `O2X2`: observation O2 with a QuantilePseudoDiscretizer.
-- `O231`: observation O2 with a sight of 32 steps (instead of 16).
-- `O232`: observation O2 with a sight of 64 steps (instead of 16).
-- `O233`: observation O2 with a sight of 96 steps (instead of 16).
+- `O23Y`: observation O2 with a sight of Y steps (instead of 16).
 - `O3`: like O2, but with past_prices and past_inflows instead of future_prices and future_inflows,
 and with past_flows_raw instead of past_clipped.
+- `O4`: like O2, but with the past variables not expanded with the action's block size.
+- `O43Y`: like O23Y, but with observation O4.
 
 In all of these, `X` can be either `1` or `2`:
 - If `X` is `1`, the PCA projector or QuantilePseudoDiscretizer is trained with observations obtained from a SAC agent.
 - If `X` is `2`, the PCA projector or QuantilePseudoDiscretizer is trained with observations obtained from a random agent.
+
+And `Y` can be `1`, `2` or `3`:
+- If `Y` is `1`, the sight is of 32 steps.
+- If `Y` is `2`, the sight is of 64 steps.
+- If `Y` is `3`, the sight is of 96 steps.
 
 Observations with randomized features (for testing purposes):
 - `O10`: observation O1 with all features randomized.

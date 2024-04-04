@@ -39,5 +39,5 @@ def get_experiment9_model_paths() -> list[str]:
 
 
 paths = get_experiment9_model_paths()
-new_folder = "C:/Users/rodri/Documents/experiment9"
+new_folder = "C:/Users/rodrigo/Documents/experiment9"
 copy_folders(paths, new_folder)

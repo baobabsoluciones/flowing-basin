@@ -3,7 +3,6 @@ import numpy as np
 from flowing_basin.core import Instance, Solution, Experiment
 from flowing_basin.solvers.rl import RLConfiguration, RLEnvironment
 from flowing_basin.solvers.rl.feature_extractors import Projector
-from stable_baselines3 import SAC
 from stable_baselines3.common.policies import BasePolicy
 import os
 

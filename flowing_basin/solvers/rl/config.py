@@ -289,6 +289,7 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
     replay_buffer_size: int = 1_000_000
     actor_layers: list[int] = field(default_factory=lambda: [256, 256])  # Neural network layers for the critic (value-function or Q-function)
     critic_layers: list[int] = field(default_factory=lambda: [256, 256])  # Neural network layers for the actor (policy, pi)
+    algorithm: str = "SAC"
 
     # Monitor logging: reward of episodes seen during training
     log_episode_freq: int
@@ -311,6 +312,12 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
     def check(self):
 
         super(TrainingConfiguration, self).check()
+
+        supported_algorithms = {"SAC", "A2C", "PPO"}
+        if self.algorithm not in supported_algorithms:
+            raise ValueError(
+                f"Unsupported algorithm: {self.algorithm}. Supported algorithms are {supported_algorithms}"
+            )
 
         required_args_not_given = [self.training_data_timesteps_freq is None, self.training_data_instances is None]
         if self.training_data_callback:

@@ -2,7 +2,7 @@ from flowing_basin.core import Instance, Solution, Experiment, TrainingData
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 from flowing_basin.solvers.rl.feature_extractors import Projector, VanillaCNN
 from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, TrainingDataCallback
-from stable_baselines3 import SAC
+from stable_baselines3 import SAC, A2C, PPO
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
 from copy import copy
@@ -150,6 +150,7 @@ class RLTrain(Experiment):
         Define the model
         """
 
+        # Define policy keyword arguments
         if self.config.feature_extractor == 'MLP':
 
             actor_layers = copy(self.config.actor_layers)
@@ -160,9 +161,13 @@ class RLTrain(Experiment):
             if critic_layers[0] == -1:
                 critic_layers[0] = self.train_env.observation_space.shape[0]
 
+            # Name for on-policy algorithms (PPO, A2C...): "vf"
+            # Name for off-policy algorithms (SAC...): "qf"
+            # Source: https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#off-policy-algorithms
+            critic_name = "qf" if self.config.algorithm == "SAC" else "vf"
             policy_type = "MlpPolicy"
             policy_kwargs = dict(
-                net_arch=dict(pi=actor_layers, qf=critic_layers)
+                net_arch={"pi": actor_layers, critic_name: critic_layers}
             )
 
         elif self.config.feature_extractor == 'CNN':
@@ -185,10 +190,16 @@ class RLTrain(Experiment):
                 f"Feature extractor of type {self.config.feature_extractor} is not supported. Either MLP or CNN"
             )
 
-        # Make default value explicit to avoid error when loading
-        policy_kwargs.update(
-            dict(use_sde=False)
+        # Define model keyword arguments
+        model_kwargs = dict(
+            learning_rate=self.config.learning_rate, policy_kwargs=policy_kwargs,
+            verbose=self.verbose, tensorboard_log=self.path_tensorboard,
+            use_sde=False  # Default value made explicit to avoid error when loading
         )
+        if self.config.algorithm == "SAC":
+            model_kwargs.update(
+                dict(buffer_size=self.config.replay_buffer_size)
+            )
 
         # Check if training should continue from pre-trained model
         self.from_pretrained = False
@@ -197,15 +208,12 @@ class RLTrain(Experiment):
             if self.verbose >= 1:
                 print(f"The training will continue from a pre-trained model saved in '{self.path_old_model}'.")
 
-        # Define the model
-        model_kwargs = dict(
-            learning_rate=self.config.learning_rate, buffer_size=self.config.replay_buffer_size,
-            verbose=self.verbose, tensorboard_log=self.path_tensorboard, policy_kwargs=policy_kwargs
-        )
+        # Load or create the model
+        algorithm = dict(SAC=SAC, A2C=A2C, PPO=PPO)[self.config.algorithm]
         if self.from_pretrained:
-            self.model = SAC.load(self.path_old_model, env=self.train_env, **model_kwargs)
+            self.model = algorithm.load(self.path_old_model, env=self.train_env, **model_kwargs)
         else:
-            self.model = SAC(policy_type, self.train_env, **model_kwargs)
+            self.model = algorithm(policy_type, self.train_env, **model_kwargs)
 
         # Load replay buffer of pre-trained model
         if self.path_old_replay_buffer is not None and os.path.exists(self.path_old_replay_buffer):

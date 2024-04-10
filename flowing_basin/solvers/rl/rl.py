@@ -5,7 +5,8 @@ from flowing_basin.solvers.rl import (
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
-from stable_baselines3 import SAC
+from stable_baselines3 import SAC, A2C, PPO
+from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.env_checker import check_env
 import torch
 import numpy as np
@@ -405,7 +406,7 @@ class ReinforcementLearning:
 
         return model_path
 
-    def load_model(self, model_type: str = "best_model") -> SAC:
+    def load_model(self, model_type: str = "best_model") -> BaseAlgorithm:
 
         """
         Load a trained model.
@@ -419,7 +420,8 @@ class ReinforcementLearning:
         # See pull request https://github.com/DLR-RM/stable-baselines3/pull/336
         model_path = self.get_model_path(model_type)
         env = self.create_train_env()
-        model = SAC.load(
+        algorithm = dict(SAC=SAC, A2C=A2C, PPO=PPO)[self.config.algorithm]
+        model = algorithm.load(
             model_path,
             env=env,
             custom_objects={
@@ -437,11 +439,11 @@ class ReinforcementLearning:
         """
 
         try:
-            from captum.attr import IntegratedGradients
+            from captum.attr import IntegratedGradients  # noqa
         except ModuleNotFoundError:
             raise ModuleNotFoundError("Module 'captum' must be installed to execute method 'integrated_gradients'.")
 
-        model = self.load_model()  # type: SAC
+        model = self.load_model()  # type: BaseAlgorithm
         obs_record = self.load_observation_record()  # type: np.ndarray # shape (num_obs, num_features)
 
         obs = obs_record[0]
@@ -488,6 +490,7 @@ class ReinforcementLearning:
 
             # When show_lookback=False, all dams are plotted on the same histogram
             # and there is an additional column at the beginning to indicate the dam
+            fig, axs = None, None
             if not show_lookback:
                 fig, axs = plt.subplots(
                     self.constants.get_num_dams(), num_features + 1, figsize=(12, int(0.5 * num_features)),

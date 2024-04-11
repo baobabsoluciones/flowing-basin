@@ -206,6 +206,7 @@ class ActionConfiguration(BaseConfiguration):  # noqa
 
     action_type: str
     optimal_flow_values: dict[str, list[float]] = field(default_factory=lambda: dict())
+    discretization_levels: int = None
     num_actions_block: int = 1  # By default, the agent only gives the actions for the current timestep
     greediness: float = 1.  # Greediness of the baseline greedy agent when action_type == 'adjustments'
     noise_std_dev: float = 0.  # Standard deviation of the initial greedy actions
@@ -223,6 +224,14 @@ class ActionConfiguration(BaseConfiguration):  # noqa
         }
         if self.action_type not in valid_actions:
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
+
+        if self.action_type == "optimal_flow_values" and len(self.optimal_flow_values) == 0:
+            raise ValueError(f"{self.action_type=} but no optimal flows were given: {self.optimal_flow_values=}")
+        if self.action_type == "discrete_flow_values" and self.discretization_levels is None:
+            raise ValueError(
+                f"{self.action_type=} but the number of "
+                f"discretization levels was not given: {self.discretization_levels=}"
+            )
 
 
 @dataclass(kw_only=True)

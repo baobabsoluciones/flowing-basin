@@ -1,3 +1,4 @@
 {
-  "action_type": "discrete_flow_values"
+  "action_type": "discrete_flow_values",
+  "discretization_levels": 15
 }

@@ -628,7 +628,7 @@ class Instance(InstanceCore):
         flow_max = self.data["dams"][idx]["flow_max"]
         return copy(flow_max)
 
-    def get_flow_limit_obs_for_channel(self, idx: str) -> dict[str, list[float]]:
+    def get_flow_limit_obs_for_channel(self, idx: str) -> dict[str, list[float]] | None:
 
         """
 

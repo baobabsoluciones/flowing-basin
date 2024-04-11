@@ -130,11 +130,24 @@ class RLEnvironment(gym.Env):
                 [len(self.config.optimal_flow_values[dam_id]) for dam_id in self.instance.get_ids_of_dams()]
             )
         elif self.config.action_type == "discrete_flow_values":
-            pass
+            self.action_space = gym.spaces.MultiDiscrete(
+                [self.config.discretization_levels for _ in self.instance.get_ids_of_dams()]
+            )
         elif self.config.action_type == "turbine_count_and_flow":
             pass
         else:
             raise ValueError(f"Unsupported action type: {self.config.action_type}")
+
+        # Discrete flow values
+        self.discretized_flows = dict()
+        if self.config.action_type == "discrete_flow_values":
+            for dam_id in self.instance.get_ids_of_dams():
+                max_flow = self.instance.get_max_flow_of_channel(dam_id)
+                if self.instance.get_flow_limit_obs_for_channel(dam_id) is not None:  # Get the real max_flow (dam2)
+                    dam_index = self.instance.get_order_of_dam(dam_id) - 1
+                    max_vol = self.instance.get_max_vol_of_dam(dam_id)
+                    max_flow = self.river_basin.dams[dam_index].channel.get_flow_limit(max_vol)
+                self.discretized_flows[dam_id] = np.linspace(0., max_flow, self.config.discretization_levels)
 
         # Functions to calculate features
         self.features_functions = self.get_features_functions()
@@ -774,6 +787,11 @@ class RLEnvironment(gym.Env):
             elif self.config.action_type == "optimal_flow_values":
                 new_flows = np.array([
                     self.config.optimal_flow_values[dam_id][index]
+                    for dam_id, index in zip(self.instance.get_ids_of_dams(), action)
+                ])
+            elif self.config.action_type == "discrete_flow_values":
+                new_flows = np.array([
+                    self.discretized_flows[dam_id][index]
                     for dam_id, index in zip(self.instance.get_ids_of_dams(), action)
                 ])
             else:

@@ -159,8 +159,8 @@ class RLEnvironment(gym.Env):
                 self.discretized_flows[dam_id] = np.linspace(0., max_flow, self.config.discretization_levels)
 
         # Flows intervals of each turbine count
-        # For each dam, we calculate the (first_flow, last_flow) values for each whole number of turbines
-        self.turbine_count_limits = dict()
+        # For each dam, we calculate the (first_flow, ..., last_flow) values for each whole number of turbines
+        self.turbine_count_flows = dict()
         if self.config.action_type == "turbine_count_and_flow":
             first_flow_padding = 0.005  # To keep all the flows in the interval within the same number of turbines
             for dam_id in self.instance.get_ids_of_dams():
@@ -172,14 +172,15 @@ class RLEnvironment(gym.Env):
                 )
                 i = 0
                 turbined_bin_flows = [0.] + turbined_bin_flows.tolist() + [max_flow]
-                self.turbine_count_limits[dam_id] = []
+                self.turbine_count_flows[dam_id] = []
                 while i < len(turbined_bin_flows) - 1:
                     first_flow = turbined_bin_flows[i]
                     if first_flow != 0.:
                         first_flow += first_flow_padding
-                    limits = (first_flow, turbined_bin_flows[i + 1])
+                    last_flow = turbined_bin_flows[i + 1]
                     if turbined_bin_groups[i] == int(turbined_bin_groups[i]):  # We are not interested in limit zones
-                        self.turbine_count_limits[dam_id].append(limits)
+                        flows = np.linspace(first_flow, last_flow, self.config.discretization_levels)
+                        self.turbine_count_flows[dam_id].append(flows)
                     i = i + 1
 
         # Functions to calculate features
@@ -801,8 +802,8 @@ class RLEnvironment(gym.Env):
                 self.avg_rew_greedy = None
 
         # Execute all actions of the block sequentially
-        action_block = action_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
-        last_flows_block = self.last_flows_block.reshape(self.config.num_actions_block, self.instance.get_num_dams())
+        action_block = action_block.reshape(self.config.num_actions_block, -1)
+        last_flows_block = self.last_flows_block.reshape(self.config.num_actions_block, -1)
         for action, last_flow in zip(action_block, last_flows_block):
 
             # Transform action to flows
@@ -828,7 +829,14 @@ class RLEnvironment(gym.Env):
                     for dam_id, index in zip(self.instance.get_ids_of_dams(), action)
                 ])
             elif self.config.action_type == "turbine_count_and_flow":
-                pass
+                # Action has 4 values, (dam1_turbine_count, dam1_flow_level, dam2_turbine_count, dam2_flow_level)
+                new_flows = []
+                for dam_id in self.instance.get_ids_of_dams():
+                    dam_index = self.instance.get_order_of_dam(dam_id) - 1
+                    turbine_count, flow_level = action[dam_index * 2], action[dam_index * 2 + 1]
+                    turbine_count_flows = self.turbine_count_flows[dam_id][turbine_count]
+                    new_flows.append(turbine_count_flows[flow_level])
+                new_flows = np.array(new_flows)
             else:
                 raise ValueError("Invalid action type.")
             flows_block.append(new_flows)

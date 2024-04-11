@@ -134,20 +134,53 @@ class RLEnvironment(gym.Env):
                 [self.config.discretization_levels for _ in self.instance.get_ids_of_dams()]
             )
         elif self.config.action_type == "turbine_count_and_flow":
-            pass
+            discrete_actions = []
+            for dam_id in self.instance.get_ids_of_dams():
+                discrete_actions.extend([
+                    self.instance.get_max_num_power_groups(dam_id) + 1, self.config.discretization_levels
+                ])
+            self.action_space = gym.spaces.MultiDiscrete(discrete_actions)
         else:
             raise ValueError(f"Unsupported action type: {self.config.action_type}")
+
+        def get_real_max_flow(dam_id: str) -> float:
+            real_max_flow = self.instance.get_max_flow_of_channel(dam_id)
+            if self.instance.get_flow_limit_obs_for_channel(dam_id) is not None:  # Get the real max_flow (dam2)
+                dam_index = self.instance.get_order_of_dam(dam_id) - 1
+                max_vol = self.instance.get_max_vol_of_dam(dam_id)
+                real_max_flow = self.river_basin.dams[dam_index].channel.get_flow_limit(max_vol)
+            return real_max_flow
 
         # Discrete flow values
         self.discretized_flows = dict()
         if self.config.action_type == "discrete_flow_values":
             for dam_id in self.instance.get_ids_of_dams():
-                max_flow = self.instance.get_max_flow_of_channel(dam_id)
-                if self.instance.get_flow_limit_obs_for_channel(dam_id) is not None:  # Get the real max_flow (dam2)
-                    dam_index = self.instance.get_order_of_dam(dam_id) - 1
-                    max_vol = self.instance.get_max_vol_of_dam(dam_id)
-                    max_flow = self.river_basin.dams[dam_index].channel.get_flow_limit(max_vol)
+                max_flow = get_real_max_flow(dam_id)
                 self.discretized_flows[dam_id] = np.linspace(0., max_flow, self.config.discretization_levels)
+
+        # Flows intervals of each turbine count
+        # For each dam, we calculate the (first_flow, last_flow) values for each whole number of turbines
+        self.turbine_count_limits = dict()
+        if self.config.action_type == "turbine_count_and_flow":
+            first_flow_padding = 0.005  # To keep all the flows in the interval within the same number of turbines
+            for dam_id in self.instance.get_ids_of_dams():
+                max_flow = get_real_max_flow(dam_id)
+                startup_flows = self.instance.get_startup_flows_of_power_group(dam_id)
+                shutdown_flows = self.instance.get_shutdown_flows_of_power_group(dam_id)
+                turbined_bin_flows, turbined_bin_groups = PowerGroup.get_turbined_bins_and_groups(
+                    startup_flows, shutdown_flows, epsilon=0.  # epsilon=0. to avoid touching the limit zones
+                )
+                i = 0
+                turbined_bin_flows = [0.] + turbined_bin_flows.tolist() + [max_flow]
+                self.turbine_count_limits[dam_id] = []
+                while i < len(turbined_bin_flows) - 1:
+                    first_flow = turbined_bin_flows[i]
+                    if first_flow != 0.:
+                        first_flow += first_flow_padding
+                    limits = (first_flow, turbined_bin_flows[i + 1])
+                    if turbined_bin_groups[i] == int(turbined_bin_groups[i]):  # We are not interested in limit zones
+                        self.turbine_count_limits[dam_id].append(limits)
+                    i = i + 1
 
         # Functions to calculate features
         self.features_functions = self.get_features_functions()
@@ -794,6 +827,8 @@ class RLEnvironment(gym.Env):
                     self.discretized_flows[dam_id][index]
                     for dam_id, index in zip(self.instance.get_ids_of_dams(), action)
                 ])
+            elif self.config.action_type == "turbine_count_and_flow":
+                pass
             else:
                 raise ValueError("Invalid action type.")
             flows_block.append(new_flows)

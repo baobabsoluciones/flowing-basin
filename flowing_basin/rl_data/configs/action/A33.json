@@ -1,3 +1,4 @@
 {
-  "action_type": "turbine_count_and_flow"
+  "action_type": "turbine_count_and_flow",
+  "discretization_levels": 6
 }

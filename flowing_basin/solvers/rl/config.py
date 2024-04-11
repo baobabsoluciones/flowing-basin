@@ -225,9 +225,12 @@ class ActionConfiguration(BaseConfiguration):  # noqa
         if self.action_type not in valid_actions:
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
 
+        # Check the required optional arguments are given
         if self.action_type == "optimal_flow_values" and len(self.optimal_flow_values) == 0:
             raise ValueError(f"{self.action_type=} but no optimal flows were given: {self.optimal_flow_values=}")
-        if self.action_type == "discrete_flow_values" and self.discretization_levels is None:
+        if (
+                self.action_type == "discrete_flow_values" or self.action_type == "turbine_count_and_flow"
+        ) and self.discretization_levels is None:
             raise ValueError(
                 f"{self.action_type=} but the number of "
                 f"discretization levels was not given: {self.discretization_levels=}"

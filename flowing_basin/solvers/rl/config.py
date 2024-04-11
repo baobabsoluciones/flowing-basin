@@ -205,6 +205,7 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
 class ActionConfiguration(BaseConfiguration):  # noqa
 
     action_type: str
+    optimal_flow_values: dict[str, list[float]] = field(default_factory=lambda: dict())
     num_actions_block: int = 1  # By default, the agent only gives the actions for the current timestep
     greediness: float = 1.  # Greediness of the baseline greedy agent when action_type == 'adjustments'
     noise_std_dev: float = 0.  # Standard deviation of the initial greedy actions
@@ -216,7 +217,10 @@ class ActionConfiguration(BaseConfiguration):  # noqa
         super(ActionConfiguration, self).check()
 
         # Check self.action_type
-        valid_actions = {"exiting_flows", "exiting_relvars", "adjustments"}
+        valid_actions = {
+            "exiting_flows", "exiting_relvars", "adjustments",
+            "optimal_flow_values", "discrete_flow_values", "turbine_count_and_flow"
+        }
         if self.action_type not in valid_actions:
             raise ValueError(f"Invalid value for 'action_type': {self.action_type}. Allowed values are {valid_actions}")
 

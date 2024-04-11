@@ -115,16 +115,26 @@ class RLEnvironment(gym.Env):
         self.record_projected_obs = []
 
         # Action space
-        # Action is an array of shape num_dams
-        self.action_space = gym.spaces.Box(
-            low=-1,
-            high=1,
-            shape=(self.instance.get_num_dams() * self.config.num_actions_block,),
-            dtype=np.float32
-        )
-        # The action space should be bounded between -1 and 1
-        # even if a lower bound of 0 would make more sense
-        # Source: https://github.com/hill-a/stable-baselines/issues/473
+        if self.config.action_type in {"exiting_flows", "exiting_relvars", "adjustments"}:
+            self.action_space = gym.spaces.Box(
+                low=-1,
+                high=1,
+                shape=(self.instance.get_num_dams() * self.config.num_actions_block,),
+                dtype=np.float32
+            )
+            # The action space should be bounded between -1 and 1
+            # even if a lower bound of 0 would make more sense
+            # Source: https://github.com/hill-a/stable-baselines/issues/473
+        elif self.config.action_type == "optimal_flow_values":
+            self.action_space = gym.spaces.MultiDiscrete(
+                [len(self.config.optimal_flow_values[dam_id]) for dam_id in self.instance.get_ids_of_dams()]
+            )
+        elif self.config.action_type == "discrete_flow_values":
+            pass
+        elif self.config.action_type == "turbine_count_and_flow":
+            pass
+        else:
+            raise ValueError(f"Unsupported action type: {self.config.action_type}")
 
         # Functions to calculate features
         self.features_functions = self.get_features_functions()
@@ -761,6 +771,11 @@ class RLEnvironment(gym.Env):
             elif self.config.action_type == "adjustments":
                 # Adjustments are configured as relvars over the unclipped flows of the previous iteration
                 new_flows = np.clip(last_flow + action * self.max_flows, 0, self.max_flows)
+            elif self.config.action_type == "optimal_flow_values":
+                new_flows = np.array([
+                    self.config.optimal_flow_values[dam_id][index]
+                    for dam_id, index in zip(self.instance.get_ids_of_dams(), action)
+                ])
             else:
                 raise ValueError("Invalid action type.")
             flows_block.append(new_flows)

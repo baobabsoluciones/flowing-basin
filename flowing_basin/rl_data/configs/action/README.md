@@ -9,3 +9,9 @@
 (which has similar performance and avoids clipping all positive adjustments).
 - `A23`: like A22, but Gaussian noise with 0.15 standard deviation is added to the initial greedy actions.
 - `A24`: like A21, but the initial actions are completely random (no greediness).
+- `A31`: the agent can only choose among the given optimal flows.
+- `A32`: the agent chooses the flow from the given number of discretization levels for each dam.
+- `A33`: the agent chooses the turbine count and the flow level within this number of turbines.
+- `A313`: like A31, but making the choice for the next 99 (99 // 1) timesteps.
+- `A323`: like A32, but making the choice for the next 99 (99 // 1) timesteps.
+- `A333`: like A33, but making the choice for the next 99 (99 // 1) timesteps.

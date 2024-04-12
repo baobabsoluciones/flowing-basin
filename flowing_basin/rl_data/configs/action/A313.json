@@ -1,0 +1,21 @@
+{
+  "action_type": "optimal_flow_values",
+  "optimal_flow_values": {
+    "dam1": [
+      0.0,
+      4.98,
+      5.95,
+      9.4,
+      9.82,
+      13.66,
+      14.15
+    ],
+    "dam2": [
+      0.0,
+      4.52,
+      7.29,
+      9.82
+    ]
+  },
+  "num_actions_block": 99
+}

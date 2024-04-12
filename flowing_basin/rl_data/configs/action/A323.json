@@ -1,0 +1,5 @@
+{
+  "action_type": "discrete_flow_values",
+  "discretization_levels": 15,
+  "num_actions_block": 99
+}

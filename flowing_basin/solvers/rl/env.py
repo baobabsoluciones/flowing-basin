@@ -127,18 +127,23 @@ class RLEnvironment(gym.Env):
             # Source: https://github.com/hill-a/stable-baselines/issues/473
         elif self.config.action_type == "optimal_flow_values":
             self.action_space = gym.spaces.MultiDiscrete(
-                [len(self.config.optimal_flow_values[dam_id]) for dam_id in self.instance.get_ids_of_dams()]
+                [
+                    len(self.config.optimal_flow_values[dam_id]) for dam_id in self.instance.get_ids_of_dams()
+                ] * self.config.num_actions_block
             )
         elif self.config.action_type == "discrete_flow_values":
             self.action_space = gym.spaces.MultiDiscrete(
-                [self.config.discretization_levels for _ in self.instance.get_ids_of_dams()]
+                [
+                    self.config.discretization_levels for _ in self.instance.get_ids_of_dams()
+                ] * self.config.num_actions_block
             )
         elif self.config.action_type == "turbine_count_and_flow":
             discrete_actions = []
-            for dam_id in self.instance.get_ids_of_dams():
-                discrete_actions.extend([
-                    self.instance.get_max_num_power_groups(dam_id) + 1, self.config.discretization_levels
-                ])
+            for _ in range(self.config.num_actions_block):
+                for dam_id in self.instance.get_ids_of_dams():
+                    discrete_actions.extend([
+                        self.instance.get_max_num_power_groups(dam_id) + 1, self.config.discretization_levels
+                    ])
             self.action_space = gym.spaces.MultiDiscrete(discrete_actions)
         else:
             raise ValueError(f"Unsupported action type: {self.config.action_type}")

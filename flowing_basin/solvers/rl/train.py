@@ -4,6 +4,7 @@ from flowing_basin.solvers.rl.feature_extractors import Projector, VanillaCNN
 from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, TrainingDataCallback
 from stable_baselines3 import SAC, A2C, PPO
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
 from copy import copy
@@ -202,10 +203,6 @@ class RLTrain(Experiment):
             verbose=self.verbose, tensorboard_log=self.path_tensorboard,
             use_sde=False  # Default value made explicit to avoid error when loading
         )
-        if self.config.algorithm == "SAC":
-            model_kwargs.update(
-                dict(buffer_size=self.config.replay_buffer_size)
-            )
 
         # Check if training should continue from pre-trained model
         self.from_pretrained = False
@@ -214,26 +211,48 @@ class RLTrain(Experiment):
             if self.verbose >= 1:
                 print(f"The training will continue from a pre-trained model saved in '{self.path_old_model}'.")
 
-        # Load or create the model
+        # Define the model's algorithm
+        # Note only off-policy algorithms have a replay buffer
         algorithm = dict(SAC=SAC, A2C=A2C, PPO=PPO)[self.config.algorithm]
+        if self.config.replay_buffer_size is not None:
+            if issubclass(algorithm, OffPolicyAlgorithm):
+                model_kwargs.update(
+                    dict(buffer_size=self.config.replay_buffer_size)
+                )
+            else:
+                warnings.warn(
+                    f"A replay buffer size was given (value {self.config.replay_buffer_size}), but the model's "
+                    f"algorithm ({self.config.algorithm}) is on-policy and does not have a replay buffer."
+                )
+
+        # Load or create the model
         if self.from_pretrained:
             self.model = algorithm.load(self.path_old_model, env=self.train_env, **model_kwargs)
         else:
             self.model = algorithm(policy_type, self.train_env, **model_kwargs)
 
         # Load replay buffer of pre-trained model
-        if self.path_old_replay_buffer is not None and os.path.exists(self.path_old_replay_buffer):
-            self.model.load_replay_buffer(self.path_old_replay_buffer)
-            if self.verbose >= 1:
-                print(f"Loaded replay buffer of pre-trained model with {self.model.replay_buffer.size()} transitions.")
-        elif self.from_pretrained:
+        if isinstance(self.model, OffPolicyAlgorithm):
+            if self.path_old_replay_buffer is not None and os.path.exists(self.path_old_replay_buffer):
+                self.model.load_replay_buffer(self.path_old_replay_buffer)
+                if self.verbose >= 1:
+                    print(
+                        f"Loaded replay buffer of pre-trained model "
+                        f"with {self.model.replay_buffer.size()} transitions."
+                    )
+            elif self.from_pretrained:
+                warnings.warn(
+                    f"Pre-trained model does not have a replay buffer in '{self.path_old_replay_buffer}'. "
+                    f"Training may not be smooth."
+                )
+        elif self.path_old_replay_buffer is not None:
             warnings.warn(
-                f"Pre-trained model does not have a replay buffer in '{self.path_old_replay_buffer}'. "
-                f"Training may not be smooth."
+                f"A replay buffer path was given ({self.path_old_replay_buffer}), but the model's "
+                f"algorithm ({self.config.algorithm}) is on-policy and does not have any replay buffer."
             )
 
         # Give a warning if the actual number of training timesteps will be lower
-        if issubclass(type(self.model), OnPolicyAlgorithm):
+        if isinstance(self.model, OnPolicyAlgorithm):
             if self.num_timesteps < self.model.n_steps:
                 warnings.warn(
                     f"The given total number of timesteps ({self.num_timesteps}), "
@@ -306,11 +325,17 @@ class RLTrain(Experiment):
 
         # Saving the replay buffer allows smoother training later
         if self.save_replay_buffer and self.path_new_replay_buffer is not None:
-            self.model.save_replay_buffer(self.path_new_replay_buffer)
-            if self.verbose >= 1:
-                print(
-                    f"Saved replay buffer with {self.model.replay_buffer.size()} transitions "
-                    f"in file '{self.path_new_replay_buffer}'."
+            if isinstance(self.model, OffPolicyAlgorithm):
+                self.model.save_replay_buffer(self.path_new_replay_buffer)
+                if self.verbose >= 1:
+                    print(
+                        f"Saved replay buffer with {self.model.replay_buffer.size()} transitions "
+                        f"in file '{self.path_new_replay_buffer}'."
+                    )
+            else:
+                warnings.warn(
+                    f"A replay buffer path was given ({self.path_new_replay_buffer}), but the model's "
+                    f"algorithm ({self.config.algorithm}) is on-policy and does not have any replay buffer."
                 )
 
         # Save model

@@ -302,7 +302,7 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
     length_episodes: int
     num_timesteps: int  # Nuber of time steps in which to train the agent
     learning_rate: float = 3e-4
-    replay_buffer_size: int = 1_000_000
+    replay_buffer_size: int = None
     actor_layers: list[int] = None  # Neural network layers for the critic (value-function or Q-function)
     critic_layers: list[int] = None  # Neural network layers for the actor (policy, pi)
     algorithm: str = "SAC"
@@ -333,6 +333,14 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
         if self.algorithm not in supported_algorithms:
             raise ValueError(
                 f"Unsupported algorithm: {self.algorithm}. Supported algorithms are {supported_algorithms}"
+            )
+
+        off_policy_algorithms = {"SAC"}
+        if self.replay_buffer_size is not None and self.algorithm not in off_policy_algorithms:
+            raise ValueError(
+                f"The replay buffer size only has an effect in off-policy algorithms such as SAC. "
+                f"The given algorithm is {self.algorithm}, which is on-policy, "
+                f"but a buffer size of {self.replay_buffer_size} was given."
             )
 
         if self.actor_layers is None or self.critic_layers is None:

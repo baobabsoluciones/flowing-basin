@@ -13,7 +13,7 @@ In all of these, `X` can be nothing, `0`, `1`, `2`, `3` or `4`:
 - If `X` is `2`, the training is done for 990 timesteps.
 - If `X` is `3`, the training is done for 15 timesteps
 (this is for action types with big block sizes, which are extremely slow to train).
-- If `X' is `4`, the training is done for 198000 timesteps.
+- If `X` is `4`, the training is done for 198000 timesteps.
 
 Note one episode (day) is equivalent to `99 // num_actions_block` timesteps.
 

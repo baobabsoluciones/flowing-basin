@@ -6,7 +6,7 @@ This script allows studying a single agent.
 
 from flowing_basin.solvers.rl import ReinforcementLearning
 
-rl = ReinforcementLearning("rl-A333G0O2R1T1302", verbose=2)
+rl = ReinforcementLearning("rl-A333G0O2R1T1371", verbose=2)
 print("Configuration:", rl.config.to_dict())
 # rl.check_train_env(obs_types=['raw'], initial_date='2020-08-19 00:00', seed=42)  # instancePercentile50
 # rl.collect_obs()

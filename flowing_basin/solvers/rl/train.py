@@ -154,21 +154,26 @@ class RLTrain(Experiment):
         if self.config.feature_extractor == 'MLP':
 
             actor_layers = copy(self.config.actor_layers)
-            if actor_layers[0] == -1:
-                actor_layers[0] = self.train_env.observation_space.shape[0]
-
             critic_layers = copy(self.config.critic_layers)
-            if critic_layers[0] == -1:
-                critic_layers[0] = self.train_env.observation_space.shape[0]
-
-            # Name for on-policy algorithms (PPO, A2C...): "vf"
-            # Name for off-policy algorithms (SAC...): "qf"
-            # Source: https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#off-policy-algorithms
-            critic_name = "qf" if self.config.algorithm == "SAC" else "vf"
             policy_type = "MlpPolicy"
-            policy_kwargs = dict(
-                net_arch={"pi": actor_layers, critic_name: critic_layers}
-            )
+            policy_kwargs = None
+
+            if actor_layers is not None or critic_layers is not None:
+
+                net_arch = dict()
+                if actor_layers[0] == -1:
+                    actor_layers[0] = self.train_env.observation_space.shape[0]
+                net_arch.update({"pi": actor_layers})
+
+                # Name for on-policy algorithms (PPO, A2C...): "vf"
+                # Name for off-policy algorithms (SAC...): "qf"
+                # Source: https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#off-policy-algorithms
+                critic_name = "qf" if self.config.algorithm == "SAC" else "vf"
+                if critic_layers[0] == -1:
+                    critic_layers[0] = self.train_env.observation_space.shape[0]
+                net_arch.update({critic_name: critic_layers})
+
+                policy_kwargs = dict(net_arch=net_arch)
 
         elif self.config.feature_extractor == 'CNN':
 

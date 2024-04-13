@@ -303,8 +303,8 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
     num_timesteps: int  # Nuber of time steps in which to train the agent
     learning_rate: float = 3e-4
     replay_buffer_size: int = 1_000_000
-    actor_layers: list[int] = field(default_factory=lambda: [256, 256])  # Neural network layers for the critic (value-function or Q-function)
-    critic_layers: list[int] = field(default_factory=lambda: [256, 256])  # Neural network layers for the actor (policy, pi)
+    actor_layers: list[int] = None  # Neural network layers for the critic (value-function or Q-function)
+    critic_layers: list[int] = None  # Neural network layers for the actor (policy, pi)
     algorithm: str = "SAC"
 
     # Monitor logging: reward of episodes seen during training
@@ -334,6 +334,18 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
             raise ValueError(
                 f"Unsupported algorithm: {self.algorithm}. Supported algorithms are {supported_algorithms}"
             )
+
+        if self.actor_layers is None or self.critic_layers is None:
+            if self.actor_layers is not None:
+                raise ValueError(
+                    f"If the critic's layers are set to default, {self.critic_layers=}; "
+                    f"the actor's layers must be set to default too, and not {self.actor_layers=}."
+                )
+            if self.critic_layers is not None:
+                raise ValueError(
+                    f"If the actor's layers are set to default, {self.actor_layers=}; "
+                    f"the critic's layers must be set to default too, and not {self.critic_layers=}."
+                )
 
         required_args_not_given = [self.training_data_timesteps_freq is None, self.training_data_instances is None]
         if self.training_data_callback:

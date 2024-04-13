@@ -27,6 +27,7 @@ where `N` equals the size of the observation space (i.e., the number of actor in
 - If `Y` is `5`, the actor network has \[512, 256] neurons and the critic \[256, 256].
 - If `Y` is `6`, the actor network has \[`N`, 256] neurons and the critic \[256, 256],
 where `N` equals the size of the observation space (i.e., the number of actor input neurons).
+- If `Y` is `7`, the actor network has \[1536, 1536] neurons and the critic \[1024, 1024].
 
 In all of these, `Z` can be nothing, `0`, `1`, or `2`:
 - If `Z` is nothing or `0`, the RL algorithm used is SAC.

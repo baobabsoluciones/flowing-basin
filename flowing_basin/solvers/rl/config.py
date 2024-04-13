@@ -301,7 +301,7 @@ class TrainingConfiguration(BaseConfiguration):  # noqa
 
     length_episodes: int
     num_timesteps: int  # Nuber of time steps in which to train the agent
-    learning_rate: float = 3e-4
+    learning_rate: float = None
     replay_buffer_size: int = None
     actor_layers: list[int] = None  # Neural network layers for the critic (value-function or Q-function)
     critic_layers: list[int] = None  # Neural network layers for the actor (policy, pi)

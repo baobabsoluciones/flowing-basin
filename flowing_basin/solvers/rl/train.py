@@ -199,10 +199,11 @@ class RLTrain(Experiment):
 
         # Define model keyword arguments
         model_kwargs = dict(
-            learning_rate=self.config.learning_rate, policy_kwargs=policy_kwargs,
-            verbose=self.verbose, tensorboard_log=self.path_tensorboard,
+            policy_kwargs=policy_kwargs, verbose=self.verbose, tensorboard_log=self.path_tensorboard,
             use_sde=False  # Default value made explicit to avoid error when loading
         )
+        if self.config.learning_rate is not None:
+            model_kwargs.update(dict(learning_rate=self.config.learning_rate))  # noqa
 
         # Check if training should continue from pre-trained model
         self.from_pretrained = False
@@ -216,9 +217,7 @@ class RLTrain(Experiment):
         algorithm = dict(SAC=SAC, A2C=A2C, PPO=PPO)[self.config.algorithm]
         if self.config.replay_buffer_size is not None:
             if issubclass(algorithm, OffPolicyAlgorithm):
-                model_kwargs.update(
-                    dict(buffer_size=self.config.replay_buffer_size)
-                )
+                model_kwargs.update(dict(buffer_size=self.config.replay_buffer_size))
             else:
                 warnings.warn(
                     f"A replay buffer size was given (value {self.config.replay_buffer_size}), but the model's "

@@ -1,7 +1,8 @@
 - `T0XYZ`: normal training setting.
 - `T1XYZ`: same as T0, but saving the best agent on evaluation rewards (EvalCallback)
 and not rollout rewards (CheckpointCallback).
-- `T2XYZ`: same as T1, but with a more aggressive learning rate (1e-3 instead of 3e-4).
+- `T2XYZ`: same as T1, but with a more aggressive learning rate (1e-3 instead of the default,
+which is 3e-4 in SAC and PPO but 7e-4 in A2C).
 - `T3XYZ`: same as T1, but with a smaller replay buffer size (100_000 instead of 1_000_000).
   - This is necessary to avoid an ArrayMemoryError with very large observation arrays,
   such as rl-A113G0O2R1T.* with observations of shape (1736,).

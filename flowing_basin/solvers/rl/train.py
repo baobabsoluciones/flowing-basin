@@ -3,6 +3,7 @@ from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 from flowing_basin.solvers.rl.feature_extractors import Projector, VanillaCNN
 from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, TrainingDataCallback
 from stable_baselines3 import SAC, A2C, PPO
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
 from copy import copy
@@ -230,6 +231,15 @@ class RLTrain(Experiment):
                 f"Pre-trained model does not have a replay buffer in '{self.path_old_replay_buffer}'. "
                 f"Training may not be smooth."
             )
+
+        # Give a warning if the actual number of training timesteps will be lower
+        if issubclass(type(self.model), OnPolicyAlgorithm):
+            if self.num_timesteps < self.model.n_steps:
+                warnings.warn(
+                    f"The given total number of timesteps ({self.num_timesteps}), "
+                    f"is lower than number of steps per update ({self.model.n_steps}). "
+                    f"The model will actually be trained for {self.model.n_steps} timesteps, not {self.num_timesteps}."
+                )
 
         if self.verbose >= 2:
             print("Model architecture to train:")

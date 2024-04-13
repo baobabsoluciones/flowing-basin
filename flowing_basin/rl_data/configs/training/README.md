@@ -1,4 +1,4 @@
-- `T0XYZ`: training a SAC agent.
+- `T0XYZ`: normal training setting.
 - `T1XYZ`: same as T0, but saving the best agent on evaluation rewards (EvalCallback)
 and not rollout rewards (CheckpointCallback).
 - `T2XYZ`: same as T1, but with a more aggressive learning rate (1e-3 instead of 3e-4).

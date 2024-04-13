@@ -12,7 +12,7 @@ if not SAVE_AGENT:
     sys.modules['torch.utils.tensorboard'] = None
 from flowing_basin.solvers.rl import ReinforcementLearning
 
-rl = ReinforcementLearning("rl-A31G0O2R1T1302", verbose=3)
+rl = ReinforcementLearning("rl-A31G0O231R1T1302", verbose=3)
 print("Configuration:", rl.config.to_dict())
 # rl.check_train_env(obs_types=['raw'], initial_date='2020-08-19 00:00', seed=42)  # instancePercentile50
 # rl.collect_obs()

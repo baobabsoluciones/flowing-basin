@@ -1,6 +1,6 @@
 """
 RL Experiment 9
-This script trains agents with
+This script trains agents with larger network sizes
 """
 
 from flowing_basin.solvers.rl import ReinforcementLearning

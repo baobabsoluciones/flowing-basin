@@ -306,8 +306,8 @@ class RLEnvironment(gym.Env):
         rewards = []
         initial_time = env.river_basin.time
         while True:
-            action = (greediness * 2 - 1) * env.action_space.high  # noqa
-            _, _, done, _, info = env.step(action, greedy_reference=False, update_as_flows=True)
+            greedy_flows = (greediness * 2 - 1) * np.ones(self.instance.get_num_dams() * self.config.num_actions_block)
+            _, _, done, _, info = env.step(greedy_flows, greedy_reference=False, update_as_flows=True)
             rewards.extend(info['rewards'])
             num_periods = env.river_basin.time - initial_time
             if done:
@@ -330,13 +330,15 @@ class RLEnvironment(gym.Env):
         done = False
         while not done:
             if not random:
-                action = (greediness * 2 - 1) * self.action_space.high  # noqa
-                noise = np.random.normal(0., noise_std_dev, action.shape)
-                action += noise
-                action = np.clip(action, -1., 1.)
+                greedy_flows = (
+                        (greediness * 2 - 1) * np.ones(self.instance.get_num_dams() * self.config.num_actions_block)
+                )
+                noise = np.random.normal(0., noise_std_dev, greedy_flows.shape)
+                greedy_flows += noise
+                greedy_flows = np.clip(greedy_flows, -1., 1.)
             else:
-                action = np.random.uniform(-1, 1, size=self.action_space.shape)
-            _, _, done, _, _ = self.step(action, update_as_flows=True)
+                greedy_flows = np.random.uniform(-1, 1, size=self.action_space.shape)
+            _, _, done, _, _ = self.step(greedy_flows, update_as_flows=True)
 
     def get_features_min_functions(self) -> dict[str, Callable[[str], float | int]]:
 

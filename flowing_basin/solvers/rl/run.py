@@ -95,6 +95,8 @@ class RLRun(Experiment):
             actions = np.transpose(actions, (1, 0))  # from (dam, period) to (period, dam)
             actions = actions.reshape((-1, self.config.num_actions_block * self.instance.get_num_dams()))
             i = 0
+        if policy_name == "greedy":
+            update_as_flows = True
 
         # Reset the environment (this allows the `solve` method to be called more than once)
         # Remember we must not give the instance directly, but rather create a fresh new one for the same day
@@ -117,7 +119,9 @@ class RLRun(Experiment):
             if policy_name == "random":
                 action = self.env.action_space.sample()
             elif policy_name == "greedy":
-                action = (greediness * 2 - 1) * self.env.action_space.high  # noqa
+                action = (
+                    (greediness * 2 - 1) * np.ones(self.instance.get_num_dams() * self.config.num_actions_block)
+                )
             elif isinstance(policy, Solution):
                 action = actions[i]
                 i += 1

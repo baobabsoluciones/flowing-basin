@@ -28,6 +28,8 @@ def sample_ppo_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
     net_arch_type = trial.suggest_categorical("net_arch", ["tiny", "small", "medium"])
 
     # For gSDE (continuous actions)
+    log_std_init = None
+    sde_sample_freq = None
     if additional_args["continuous_actions"]:
         log_std_init = trial.suggest_float("log_std_init", -4, 1)
         sde_sample_freq = trial.suggest_categorical("sde_sample_freq", [-1, 8, 16, 32, 64, 128, 256])
@@ -59,7 +61,7 @@ def sample_ppo_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
 
     activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU}[activation_fn_name]
 
-    return {
+    return_dict = {
         "n_steps": n_steps,
         "batch_size": batch_size,
         "gamma": gamma,
@@ -70,14 +72,16 @@ def sample_ppo_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
         "gae_lambda": gae_lambda,
         "max_grad_norm": max_grad_norm,
         "vf_coef": vf_coef,
-        # "sde_sample_freq": sde_sample_freq,
         "policy_kwargs": dict(
-            # log_std_init=log_std_init,
             net_arch=net_arch,
             activation_fn=activation_fn,
             ortho_init=ortho_init,
         ),
     }
+    if additional_args["continuous_actions"]:
+        return_dict.update({"sde_sample_freq": sde_sample_freq})
+        return_dict["policy_kwargs"].update(dict(log_std_init=log_std_init))
+    return return_dict
 
 
 def sample_ppo_lstm_params(trial: optuna.Trial, n_actions: int, n_envs: int, additional_args: dict) -> Dict[str, Any]:
@@ -121,6 +125,8 @@ def sample_trpo_params(trial: optuna.Trial, n_actions: int, n_envs: int, additio
     gae_lambda = trial.suggest_categorical("gae_lambda", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0])
     net_arch_type = trial.suggest_categorical("net_arch", ["small", "medium"])
 
+    log_std_init = None
+    sde_sample_freq = None
     if additional_args["continuous_actions"]:
         log_std_init = trial.suggest_float("log_std_init", -4, 1)
         sde_sample_freq = trial.suggest_categorical("sde_sample_freq", [-1, 8, 16, 32, 64, 128, 256])
@@ -149,7 +155,7 @@ def sample_trpo_params(trial: optuna.Trial, n_actions: int, n_envs: int, additio
 
     activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU}[activation_fn_name]
 
-    return {
+    return_dict = {
         "n_steps": n_steps,
         "batch_size": batch_size,
         "gamma": gamma,
@@ -160,14 +166,16 @@ def sample_trpo_params(trial: optuna.Trial, n_actions: int, n_envs: int, additio
         "target_kl": target_kl,
         "learning_rate": learning_rate,
         "gae_lambda": gae_lambda,
-        # "sde_sample_freq": sde_sample_freq,
         "policy_kwargs": dict(
-            # log_std_init=log_std_init,
             net_arch=net_arch,
             activation_fn=activation_fn,
             ortho_init=ortho_init,
         ),
     }
+    if additional_args["continuous_actions"]:
+        return_dict.update({"sde_sample_freq": sde_sample_freq})
+        return_dict["policy_kwargs"].update(dict(log_std_init=log_std_init))
+    return return_dict
 
 
 def sample_a2c_params(trial: optuna.Trial, n_actions: int, n_envs: int, additional_args: dict) -> Dict[str, Any]:
@@ -188,6 +196,7 @@ def sample_a2c_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
     learning_rate = trial.suggest_float("learning_rate", 1e-5, 1, log=True)
     ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
     vf_coef = trial.suggest_float("vf_coef", 0, 1)
+    log_std_init = None
     if additional_args["continuous_actions"]:
         log_std_init = trial.suggest_float("log_std_init", -4, 1)
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
@@ -213,7 +222,7 @@ def sample_a2c_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
 
     activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU}[activation_fn_name]
 
-    return {
+    return_dict = {
         "n_steps": n_steps,
         "gamma": gamma,
         "gae_lambda": gae_lambda,
@@ -224,7 +233,6 @@ def sample_a2c_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
         "use_rms_prop": use_rms_prop,
         "vf_coef": vf_coef,
         "policy_kwargs": dict(
-            # log_std_init=log_std_init,
             net_arch=net_arch,
             # full_std=full_std,
             activation_fn=activation_fn,
@@ -232,6 +240,9 @@ def sample_a2c_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
             ortho_init=ortho_init,
         ),
     }
+    if additional_args["continuous_actions"]:
+        return_dict["policy_kwargs"].update(dict(log_std_init=log_std_init))
+    return return_dict
 
 
 def sample_sac_params(trial: optuna.Trial, n_actions: int, n_envs: int, additional_args: dict) -> Dict[str, Any]:

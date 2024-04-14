@@ -11,3 +11,4 @@ stable-baselines3==2.1.0
 torch~=2.2.0
 PuLP~=2.8.0
 scikit-learn~=1.4.0
+optuna~=3.6.1

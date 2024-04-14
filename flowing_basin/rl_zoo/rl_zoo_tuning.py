@@ -6,6 +6,7 @@ Custom environments: https://rl-baselines3-zoo.readthedocs.io/en/master/guide/cu
 Hyperparameter tuning: https://rl-baselines3-zoo.readthedocs.io/en/master/guide/tuning.html
 
 This script uses the forked RL Zoo library contained within this repository.
+Please refer to the README.md of this fork.
 
 The fixed values for hyperparameters that will not be tuned
 are read from the default_hyperparams directory,
@@ -29,7 +30,7 @@ from itertools import product
 
 NUM_TRIALS = 100
 NUM_TIMESTEPS_PER_TRIAL = 49_500  # Half of training T1
-NUM_PARALLEL_JOBS = 1
+NUM_PARALLEL_JOBS = -1  # This will set it to the system's CPU count
 EVAL_EPISODES = 10  # Same as training T1
 CONTINUOUS_ACTIONS = {"A1", "A113"}
 
@@ -38,18 +39,20 @@ algorithms = ["sac", "a2c", "ppo"]
 generals = ["G0", "G1"]
 observation = "O231"
 reward = "R1"
-training = "T0"
 
 for algorithm, general in product(algorithms, generals):
 
     if algorithm == "sac":
         actions = ["A1", "A113"]
+        training = "T3"  # Avoid huge replay buffer
     else:
         actions = ["A1", "A113", "A31", "A32", "A33", "A313", "A323", "A333"]
+        training = "T0"
 
     for action in actions:
 
         env_id = f"{action}{general}{observation}{reward}{training}"
+        print(f"Tuning {algorithm} in environment {env_id}...")
         instruction = (
             f"python rl_zoo3/train.py --algo {algorithm} --env RLEnvironment-{env_id}"
             f" -n {NUM_TIMESTEPS_PER_TRIAL} -optimize --n-trials {NUM_TRIALS} --eval-episodes {EVAL_EPISODES}"

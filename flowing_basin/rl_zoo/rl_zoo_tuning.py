@@ -44,12 +44,15 @@ for algorithm, general in product(algorithms, generals):
 
     if algorithm == "sac":
         actions = ["A1", "A113"]
-        training = "T3"  # Avoid huge replay buffer
     else:
         actions = ["A1", "A113", "A31", "A32", "A33", "A313", "A323", "A333"]
-        training = "T0"
 
     for action in actions:
+
+        if algorithm == "sac" and action == "A113":
+            training = "T3"  # Avoid huge replay buffer
+        else:
+            training = "T0"
 
         env_id = f"{action}{general}{observation}{reward}{training}"
         print(f"Tuning {algorithm} in environment {env_id}...")

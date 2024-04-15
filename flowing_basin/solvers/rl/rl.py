@@ -900,6 +900,41 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
+    def print_training_times(
+            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT',
+            hours: bool = False, csv_filepath: str = None
+    ):
+
+        """
+        Show the training time of all agents matching the given regex in a barchart
+        """
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
+        training_times = ReinforcementLearning.get_training_times(agents)
+        unit = 'min'
+        if hours:
+            training_times = [training_time / 60 for training_time in training_times]
+            unit = 'hours'
+
+        results = [
+            ["agent", f"training_time_{unit}"]
+        ]
+        for agent, training_time in zip(agents, training_times):
+            results.append([agent, training_time])
+
+        # Save results in .csv file
+        if csv_filepath is not None:
+            with open(csv_filepath, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                for result in results:
+                    writer.writerow(result)
+
+        # Print results
+        for line in results:
+            line = [f'{el:.2f}' if isinstance(el, float) else el for el in line]
+            print(','.join(line))
+
+    @staticmethod
     def barchart_instances_incomes(
             agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
             read_from_data: bool = False
@@ -1002,16 +1037,6 @@ class ReinforcementLearning:
 
         plt.tight_layout()
         plt.show()
-
-    @staticmethod
-    def print_training_times(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'):
-
-        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
-        training_times = ReinforcementLearning.get_training_times(agents)
-
-        print("agent; training time (min)")
-        for agent, training_time in zip(agents, training_times):
-            print(f"{agent}; {training_time:.2f}")
 
     @staticmethod
     def print_max_avg_incomes(

@@ -11,6 +11,7 @@ Environments in which to tune these algorithms:
 - The one-step continuous action (A1).
 - Only the normal observation (O231), normal reward (R1), and normal training configuration (T1),
 since they should not influence on the performance of the hyperparameters.
+- With and without normalization (SB3 VecNormalize wrapper).
 """
 
 import os

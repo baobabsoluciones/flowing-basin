@@ -1,5 +1,5 @@
 RLEnvironment-ANY:
-  normalize: true
+  normalize: false
   n_envs: 1
   policy: 'MlpPolicy'
   ent_coef: 0.0

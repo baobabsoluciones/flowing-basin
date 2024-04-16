@@ -19,7 +19,7 @@ def get_reports(log_dir: str) -> list[tuple[str, str, str]]:
             algorithm = root.split("\\")[1]
             for file in files:
                 if file.startswith("report_") and file.endswith(".pkl"):
-                    # Example: "report_RLEnvironment-A1G0O231R1T0_100-trials-49500-tpe-median_1713179196.pkl"
+                    # Example: "report_RLEnvironment-A1G0O231R1T0normalize_100-trials-49500-tpe-median_1713179196.pkl"
                     names = file.split("_")
                     env_id = names[1].split("-")[1]
                     trials = names[2].split("-")[0]

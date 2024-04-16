@@ -24,25 +24,33 @@ EVAL_EPISODES = 10  # Same as training T0
 # Possible values: --algo {a2c,ddpg,dqn,ppo,sac,td3,ars,qrdqn,tqc,trpo,ppo_lstm}
 algorithms = ["sac", "a2c", "ppo"]
 generals = ["G0", "G1"]
+normalizations = [True, False]
 action = "A1"
 observation = "O231"
 reward = "R1"
 training = "T0"
 
-for algorithm, general in product(algorithms, generals):
+for algorithm, general, normalization in product(algorithms, generals, normalizations):
 
     # Skip optimizations that have already finished
-    if algorithm == "sac" or (algorithm == "a2c" and general == "G0"):
-        print(f"Skipped the tuning of {algorithm} in {general}.")
+    if (normalization and algorithm in {"a2c", "ppo"}) or (not normalization and algorithm == "sac"):
+        print(f"Skipped the tuning of {algorithm} in {general} with normalization {normalization}.")
         continue
 
     env_id = f"{action}{general}{observation}{reward}{training}"
+    if normalization:
+        env_id += "normalize"
+
+    hyperparams_filename = f"{algorithm}"
+    if normalization:
+        hyperparams_filename += "_normalize"
+
     print(f"Tuning {algorithm} in environment {env_id}...")
     instruction = (
         f"python rl_zoo3/train.py --algo {algorithm} --env RLEnvironment-{env_id}"
         f" -n {NUM_TIMESTEPS_PER_TRIAL} -optimize --n-trials {NUM_TRIALS} --eval-episodes {EVAL_EPISODES}"
         f" --n-jobs {NUM_PARALLEL_JOBS}"
-        f" --conf-file default_hyperparams/{algorithm}.yml"
+        f" --conf-file default_hyperparams/{hyperparams_filename}.yml"
         f" --continuous-actions"
     )
     os.system(instruction)

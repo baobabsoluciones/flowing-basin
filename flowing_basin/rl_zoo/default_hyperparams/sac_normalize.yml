@@ -1,5 +1,5 @@
 RLEnvironment-ANY:
-  normalize: false
+  normalize: true
   policy: 'MlpPolicy'
   learning_rate: !!float 3e-4
   n_timesteps: -1

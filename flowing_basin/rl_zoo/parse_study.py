@@ -1,6 +1,8 @@
 """
 File taken from
 https://github.com/DLR-RM/rl-baselines3-zoo/blob/e06914e9835b8f3233b18d59943b1464b89ddb90/scripts/parse_study.py
+
+An extra parameter was created to control the name of the filename with the optimal hyperparameters (`-fn`)
 """
 
 import argparse
@@ -29,6 +31,13 @@ parser.add_argument(
     help="Folder where the best hyperparameter json files will be written",
     type=str,
     default="logs/hyperparameter_jsons",
+)
+parser.add_argument(
+    "-fn",
+    "--filename",
+    help="Filename of the json files",
+    type=str,
+    default="hyperparameters",
 )
 parser.add_argument("--study-name", help="Study name used during hyperparameter optimization", type=str)
 parser.add_argument("--storage", help="Database storage path used during hyperparameter optimization", type=str)
@@ -70,6 +79,6 @@ if args.save_n_best_hyperparameters > 0:
     os.makedirs(f"{args.folder}", exist_ok=True)
     for i in range(min(args.save_n_best_hyperparameters, len(trials))):
         params = trials[i].params
-        with open(f"{args.folder}/hyperparameters_{i + 1}.json", "w+") as json_file:
+        with open(f"{args.folder}/{args.filename}_{i + 1}.json", "w+") as json_file:
             json_file.write(json.dumps(trials[i].params, indent=4))
     print(f"Saved best hyperparameters to {args.folder}")

@@ -353,7 +353,7 @@ class ExperimentManager:
         if "normalize" in hyperparams.keys():
             self.normalize = hyperparams["normalize"]
 
-            # Special case, instead of both normalizing
+            # Special case, instead of normalizing
             # both observation and reward, we can normalize one of the two.
             # in that case `hyperparams["normalize"]` is a string
             # that can be evaluated as python,

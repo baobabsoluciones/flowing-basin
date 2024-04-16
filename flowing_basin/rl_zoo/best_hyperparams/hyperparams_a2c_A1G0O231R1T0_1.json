@@ -1,0 +1,16 @@
+{
+    "gamma": 0.9999,
+    "normalize_advantage": true,
+    "max_grad_norm": 0.6,
+    "use_rms_prop": false,
+    "gae_lambda": 0.8,
+    "n_steps": 256,
+    "lr_schedule": "linear",
+    "learning_rate": 0.0014600231347282949,
+    "ent_coef": 0.00024345017689408245,
+    "vf_coef": 0.5666160315949265,
+    "log_std_init": -0.16358976964969862,
+    "ortho_init": true,
+    "net_arch": "small",
+    "activation_fn": "relu"
+}

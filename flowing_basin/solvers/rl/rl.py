@@ -18,6 +18,7 @@ import warnings
 from time import perf_counter
 from datetime import datetime
 import csv
+import json
 
 
 class ReinforcementLearning:
@@ -40,6 +41,7 @@ class ReinforcementLearning:
     models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
     baselines_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/baselines")
     tensorboard_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/tensorboard_logs")
+    best_hyperparams_folder = os.path.join(os.path.dirname(__file__), "../../rl_zoo/best_hyperparams")
 
     observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
     static_projectors = ["identity", "QuantilePseudoDiscretizer"]
@@ -1378,8 +1380,26 @@ class ReinforcementLearning:
     def process_config(config: RLConfiguration, config_names: dict[str, str]) -> RLConfiguration:
 
         """
-        Add missing information to the configuration,
-        such as the MILP or rl-random reward structures in the reward R23 and R24
+        Add missing information to the configuration:
+        - the MILP or rl-random reward structures in the reward R23 and R24
+        - the tuned hyperparameters given by RL Zoo
+
+        :param config:
+        :param config_names:
+        :return:
+        """
+
+        config = ReinforcementLearning.add_reward_structures(config, config_names)
+        config = ReinforcementLearning.add_hyperparams(config, config_names)
+        return config
+
+    @staticmethod
+    def add_reward_structures(config: RLConfiguration, config_names: dict[str, str]) -> RLConfiguration:
+
+        """
+        Add the MILP or rl-random reward structures to the configuration
+        (when using the reward R23 and R24)
+
         :param config:
         :param config_names:
         :return:
@@ -1402,6 +1422,78 @@ class ReinforcementLearning:
             config.random_slope = slope
             config.random_intercept = intercept
             print(f"Set rl-random's slope to {config.random_slope} and its intercept to {config.random_intercept}.")
+
+        return config
+
+    @staticmethod
+    def add_hyperparams(config: RLConfiguration, config_names: dict[str, str]) -> RLConfiguration:
+
+        """
+        Add the tuned hyperparameters given by RL Zoo to the configuration
+        (when hyperparams == "rl_zoo")
+
+        :param config:
+        :param config_names:
+        :return:
+        """
+
+        if config.hyperparams != "rl_zoo":
+            return config
+
+        algo = config.algorithm.lower()
+        action = config_names['A']
+        general = config_names['G']
+        norm_str = "normalize" if config.normalization else ""
+
+        folder_path = ReinforcementLearning.best_hyperparams_folder
+        filename = f"hyperparams_{algo}_{action}{general}O231R1T0{norm_str}_1.json"
+        file_path = os.path.join(folder_path, filename)
+        print(f"Loading tuned hyperparameters from file {filename} in folder {folder_path}...")
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                hyperparams = json.load(file)
+        else:
+            raise FileNotFoundError(f"The file {file_path} does not exist.")
+
+        # Replace keys with the specific attribute names in RLConfiguration
+        if "learning_rate" in hyperparams:
+            config.learning_rate = hyperparams["learning_rate"]
+            del hyperparams["learning_rate"]
+        if "lr_schedule" in hyperparams:
+            config.lr_schedule_name = hyperparams["lr_schedule"]
+            del hyperparams["lr_schedule"]
+        if "buffer_size" in hyperparams:
+            config.replay_buffer_size = hyperparams["buffer_size"]
+            del hyperparams["buffer_size"]
+        if "net_arch" in hyperparams:
+            # The meaning of "tiny", "small", etc. is taken from flowing_basin/rl_zoo/rl_zoo3/hyperparams_opt.py
+            actor_critic_layers = {
+                "tiny": [64],
+                "small": [64, 64],
+                "medium": [256, 256],
+                "big": [400, 300]
+            }[hyperparams["net_arch"]]
+            config.actor_layers = actor_critic_layers
+            config.critic_layers = actor_critic_layers
+            del hyperparams["net_arch"]
+        if "activation_fn" in hyperparams:
+            config.activation_fn_name = hyperparams["activation_fn"]
+            del hyperparams["activation_fn"]
+        if "log_std_init" in hyperparams:
+            config.log_std_init = hyperparams["log_std_init"]
+            del hyperparams["log_std_init"]
+        if "ortho_init" in hyperparams:
+            config.ortho_init = hyperparams["ortho_init"]
+            del hyperparams["ortho_init"]
+
+        # NOTE: I attempted to use gSDE when tuning with continuous actions in RL Zoo,
+        # but I forgot to put `use_sde: true` in the .yml files.
+        # This means gSDE was actually not used during tuning
+        # and that the `log_std_init` and `sde_sample_freq` values suggested by RL Zoo actually have no effect,
+        # so config.use_sde should keep its default value of False.
+
+        # Put the remaining hyperparameters in the 'other hyperparams' attribute of RLConfiguration
+        config.hyperparams = hyperparams
 
         return config
 

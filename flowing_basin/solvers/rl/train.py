@@ -1,4 +1,5 @@
 from flowing_basin.core import Instance, Solution, Experiment, TrainingData
+from flowing_basin.core.utils import custom_serializer
 from flowing_basin.solvers.rl import RLEnvironment, RLConfiguration
 from flowing_basin.solvers.rl.feature_extractors import Projector, VanillaCNN
 from flowing_basin.solvers.rl.callbacks import SaveOnBestTrainingRewardCallback, TrainingDataCallback
@@ -7,10 +8,13 @@ from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
+from torch import nn as nn
 from copy import copy
+from flowing_basin.rl_zoo.rl_zoo3 import linear_schedule
 import os
 import warnings
 import re
+import json
 
 
 class RLTrain(Experiment):
@@ -197,13 +201,30 @@ class RLTrain(Experiment):
                 f"Feature extractor of type {self.config.feature_extractor} is not supported. Either MLP or CNN"
             )
 
+        # Additional keyword arguments
+        if self.config.activation_fn_name is not None:
+            activation_fn = {
+                "tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU
+            }[self.config.activation_fn_name]
+            policy_kwargs.update(activation_fn=activation_fn)
+        if self.config.log_std_init is not None:
+            policy_kwargs.update(log_std_init=self.config.log_std_init)
+        if self.config.ortho_init is not None:
+            policy_kwargs.update(ortho_init=self.config.ortho_init)
+
         # Define model keyword arguments
         model_kwargs = dict(
             policy_kwargs=policy_kwargs, verbose=self.verbose, tensorboard_log=self.path_tensorboard,
-            use_sde=False  # Default value made explicit to avoid error when loading
+            use_sde=self.config.use_sde
         )
+        if self.config.hyperparams is not None:
+            model_kwargs.update(**self.config.hyperparams)
         if self.config.learning_rate is not None:
-            model_kwargs.update(dict(learning_rate=self.config.learning_rate))  # noqa
+            learning_rate = self.config.learning_rate
+            if self.config.lr_schedule_name is not None:
+                if self.config.lr_schedule_name == "linear":
+                    learning_rate = linear_schedule(learning_rate)
+            model_kwargs.update(learning_rate=learning_rate)  # noqa
 
         # Check if training should continue from pre-trained model
         self.from_pretrained = False
@@ -217,7 +238,7 @@ class RLTrain(Experiment):
         algorithm = dict(SAC=SAC, A2C=A2C, PPO=PPO)[self.config.algorithm]
         if self.config.replay_buffer_size is not None:
             if issubclass(algorithm, OffPolicyAlgorithm):
-                model_kwargs.update(dict(buffer_size=self.config.replay_buffer_size))
+                model_kwargs.update(buffer_size=self.config.replay_buffer_size)
             else:
                 warnings.warn(
                     f"A replay buffer size was given (value {self.config.replay_buffer_size}), but the model's "
@@ -225,6 +246,10 @@ class RLTrain(Experiment):
                 )
 
         # Load or create the model
+        if self.verbose >= 2:
+            print("Model keyword arguments:")
+            print(json.dumps(model_kwargs, indent=4, default=custom_serializer))
+            print("The missing keyword arguments are set to the default values of StableBaselines3.")
         if self.from_pretrained:
             self.model = algorithm.load(self.path_old_model, env=self.train_env, **model_kwargs)
         else:

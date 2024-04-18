@@ -299,31 +299,98 @@ class RewardConfiguration(BaseConfiguration):  # noqa
 @dataclass(kw_only=True)
 class TrainingConfiguration(BaseConfiguration):  # noqa
 
+    """
+    :param length_episodes:
+        The length of episodes.
+    :param num_timesteps:
+        Number of time steps in which to train the agent.
+    :param algorithm:
+        The algorithm used for training. Default is "SAC".
+
+    :param actor_layers:
+        Neural network layers for the critic (value-function or Q-function).
+    :param critic_layers:
+        Neural network layers for the actor (policy, pi).
+    :param activation_fn_name:
+        Name of the activation function ('tanh', 'relu', 'elu', 'leaky_relu').
+    :param log_std_init:
+        Initial value for the log standard deviation (the default is -3 in SAC and 0 in A2C/PPO).
+        It only works when using gSDE.
+    :param ortho_init:
+        Whether to use or not orthogonal initialization (default is True in A2C/PPO; it does not exist for SAC).
+
+    :param learning_rate:
+        The learning rate for training.
+    :param lr_schedule_name:
+        Name of the schedule for the learning rate ('constant', 'linear').
+    :param replay_buffer_size:
+        The size of the replay buffer.
+    :param use_sde:
+        Whether to use gSDE or not (False by default).
+    :param hyperparams:
+        Additional hyperparameters. Can be a dict of values or the string "rl_zoo" to indicate tuned hyperparameters
+
+    :param log_episode_freq:
+        Frequency for logging episode rewards during training.
+
+    :param training_data_callback:
+        Flag indicating whether to use a training data callback.
+    :param training_data_timesteps_freq:
+        Frequency for evaluating the agent (every X timesteps).
+    :param training_data_instances:
+        Names of the instances solved every time.
+
+    :param evaluation_callback:
+        Flag indicating whether to use an evaluation callback.
+    :param evaluation_timesteps_freq:
+        Frequency for evaluating the agent (every X timesteps).
+    :param evaluation_num_episodes:
+        Number of episodes run every time.
+    :param evaluation_save_best:
+        Whether to save the model with the highest mean reward.
+
+    :param checkpoint_callback:
+        Flag indicating whether to use a checkpoint callback.
+    :param checkpoint_timesteps_freq:
+        Frequency for checking if there is a new best agent (every X timesteps).
+    """
+
     length_episodes: int
-    num_timesteps: int  # Nuber of time steps in which to train the agent
-    learning_rate: float = None
-    replay_buffer_size: int = None
-    actor_layers: list[int] = None  # Neural network layers for the critic (value-function or Q-function)
-    critic_layers: list[int] = None  # Neural network layers for the actor (policy, pi)
+    num_timesteps: int
     algorithm: str = "SAC"
+    normalization: bool = False
+
+    # Policy keyword arguments
+    actor_layers: list[int] = None
+    critic_layers: list[int] = None
+    activation_fn_name: str = None
+    log_std_init: float = None
+    ortho_init: bool = None
+
+    # Model keyword arguments and other hyperparameters
+    learning_rate: float = None
+    lr_schedule_name: str = None
+    replay_buffer_size: int = None
+    use_sde: bool = False
+    hyperparams: dict[str, int | float | str] | str = None
 
     # Monitor logging: reward of episodes seen during training
     log_episode_freq: int
 
     # Training data callback: periodic evaluation in fixed instances
     training_data_callback: bool
-    training_data_timesteps_freq: int = None  # Frequency for evaluating the agent (every X timesteps)
-    training_data_instances: list[str] = None  # Names of the instances solved every time
+    training_data_timesteps_freq: int = None
+    training_data_instances: list[str] = None
 
     # Evaluation callback: periodic evaluation in random episodes
     evaluation_callback: bool
-    evaluation_timesteps_freq: int = None  # Frequency for evaluating the agent (every X timesteps)
-    evaluation_num_episodes: int = None  # Number of episodes run every time
-    evaluation_save_best: bool = False  # Whether to save the model with the highest mean reward
+    evaluation_timesteps_freq: int = None
+    evaluation_num_episodes: int = None
+    evaluation_save_best: bool = False
 
     # Checking callback: checking if there is a new best agent
     checkpoint_callback: bool
-    checkpoint_timesteps_freq: int = None  # Frequency for checking if there is a new best agent (every X timesteps)
+    checkpoint_timesteps_freq: int = None
 
     def check(self):
 

@@ -9,6 +9,8 @@ which is 3e-4 in SAC and PPO but 7e-4 in A2C).
   - Note the replay buffer size only matters with off-policy algorithms (SAC),
   since on-policy algorithms (A2C, PPO) do not use replay buffers.
 - `T4XYZ`: this combines T2 and T3 (more aggressive learning rate and smaller replay buffer).
+- `T5X0Z`: same as T0, but using the hyperparameters (including the learning rate, buffer size
+and network layers) suggested by RL Zoo's hyperparameter tuning with _no_ normalization.
 
 In all of these, `X` can be nothing, `0`, `1`, `2`, `3` or `4`:
 - If `X` is nothing or `0`, the training is done for 99000 timesteps.

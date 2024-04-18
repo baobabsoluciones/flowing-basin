@@ -1,0 +1,11 @@
+{
+    "gamma": 0.9,
+    "learning_rate": 0.0016196482075257503,
+    "batch_size": 128,
+    "buffer_size": 1000000,
+    "learning_starts": 10000,
+    "train_freq": 128,
+    "tau": 0.005,
+    "log_std_init": -2.2028428155762327,
+    "net_arch": "small"
+}

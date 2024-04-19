@@ -1,6 +1,6 @@
 {
     "length_episodes": 99,
-    "num_timesteps": 99000,
+    "num_timesteps": 15,
     "log_episode_freq": 5,
     "training_data_callback": true,
     "evaluation_callback": true,
@@ -22,7 +22,7 @@
     "evaluation_num_episodes": 10,
     "evaluation_timesteps_freq": 495,
     "evaluation_save_best": true,
-    "algorithm": "A2C",
+    "algorithm": "PPO",
     "hyperparams": "rl_zoo",
-    "normalization": false
+    "normalization": true
 }

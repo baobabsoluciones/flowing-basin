@@ -22,7 +22,7 @@
     "evaluation_num_episodes": 10,
     "evaluation_timesteps_freq": 495,
     "evaluation_save_best": true,
-    "algorithm": "A2C",
+    "algorithm": "SAC",
     "hyperparams": "rl_zoo",
-    "normalization": false
+    "normalization": true
 }

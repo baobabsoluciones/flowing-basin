@@ -8,6 +8,7 @@ from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
+from flowing_basin.rl_zoo.rl_zoo3.callbacks import SaveVecNormalizeCallback
 from torch import nn as nn
 from copy import copy
 from flowing_basin.rl_zoo.rl_zoo3 import linear_schedule
@@ -72,10 +73,12 @@ class RLTrain(Experiment):
         self.path_old_model = None
         self.path_old_replay_buffer = None
         self.path_old_training_data = None
+        self.path_old_normalization = None
         self.path_new_folder = None
         self.path_new_model = None
         self.path_new_replay_buffer = None
         self.path_new_training_data = None
+        self.path_new_normalization = None
         self._set_agent_files(path_folder)
 
         # Path to tensorboard logging directory
@@ -95,12 +98,11 @@ class RLTrain(Experiment):
             self.train_env = Monitor(self.train_env, filename=os.path.join(self.path_new_folder, "."))
         else:
             self.train_env = Monitor(self.train_env)
+        self.train_env = self.train_env.get_vec_env(is_eval_env=False, path_normalization=self.path_old_normalization)
 
-        # Model (RL agent)
-        self.model = None
-        self._initialize_agent()
-
-        # Variables for periodic evaluation of agent during training
+        # Evaluation environment
+        # Passing `path_normalization=self.path_old_normalization` is not necessary since
+        # the eval env's normalization is automatically synchronized with the training env in `EvalCallback`
         self.eval_env = RLEnvironment(
             config=self.config,
             projector=self.projector,
@@ -111,6 +113,11 @@ class RLTrain(Experiment):
             instance=instance,
         )
         self.eval_env = Monitor(self.eval_env)
+        self.eval_env = self.eval_env.get_vec_env(is_eval_env=True)
+
+        # Model (RL agent)
+        self.model = None
+        self._initialize_agent()
 
     def _set_agent_files(self, path_folder: str = None):
 
@@ -143,12 +150,14 @@ class RLTrain(Experiment):
             self.path_old_model = os.path.join(self.path_old_folder, "model.zip")
             self.path_old_replay_buffer = os.path.join(self.path_old_folder, 'replay_buffer.pickle')
             self.path_old_training_data = os.path.join(self.path_old_folder, "training_data.json")
+            self.path_old_normalization = os.path.join(self.path_old_folder, "vecnormalize.pkl")
 
         # Set paths of files inside new folder
         if self.path_new_folder is not None:
             self.path_new_model = os.path.join(self.path_new_folder, "model.zip")
             self.path_new_replay_buffer = os.path.join(self.path_new_folder, 'replay_buffer.pickle')
             self.path_new_training_data = os.path.join(self.path_new_folder, "training_data.json")
+            self.path_new_normalization = os.path.join(self.path_new_folder, "vecnormalize.pkl")
 
     def _initialize_agent(self):
 
@@ -202,6 +211,7 @@ class RLTrain(Experiment):
             )
 
         # Additional keyword arguments
+        policy_kwargs.update(use_sde=self.config.use_sde)
         if self.config.activation_fn_name is not None:
             activation_fn = {
                 "tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU
@@ -314,9 +324,21 @@ class RLTrain(Experiment):
                 verbose=self.verbose
             )
             callbacks.append(training_data_callback)
+
         if self.config.evaluation_callback:
+
+            if self.path_new_folder is not None:
+                # The best model according to `EvalCallback` should be saved with its normalization statistics,
+                # as done in flowing_basin/rl_zoo/rl_zoo3/exp_manager.py
+                save_vec_normalize = SaveVecNormalizeCallback(
+                    save_freq=1, save_path=self.path_new_folder, filename="best_vecnormalize"
+                )
+            else:
+                save_vec_normalize = None
+
             eval_callback = EvalCallback(
                 self.eval_env,
+                callback_on_new_best=save_vec_normalize,
                 best_model_save_path=self.path_new_folder if self.config.evaluation_save_best else None,
                 log_path=self.path_new_folder,
                 eval_freq=self.config.evaluation_timesteps_freq,
@@ -326,6 +348,7 @@ class RLTrain(Experiment):
                 verbose=self.verbose
             )
             callbacks.append(eval_callback)
+
         if self.config.checkpoint_callback and self.path_new_folder is not None:
             checkpoint_callback = SaveOnBestTrainingRewardCallback(
                 check_freq=self.config.checkpoint_timesteps_freq,
@@ -372,6 +395,16 @@ class RLTrain(Experiment):
         # Save training data
         if self.config.training_data_callback and self.path_new_training_data is not None:
             training_data_callback.training_data.to_json(self.path_new_training_data)  # noqa
+            if self.verbose >= 1:
+                print(f"Created JSON file '{self.path_new_training_data}'.")
+
+        # Save normalization statistics
+        if self.path_new_normalization is not None:
+            vec_normalize = self.model.get_vec_normalize_env()
+            assert vec_normalize is not None
+            vec_normalize.save(self.path_new_normalization)
+            if self.verbose >= 1:
+                print(f"Created pickle file '{self.path_new_normalization}'.")
 
         return dict()
 

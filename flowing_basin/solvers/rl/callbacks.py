@@ -5,6 +5,7 @@ import os
 import numpy as np
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.vec_env import sync_envs_normalization
 from time import perf_counter
 
 
@@ -112,6 +113,16 @@ class TrainingDataCallback(BaseCallback):
             new_values = []
 
             for run in self.runs:
+
+                # Sync training and run's env if there is VecNormalize
+                # This is also done in SB3's ``EvalCallback``
+                if self.model.get_vec_normalize_env() is not None:
+                    try:
+                        sync_envs_normalization(self.training_env, run.env)
+                    except AttributeError as e:
+                        raise AssertionError(
+                            "Training env and RLRun env are not wrapped the same way."
+                        ) from e
 
                 run.solve(self.model.policy)
                 income = run.solution.get_objective_function()

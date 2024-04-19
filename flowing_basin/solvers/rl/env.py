@@ -3,6 +3,7 @@ from flowing_basin.tools import RiverBasin, PowerGroup
 from flowing_basin.solvers.rl import RLConfiguration
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
+from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, VecNormalize
 import numpy as np
 import gymnasium as gym
 import pandas as pd
@@ -33,6 +34,7 @@ class RLEnvironment(gym.Env):
             instance: Instance = None,
             initial_row: int | datetime = None,
             paths_power_models: dict[str, str] = None,
+            verbose: int = 1,
     ):
 
         super(RLEnvironment, self).__init__()
@@ -48,6 +50,7 @@ class RLEnvironment(gym.Env):
         self.config = config
         self.projector = projector
         self.update_observation_record = update_observation_record
+        self.verbose = verbose
 
         # Set data
         self.constants = None
@@ -211,17 +214,55 @@ class RLEnvironment(gym.Env):
         if self.config.greedy_reference:
             self.avg_rew_greedy = self.get_greedy_avg_reward()
 
+        # Parameters to the step() method can be overridden by these attributes, which are set in the reset() method
+        # These allows controlling these parameters after wrapping the RLEnvironment in a SB3 VecEnv
+        self.update_as_flows = None
+        self.skip_rewards = None
+
+        if self.verbose > 0:
+            info_msg = f"Created RL environment with {self.observation_space=} and {self.action_space=}"
+            if instance is not None:
+                info_msg += f" for instance {instance.get_instance_name()}."
+            elif initial_row is not None:
+                initial_row_str = (
+                    initial_row.strftime('%Y-%m-%d %H:%M') if isinstance(initial_row, datetime) else initial_row
+                )
+                info_msg += f" from initial row {initial_row_str}."
+            else:
+                info_msg += "."
+            print(info_msg)
+
     def reset(
-            self, instance: Instance = None, initial_row: int | datetime = None, seed=None, options=None
+            self, seed: int = None, options: dict[str, Instance | int | datetime | bool] = None
     ) -> tuple[np.ndarray, dict]:
 
         """
         Reset the environment. Return the initial projected observation and a dictionary with other information.
+        :param seed:
+        :param options: Dictionary with {
+            "instance": Instance = None,
+            "initial_row": int | datetime = None,
+            "update_as_flows": bool = None,
+            "skip_rewards": bool = None
+        }
         """
 
         super().reset(seed=seed)
 
-        self._reset_instance(instance, initial_row)
+        if self.verbose > 0:
+            print(f"Resetting RL environment with {options=}")
+
+        option_keys = ["instance", "initial_row", "update_as_flows", "skip_rewards"]
+        if options is None:
+            options = dict()
+        for key in option_keys:
+            if key not in options:
+                options.update({key: None})
+
+        self.update_as_flows = options["update_as_flows"]
+        self.skip_rewards = options["skip_rewards"]
+
+        self._reset_instance(options["instance"], options["initial_row"])
         self.river_basin.reset(self.instance)
         self._reset_variables()
 
@@ -307,7 +348,7 @@ class RLEnvironment(gym.Env):
         initial_time = env.river_basin.time
         while True:
             greedy_flows = (greediness * 2 - 1) * np.ones(self.instance.get_num_dams() * self.config.num_actions_block)
-            _, _, done, _, info = env.step(greedy_flows, greedy_reference=False, update_as_flows=True)
+            _, _, done, _, info = env.step(greedy_flows, greedy_reference=False, update_as_flows=True, from_inside=True)
             rewards.extend(info['rewards'])
             num_periods = env.river_basin.time - initial_time
             if done:
@@ -338,7 +379,7 @@ class RLEnvironment(gym.Env):
                 greedy_flows = np.clip(greedy_flows, -1., 1.)
             else:
                 greedy_flows = np.random.uniform(-1, 1, size=self.action_space.shape)
-            _, _, done, _, _ = self.step(greedy_flows, update_as_flows=True)
+            _, _, done, _, _ = self.step(greedy_flows, update_as_flows=True, from_inside=True)
 
     def get_features_min_functions(self) -> dict[str, Callable[[str], float | int]]:
 
@@ -778,7 +819,7 @@ class RLEnvironment(gym.Env):
 
     def step(
             self, action_block: np.ndarray, greedy_reference: bool = True, update_as_flows: bool = False,
-            skip_rewards: bool = False
+            skip_rewards: bool = False, from_inside: bool = False
     ) -> tuple[np.ndarray, float, bool, bool, dict]:
 
         """
@@ -790,8 +831,24 @@ class RLEnvironment(gym.Env):
             If the configuration does not have this on, then no reference is used and this parameter is ignored.
         :param update_as_flows: Whether to treat the action as flows, independently of the configuration.
         :param skip_rewards: Whether to skip reward calculation to accelerate inference
+        :param from_inside: Whether the method is called from within the environment.
+            If True, the parameters for `update_as_flows` and `skip_rewards`
+            will not be overridden by the corresponding attributes.
         :return: The next observation, the reward obtained, and whether the episode is finished or not
         """
+
+        # Override the `update_as_flows` and `skip_rewards` parameters with the corresponding attributes
+        # when the function is being called from outside the environment
+        if not from_inside:
+            if self.update_as_flows is not None:
+                update_as_flows = self.update_as_flows
+            if self.skip_rewards is not None:
+                skip_rewards = self.skip_rewards
+
+        # Cannot skip reward with the "adjustments" action type or there would be no stopping criteria
+        if self.config.action_type == "adjustments":
+            skip_rewards = False
+
         rewards = []
         flows_block = []
 
@@ -881,13 +938,51 @@ class RLEnvironment(gym.Env):
         next_projected_obs = self.project(next_normalized_obs)
 
         done = self.is_done(update_as_flows)
-
-        return next_projected_obs, final_reward, done, False, dict(
+        info = dict(
             rewards=rewards,
             flow=flows_block,
             raw_obs=next_raw_obs,
             normalized_obs=next_normalized_obs,
         )
+
+        # Pass a copy of the whole environment on the last step, so it can be accessed
+        # when the environment is wrapped with SB3 VecEnv and reset() is done automatically when it is done
+        if done:
+            info.update(final_env=deepcopy(self))  # noqa
+
+        return next_projected_obs, final_reward, done, False, info
+
+    def get_vec_env(self, is_eval_env: bool = False, path_normalization: str = None) -> VecEnv:
+
+        """
+        Turn the RLEnvironment into a StableBaselines3 vectorized environment.
+        :return:
+        """
+
+        env = self
+
+        env = DummyVecEnv([lambda: env])
+        if self.verbose > 0:
+            print("Wrapped RL environment with DummyVecEnv.")
+
+        if self.config.normalization:
+
+            info_msg = "Wrapped RL environment with VecNormalize"
+            if path_normalization is not None:
+                env = VecNormalize.load(path_normalization, env)
+                info_msg += f" from path {path_normalization}"
+            else:
+                env = VecNormalize(env)
+
+            if is_eval_env:
+                env.training = False
+                env.norm_reward = False
+                info_msg += f" setting {env.training=} and {env.norm_reward=}"
+
+            if self.verbose > 0:
+                print(info_msg + ".")
+
+        return env
 
     @staticmethod
     def create_instance(

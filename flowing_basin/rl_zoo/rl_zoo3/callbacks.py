@@ -67,11 +67,15 @@ class SaveVecNormalizeCallback(BaseCallback):
         only one file will be kept.
     """
 
-    def __init__(self, save_freq: int, save_path: str, name_prefix: Optional[str] = None, verbose: int = 0):
+    def __init__(
+            self, save_freq: int, save_path: str, name_prefix: Optional[str] = None, filename: str = "vecnormalize",
+            verbose: int = 0
+    ):
         super().__init__(verbose)
         self.save_freq = save_freq
         self.save_path = save_path
         self.name_prefix = name_prefix
+        self.filename = filename
 
     def _init_callback(self) -> None:
         # Create folder if needed
@@ -86,7 +90,7 @@ class SaveVecNormalizeCallback(BaseCallback):
             if self.name_prefix is not None:
                 path = os.path.join(self.save_path, f"{self.name_prefix}_{self.num_timesteps}_steps.pkl")
             else:
-                path = os.path.join(self.save_path, "vecnormalize.pkl")
+                path = os.path.join(self.save_path, f"{self.filename}.pkl")
             if self.model.get_vec_normalize_env() is not None:
                 self.model.get_vec_normalize_env().save(path)  # type: ignore[union-attr]
                 if self.verbose > 1:

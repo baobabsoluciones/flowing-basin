@@ -8,6 +8,7 @@ from cornflow_client.core.tools import load_json
 from stable_baselines3 import SAC, A2C, PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.env_checker import check_env
+from flowing_basin.rl_zoo.rl_zoo3 import linear_schedule
 import torch
 import numpy as np
 import math
@@ -259,7 +260,7 @@ class ReinforcementLearning:
         if initial_date is not None:
             initial_date = datetime.strptime(initial_date, '%Y-%m-%d %H:%M')
 
-        obs, info = env.reset(initial_row=initial_date)
+        obs, info = env.reset(options=dict(initial_row=initial_date))
 
         # Instance
         print("\nINSTANCE:")
@@ -393,7 +394,7 @@ class ReinforcementLearning:
         Get the path to a trained model.
 
         :param model_type: Either "model" (the model in the last timestep of training)
-            or "best_model" (the model with the highest evaluation from StableBaselines3 EcalCallback)
+            or "best_model" (the model with the highest evaluation from StableBaselines3 EvalCallback)
         """
 
         # In T0, the best model is called "model_best" instead of "best_model"
@@ -407,6 +408,32 @@ class ReinforcementLearning:
             )
 
         return model_path
+
+    def get_normalization_path(self, model_type: str = "best_model") -> str | None:
+
+        """
+        Get the path to the environment's normalization statistics.
+        Returns None when normalization is turned off.
+        :param model_type: Either "model" (the statistics in the last moment of training)
+            or "best_model" (the statistics when the model was at its best)
+        :return:
+        """
+
+        if model_type == "best_model":
+            norm_file = "best_vecnormalize.pkl"
+        else:
+            norm_file = "vecnormalize.pkl"
+
+        normalization_path = None
+        if self.config.normalization:
+            normalization_path = os.path.join(self.get_agent_folder_path(), norm_file)
+            if not os.path.exists(normalization_path):
+                raise FileNotFoundError(
+                    f"There are no normalization statistics for {self.agent_name}."
+                    f" File {normalization_path} doesn't exist."
+                )
+
+        return normalization_path
 
     def load_model(self, model_type: str = "best_model") -> BaseAlgorithm:
 
@@ -422,16 +449,24 @@ class ReinforcementLearning:
         # See pull request https://github.com/DLR-RM/stable-baselines3/pull/336
         model_path = self.get_model_path(model_type)
         env = self.create_train_env()
+        env = env.get_vec_env(is_eval_env=False, path_normalization=self.get_normalization_path(model_type))
         algorithm = dict(SAC=SAC, A2C=A2C, PPO=PPO)[self.config.algorithm]
+
+        lr_schedule = lambda _: self.config.learning_rate
+        if self.config.lr_schedule_name is not None:
+            if self.config.lr_schedule_name == "linear":
+                lr_schedule = linear_schedule(self.config.learning_rate)
+
         model = algorithm.load(
             model_path,
             env=env,
             custom_objects={
                 'observation_space': env.observation_space,
                 'action_space': env.action_space,
-                'lr_schedule': lambda _: self.config.learning_rate,
+                'lr_schedule': lr_schedule,
             }
         )
+
         return model
 
     def integrated_gradients(self):
@@ -704,6 +739,7 @@ class ReinforcementLearning:
                 config=self.config,
                 instance=inst,
                 projector=projector,
+                path_normalization=self.get_normalization_path(model_type),
                 solver_name=self.agent_name
             )
             run.solve(model.policy, skip_rewards=True)
@@ -768,7 +804,9 @@ class ReinforcementLearning:
             agents=[self.agent_name, *agents], baselines=baselines, values=values, instances=instances
         )
 
-    def barchart_instances_rewards(self, reward_configs: list[str], named_policy: str = None):
+    def barchart_instances_rewards(
+            self, reward_configs: list[str], named_policy: str = None, model_type: str = "best_model"
+    ):
 
         """
         Show a barchart with the reward across all fixed instances
@@ -776,6 +814,7 @@ class ReinforcementLearning:
 
         :param reward_configs:
         :param named_policy: Named policy to run instead of the current agent
+        :param model_type: See method `load_model`
         :return:
         """
 
@@ -792,6 +831,11 @@ class ReinforcementLearning:
             avg_rewards = []
             values[reward_config] = dict()
 
+            if named_policy is None:
+                policy = self.load_model(model_type).policy
+            else:
+                policy = named_policy
+
             for instance in self.get_all_fixed_instances():
 
                 if self.verbose >= 2:
@@ -800,13 +844,10 @@ class ReinforcementLearning:
                     config=new_config,
                     instance=instance,
                     projector=self.create_projector(),
+                    path_normalization=self.get_normalization_path(model_type),
                     solver_name=new_agent_name
                 )
-                if named_policy is None:
-                    model = self.load_model()
-                    run.solve(model.policy)
-                else:
-                    run.solve(named_policy)
+                run.solve(policy)
                 avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
                 avg_rewards.append(avg_reward)
                 values[reward_config][instance.get_instance_name()] = avg_reward

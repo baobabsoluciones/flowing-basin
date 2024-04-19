@@ -211,7 +211,10 @@ class RLTrain(Experiment):
             )
 
         # Additional keyword arguments
-        policy_kwargs.update(use_sde=self.config.use_sde)
+        if policy_kwargs is not None:
+            policy_kwargs.update(use_sde=self.config.use_sde)
+        else:
+            policy_kwargs = dict(use_sde=self.config.use_sde)
         if self.config.activation_fn_name is not None:
             activation_fn = {
                 "tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU

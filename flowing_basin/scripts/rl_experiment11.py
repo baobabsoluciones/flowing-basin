@@ -19,6 +19,10 @@ for action, general, observation, reward, training in product(actions, generals,
         # This corresponds to training "T1", which was already done before
         continue
 
+    if general == "G0" and reward == "R1" and training == "T1001":
+        # This agent was correctly trained in a previous execution of this script that didn't finish
+        continue
+
     rl = ReinforcementLearning(f"{action}{general}{observation}{reward}{training}", verbose=2)
     rl.train()
 

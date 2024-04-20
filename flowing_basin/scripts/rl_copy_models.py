@@ -38,6 +38,25 @@ def get_experiment9_model_paths() -> list[str]:
     return paths
 
 
-paths = get_experiment9_model_paths()
-new_folder = "C:/Users/rodrigo/Documents/experiment9"
-copy_folders(paths, new_folder)
+def get_experiment11_model_paths() -> list[str]:
+    actions = ["A1"]
+    generals = ["G0", "G1"]
+    observations = ["O231"]
+    rewards = ["R1", "R22"]
+    trainings = [f"T{norm_digit}00{algo_digit}" for norm_digit in ["1", "5", "6"] for algo_digit in ["0", "1", "2"]]
+    paths = []
+    for action, general, observation, reward, training in product(actions, generals, observations, rewards, trainings):
+        if training == "T1000":
+            # This corresponds to training "T1", which was already done before
+            continue
+        agent = f"rl-{action}{general}{observation}{reward}{training}"
+        paths.append(os.path.join(ReinforcementLearning.models_folder, agent))
+    print(f"Returning {len(paths)} paths:", paths)
+    return paths
+
+
+if __name__ == "__main__":
+
+    paths = get_experiment11_model_paths()
+    new_folder = "C:/Users/rodrigo/Documents/experiment11"
+    copy_folders(paths, new_folder)

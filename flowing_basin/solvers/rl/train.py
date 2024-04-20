@@ -211,10 +211,12 @@ class RLTrain(Experiment):
             )
 
         # Additional keyword arguments
-        if policy_kwargs is not None:
-            policy_kwargs.update(use_sde=self.config.use_sde)
-        else:
-            policy_kwargs = dict(use_sde=self.config.use_sde)
+        # TODO: adding `use_sde` to `policy_kwargs` was necessary to load an agent, but
+        #  it triggered an error when training another agent... Figure out exactly when this should be done and not
+        # if policy_kwargs is not None:
+        #     policy_kwargs.update(use_sde=self.config.use_sde)
+        # else:
+        #     policy_kwargs = dict(use_sde=self.config.use_sde)
         if self.config.activation_fn_name is not None:
             activation_fn = {
                 "tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU
@@ -402,7 +404,7 @@ class RLTrain(Experiment):
                 print(f"Created JSON file '{self.path_new_training_data}'.")
 
         # Save normalization statistics
-        if self.path_new_normalization is not None:
+        if self.config.normalization and self.path_new_normalization is not None:
             vec_normalize = self.model.get_vec_normalize_env()
             assert vec_normalize is not None
             vec_normalize.save(self.path_new_normalization)

@@ -26,12 +26,12 @@ class RLRun(Experiment):
             solution: Solution = None,
             experiment_id: str = None
     ):
-        super().__init__(instance=instance, solution=solution, experiment_id=experiment_id)
+        super().__init__(instance=instance, solution=solution, config=config, experiment_id=experiment_id)
+        self.config = config  # This is unnecessary but avoids error highlighting
         if solution is None:
             self.solution = None
 
         self.solver_name = solver_name
-        self.config = config
         self.rewards_per_step = None
         self.rewards_per_period = None
         if self.config.action_type == "adjustments":

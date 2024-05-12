@@ -58,12 +58,12 @@ class RLTrain(Experiment):
             num_timesteps: int = None
     ):
 
-        super().__init__(instance=instance, solution=solution, experiment_id=experiment_id)
+        super().__init__(instance=instance, config=config, solution=solution, experiment_id=experiment_id)
+        self.config = config  # This is unnecessary but avoids error highlighting
         if solution is None:
             self.solution = None
 
         self.verbose = verbose
-        self.config = config
         self.num_timesteps = num_timesteps if num_timesteps is not None else self.config.num_timesteps
         self.projector = projector
         self.save_replay_buffer = save_replay_buffer

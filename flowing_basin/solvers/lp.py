@@ -26,8 +26,8 @@ class LPModel(Experiment):
         config: LPConfiguration,
         solution: Solution = None,
     ):
-        super().__init__(instance=instance, solution=solution)
-        self.config = config
+        super().__init__(instance=instance, config=config, solution=solution)
+        self.config = config  # This is unnecessary but avoids error highlighting
 
     # Método de prueba que posteriormente se eliminará
     def LPModel_print(self):
@@ -538,10 +538,14 @@ class LPModel(Experiment):
         """
         Parámetro volumen final objetivo (m3): VolFinal
         """
-        VolFinal = {
-            dam_id: self.config.volume_objectives[dam_id]
-            for dam_id in self.instance.get_ids_of_dams()
-        }
+        if self.config.volume_objectives:
+            VolFinal = {
+                dam_id: self.config.volume_objectives[dam_id]
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+        else:
+            # If no objective final volume is given, we assume it is 0
+            VolFinal = {dam_id: 0. for dam_id in self.instance.get_ids_of_dams()}
         """
         Parámetro caudal entrante al primer embalse (m3/s): Q0
         """

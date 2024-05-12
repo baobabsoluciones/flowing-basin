@@ -1,5 +1,6 @@
 import os
 from cornflow_client.core.tools import load_json
+from flowing_basin.core import Instance
 from flowing_basin.solvers.rl import GeneralConfiguration
 from flowing_basin.solvers import (
     Heuristic, HeuristicConfiguration, LPModel, LPConfiguration, PSO, PSOConfiguration,
@@ -22,17 +23,50 @@ class Baseline:
     hyperparams_folder = os.path.join(os.path.dirname(__file__), "../hyperparams")
     config_info = (os.path.join(os.path.dirname(__file__), "../rl_data/configs/general"), GeneralConfiguration)
     baselines_folder = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
+    baselines_filename = "instance{instance_name}_{solver}.json"
     instance_names = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
 
-    def __init__(self, general_config: str, solver: str):
+    def __init__(self, general_config: str, solver: str, verbose: int = 1):
 
-        self.solver_class, config_class = Baseline.solver_classes[solver]
+        self.verbose = verbose
+        self.solver = solver
+        self.solver_class, config_class = Baseline.solver_classes[self.solver]
 
-        solver_config_path = os.path.join(Baseline.hyperparams_folder, f"{solver.lower()}.json")
+        solver_config_path = os.path.join(Baseline.hyperparams_folder, f"{self.solver.lower()}.json")
         solver_config_dict = load_json(solver_config_path)
-        general_config_dict = Baseline.get_general_config_dict(general_config)
+
+        self.general_config = general_config
+        general_config_dict = Baseline.get_general_config_dict(self.general_config)
+
         Baseline.update_config(solver_config_dict, general_config_dict)
         self.config = config_class.from_dict(solver_config_dict)
+
+    def solve(self):
+
+        """
+        Solve each instance and save it in the corresponding baselines folder
+        """
+
+        for instance_name in Baseline.instance_names:
+
+            instance = Instance.from_name(instance_name)
+            solver = self.solver_class(instance=instance, config=self.config)
+
+            solver.solve()
+
+            sol_inconsistencies = solver.solution.check()
+            if sol_inconsistencies:
+                raise Exception(f"There are inconsistencies in the given solution: {sol_inconsistencies}")
+            solver.solution.data["instance_name"] = instance_name
+
+            sol_filename = Baseline.baselines_filename.format(instance_name=instance_name, solver=self.solver)
+            sol_path = os.path.join(Baseline.baselines_folder, self.general_config, sol_filename)
+            solver.solution.to_json(sol_path)
+            if self.verbose > 0:
+                print(
+                    f"Saved solution of {self.solver} under {self.general_config} "
+                    f"for instance {instance_name} in path {sol_path}"
+                )
 
     @staticmethod
     def get_general_config_dict(general_config: str) -> dict:

@@ -663,11 +663,11 @@ class Heuristic(Experiment):
         solution: Solution = None,
     ):
 
-        super().__init__(instance=instance, solution=solution)
+        super().__init__(instance=instance, config=config, solution=solution)
+        self.config = config  # This is unnecessary but avoids error highlighting
         if solution is None:
             self.solution = None
 
-        self.config = config
         self.paths_power_models = paths_power_models
         self.greedy = greedy
         self.do_tests = do_tests

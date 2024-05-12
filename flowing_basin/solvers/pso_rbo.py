@@ -35,7 +35,8 @@ class PsoRbo(Experiment):
             verbose: bool = True
     ):
 
-        super().__init__(instance=instance, solution=solution)
+        super().__init__(instance=instance, config=config, solution=solution)
+        self.config = config  # This is unnecessary but avoids error highlighting
         if solution is None:
             self.solution = None
 

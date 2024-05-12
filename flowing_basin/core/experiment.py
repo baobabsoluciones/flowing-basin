@@ -1,6 +1,7 @@
 from cornflow_client import get_empty_schema, ExperimentCore
 from flowing_basin.core.instance import Instance
 from flowing_basin.core.solution import Solution
+from flowing_basin.core.config import Configuration
 from typing import Dict
 from pytups import SuperDict
 from datetime import datetime
@@ -9,9 +10,13 @@ from datetime import datetime
 class Experiment(ExperimentCore):
     schema_checks = get_empty_schema()
 
-    def __init__(self, instance: Instance, solution: Solution = None, experiment_id: str = None) -> None:
+    def __init__(
+            self, instance: Instance, config: Configuration, solution: Solution = None, experiment_id: str = None
+    ) -> None:
 
         ExperimentCore.__init__(self, instance=instance, solution=solution)
+
+        self.config = config
 
         if solution is None:
             self.solution = Solution(SuperDict())

@@ -5,5 +5,4 @@ under the same conditions as the RL models for general config `G1`:
  - Flow smoothing parameter set to 0.
  - Startup and limit zone penalty of 0€.
 
-**NOTE**: the MILP solutions were calculated in `flowing_basin/scripts/lp_rl_baseline.py`
-and the Heuristic solutions in `flowing_basin/scripts/heuristic_rl_baseline.py`.
+**NOTE**: the solutions were calculated in `flowing_basin/scripts/rl_baseline.py`.

@@ -37,6 +37,8 @@ class Baseline:
 
         self.general_config = general_config
         general_config_dict = Baseline.get_general_config_dict(self.general_config)
+        general_config_obj = GeneralConfiguration.from_dict(general_config_dict)
+        self.num_dams = general_config_obj.num_dams
 
         Baseline.update_config(solver_config_dict, general_config_dict)
         self.config = config_class.from_dict(solver_config_dict)
@@ -49,9 +51,11 @@ class Baseline:
 
         for instance_name in Baseline.instance_names:
 
-            instance = Instance.from_name(instance_name)
+            instance = Instance.from_name(instance_name, num_dams=self.num_dams)
             solver = self.solver_class(instance=instance, config=self.config)
 
+            if self.verbose > 0:
+                print(f"Using {self.solver} under {self.general_config} to solve instance {instance_name}...")
             solver.solve()
 
             sol_inconsistencies = solver.solution.check()
@@ -72,7 +76,7 @@ class Baseline:
     def get_general_config_dict(general_config: str) -> dict:
 
         """
-        Get the GeneralConfiguration object from the configuration string (e.g., "G0")
+        Get the GeneralConfiguration dict from the configuration string (e.g., "G0")
         """
 
         config_folder, config_class = Baseline.config_info

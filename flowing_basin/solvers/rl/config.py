@@ -11,6 +11,7 @@ class GeneralConfiguration(Configuration):  # noqa
     flow_smoothing_clip: bool  # Whether to clip the actions that do not comply with flow smoothing or not
     mode: str = "nonlinear"
     do_history_updates: bool = True
+    num_dams: int = 2
 
     def check(self):
 

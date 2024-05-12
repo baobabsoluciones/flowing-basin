@@ -1,0 +1,12 @@
+{
+    "do_history_updates": false,
+    "flow_smoothing": 0,
+    "flow_smoothing_clip": false,
+    "limit_zones_penalty": 0.0,
+    "mode": "linear",
+    "startups_penalty": 0.0,
+    "volume_exceedance_bonus": 0.0,
+    "volume_objectives": {},
+    "volume_shortage_penalty": 0.0,
+    "num_dams": 6
+}

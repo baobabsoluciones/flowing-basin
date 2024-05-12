@@ -14,8 +14,8 @@ class Instance(InstanceCore):
     )
     schema_checks = get_empty_schema()
 
-    instances_folder = os.path.join(os.path.dirname(__file__), "../instances/instances_base")
-    instances_filenames = "instance{INSTANCE_NAME}.json"
+    instances_folder = os.path.join(os.path.dirname(__file__), "../instances/instances_big")
+    instances_filenames = "instance{instance_name}_{num_dams}dams_1days.json"
 
     @classmethod
     def from_dict(cls, data) -> "Instance":
@@ -37,10 +37,11 @@ class Instance(InstanceCore):
         return data_p
 
     @classmethod
-    def from_name(cls, instance_name: str) -> "Instance":
+    def from_name(cls, instance_name: str, num_dams: int = 2) -> "Instance":
 
-        instance_filename = Instance.instances_filenames.format(INSTANCE_NAME=instance_name)
-        return Instance.from_json(os.path.join(Instance.instances_folder, instance_filename))
+        instance_filename = Instance.instances_filenames.format(instance_name=instance_name, num_dams=num_dams)
+        instance_path = os.path.join(Instance.instances_folder, instance_filename)
+        return Instance.from_json(instance_path)
 
     def check_inconsistencies(self) -> dict:
 

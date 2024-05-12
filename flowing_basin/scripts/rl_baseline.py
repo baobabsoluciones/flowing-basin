@@ -14,5 +14,5 @@ from flowing_basin.solvers import Baseline
 # print(Baseline(general_config='G1', solver='PSO-RBO').config)
 # print(Baseline(general_config='G1', solver='Heuristic').config)
 
-Baseline(general_config='G3', solver='PSO').solve()
-# Baseline(general_config='G1', solver='MILP').solve()
+# Baseline(general_config='G3', solver='PSO').solve()
+Baseline(general_config='G3', solver='MILP', max_time=40).solve(instance_names=['Percentile00'])

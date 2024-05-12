@@ -26,7 +26,7 @@ class Baseline:
     baselines_filename = "instance{instance_name}_{solver}.json"
     instance_names = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
 
-    def __init__(self, general_config: str, solver: str, verbose: int = 1):
+    def __init__(self, general_config: str, solver: str, verbose: int = 1, max_time: float = None):
 
         self.verbose = verbose
         self.solver = solver
@@ -34,6 +34,8 @@ class Baseline:
 
         solver_config_path = os.path.join(Baseline.hyperparams_folder, f"{self.solver.lower()}.json")
         solver_config_dict = load_json(solver_config_path)
+        if "max_time" in solver_config_dict and max_time is not None:
+            solver_config_dict["max_time"] = max_time
 
         self.general_config = general_config
         general_config_dict = Baseline.get_general_config_dict(self.general_config)
@@ -43,14 +45,16 @@ class Baseline:
         Baseline.update_config(solver_config_dict, general_config_dict)
         self.config = config_class.from_dict(solver_config_dict)
 
-    def solve(self):
+    def solve(self, instance_names: list[str] = None):
 
         """
         Solve each instance and save it in the corresponding baselines folder
         """
 
-        for instance_name in Baseline.instance_names:
+        if instance_names is None:
+            instance_names = Baseline.instance_names
 
+        for instance_name in instance_names:
             instance = Instance.from_name(instance_name, num_dams=self.num_dams)
             solver = self.solver_class(instance=instance, config=self.config)
 

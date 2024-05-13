@@ -135,11 +135,16 @@ class HeuristicSingleDam:
         such that the first group (i.e., with the highest average lagged price) has more probability than the rest.
         """
 
-        prob = (self.config.common_ratio - 1) / (self.config.common_ratio ** num_groups - 1)
-        probs = [prob]
-        for _ in range(1, num_groups):
-            prob *= self.config.common_ratio
-            probs.append(prob)
+        if abs(self.config.common_ratio - 1) > 1e-5:
+            prob = (self.config.common_ratio - 1) / (self.config.common_ratio ** num_groups - 1)
+            probs = [prob]
+            for _ in range(1, num_groups):
+                prob *= self.config.common_ratio
+                probs.append(prob)
+        else:
+            # When common_ratio = 1, all groups should have the same probability
+            prob = 1 / num_groups
+            probs = [prob for _ in range(num_groups)]
 
         return probs
 
@@ -673,7 +678,10 @@ class Heuristic(Experiment):
         self.do_tests = do_tests
 
         # Calculate the bias weight in the random biased number generator
-        self.bias_weight = log(self.config.prob_below_half) / log(0.5)
+        if self.config.prob_below_half > 1e-5:
+            self.bias_weight = log(self.config.prob_below_half) / log(0.5)
+        else:
+            self.bias_weight = float('inf')
 
     @staticmethod
     def compare_flows_and_volumes(

@@ -20,7 +20,7 @@ class Baseline:
         "PSO": (PSO, PSOConfiguration),
         "PSO-RBO": (PsoRbo, PsoRboConfiguration)
     }
-    hyperparams_folder = os.path.join(os.path.dirname(__file__), "../hyperparams")
+    hyperparams_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/values")
     config_info = (os.path.join(os.path.dirname(__file__), "../rl_data/configs/general"), GeneralConfiguration)
     baselines_folder = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
     baselines_filename = "instance{instance_name}_{solver}.json"

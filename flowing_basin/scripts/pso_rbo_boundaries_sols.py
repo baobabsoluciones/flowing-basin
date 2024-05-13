@@ -5,14 +5,14 @@ import csv
 
 # PSO-RBO plot
 # Values of discrete parameters considered (and the way we plot them)
-# RELVARS = [True, False]
-# LINES = ['-', '--']
-# BOUNDARIES = ['periodic', 'nearest', 'intermediate', 'shrink', 'reflective']
-# COLORS = ['black', 'green', 'red', 'orange', 'blue']
-RELVARS = [False]
-LINES = ['--']
-BOUNDARIES = ['intermediate']
-COLORS = ['red']
+RELVARS = [True, False]
+LINES = ['-', '--']
+BOUNDARIES = ['periodic', 'nearest', 'intermediate', 'shrink', 'reflective']
+COLORS = ['black', 'green', 'red', 'orange', 'blue']
+# RELVARS = [False]
+# LINES = ['--']
+# BOUNDARIES = ['intermediate']
+# COLORS = ['red']
 
 # PSO plot
 PSO_COLOR = 'purple'
@@ -23,10 +23,10 @@ MILP_COLOR = 'gray'
 # Instances solved
 INSTANCES = ['Percentile25', 'Percentile75']
 # INSTANCES = ['1', '3']
-# NUMS_DAMS = [2, 6]
-NUMS_DAMS = [6, 8, 10, 12]
-VOL_BONUS = True
-POWER_PENALTY = False
+NUMS_DAMS = [2, 6]
+# NUMS_DAMS = [6, 8, 10, 12]
+VOL_BONUS = False
+POWER_PENALTY = True
 
 # Other options
 PLOT_SOL = True
@@ -35,9 +35,10 @@ PLOT_PSO_SOL = True
 PLOT_MILP_SOL = True
 SAVE_REPORT = True
 TIME_LIMITS = [5 * 60, 15 * 60]
+OBJ_FUN_NORM_METHOD = 'NEW'
 
 report_filepath = (
-    f"reports/test_pso_rbo_boundaries_sols"
+    f"reports/test_pso_rbo_boundaries_sols_{OBJ_FUN_NORM_METHOD}"
     f"{'_VolExceed' if VOL_BONUS else ''}{'_NoPowerPenalty' if not POWER_PENALTY else ''}.csv"
 )
 
@@ -138,7 +139,11 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
             )
             avg_inflow = instance.calculate_total_avg_inflow()
             power_installed = sum(instance.get_max_power_of_power_group(dam_id) for dam_id in instance.get_ids_of_dams())
-            obj_norm = pso_rbo_obj_fun / (avg_inflow * power_installed)
+            if OBJ_FUN_NORM_METHOD == 'NEW':
+                avg_price = instance.get_avg_price()
+                obj_norm = pso_rbo_obj_fun / (avg_inflow * avg_price)
+            else:
+                obj_norm = pso_rbo_obj_fun / (avg_inflow * power_installed)
             final_objs_norm[(instance_name, num_dams, relvar, boundary, time_limit)] = obj_norm
 
             fraction_over_milp[(instance_name, num_dams, relvar, boundary, time_limit)] = (

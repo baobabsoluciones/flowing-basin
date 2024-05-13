@@ -10,3 +10,5 @@ study = optuna.create_study()
 study.optimize(objective, n_trials=20)
 
 print(study.best_params)  # E.g. {'x': 2.002108042}
+for trial in study.trials:
+    print(type(trial), trial, trial.params)

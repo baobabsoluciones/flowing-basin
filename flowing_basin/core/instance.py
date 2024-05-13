@@ -857,6 +857,17 @@ class Instance(InstanceCore):
 
         return max_price
 
+    def get_avg_price(self) -> float:
+
+        """
+        Get the largest average price value for the instance.
+
+        :return: Average price of the information interval
+        """
+
+        avg_price = sum(self.data["energy_prices"]) / len(self.data["energy_prices"])
+        return avg_price
+
     def calculate_total_avg_inflow(self) -> float:
 
         """

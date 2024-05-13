@@ -20,11 +20,13 @@ class Baseline:
         "PSO": (PSO, PSOConfiguration),
         "PSO-RBO": (PsoRbo, PsoRboConfiguration)
     }
-    hyperparams_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/values")
+    hyperparams_values_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/values")
+    hyperparams_bounds_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/tuning_bounds")
     config_info = (os.path.join(os.path.dirname(__file__), "../rl_data/configs/general"), GeneralConfiguration)
     baselines_folder = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
     baselines_filename = "instance{instance_name}_{solver}.json"
-    instance_names = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
+    instance_names_eval = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
+    instance_names_tune = ["Percentile25", "Percentile75"]
 
     def __init__(self, general_config: str, solver: str, verbose: int = 1, max_time: float = None):
 
@@ -32,7 +34,7 @@ class Baseline:
         self.solver = solver
         self.solver_class, config_class = Baseline.solver_classes[self.solver]
 
-        solver_config_path = os.path.join(Baseline.hyperparams_folder, f"{self.solver.lower()}.json")
+        solver_config_path = os.path.join(Baseline.hyperparams_values_folder, f"{self.solver.lower()}.json")
         solver_config_dict = load_json(solver_config_path)
         if "max_time" in solver_config_dict and max_time is not None:
             solver_config_dict["max_time"] = max_time
@@ -52,7 +54,7 @@ class Baseline:
         """
 
         if instance_names is None:
-            instance_names = Baseline.instance_names
+            instance_names = Baseline.instance_names_eval
 
         for instance_name in instance_names:
             instance = Instance.from_name(instance_name, num_dams=self.num_dams)

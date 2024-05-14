@@ -98,19 +98,31 @@ class Baseline:
 
         return solver.solution
 
-    def solve(self, instance_names: list[str] = None):
+    def solve(self, instance_names: list[str] = None, num_replications: int = 1, filename_tail: str = ""):
         """
         Solve each instance and save it in the corresponding baselines folder.
         """
 
+        def add_filename_tail(filename: str, tail: str):
+            filename_parts = filename.split('.')
+            new_filename = filename_parts[0] + f"_{tail}." + filename_parts[1]
+            return new_filename
+
         if instance_names is None:
             instance_names = Baseline.instance_names_eval
 
-        for instance_name in instance_names:
-            instance = Instance.from_name(instance_name, num_dams=self.num_dams)
-            sol_filename = Baseline.baselines_filename.format(instance_name=instance_name, solver=self.solver)
-            sol_path = os.path.join(Baseline.baselines_folder, self.general_config, sol_filename)
-            self.solve_instance(instance, sol_path=sol_path)
+        for replication_num in range(num_replications):
+            self.log(f"[Replication {replication_num}] Starting replication {replication_num}...")
+            for instance_name in instance_names:
+                instance = Instance.from_name(instance_name, num_dams=self.num_dams)
+                sol_filename = Baseline.baselines_filename.format(instance_name=instance_name, solver=self.solver)
+                if num_replications > 1:
+                    sol_filename = add_filename_tail(sol_filename, f"replication{replication_num}")
+                if filename_tail:
+                    sol_filename = add_filename_tail(sol_filename, filename_tail)
+                sol_path = os.path.join(Baseline.baselines_folder, self.general_config, sol_filename)
+                self.solve_instance(instance, sol_path=sol_path)
+            self.log(f"[Replication {replication_num}] Finished replication {replication_num}.")
 
     def tune(self, num_trials: int, instance_names: list[str] = None, num_replications: int = 5):
         """
@@ -159,6 +171,27 @@ class Baseline:
             )
             return trial_objective
 
+        def handle_pso_config(trial: Trial, config: PSOConfiguration):
+            """Set the missing required attributes for this specific case"""
+            # Due to performance issues, the max value of "num_particles" is lower with the "pyramid" topology
+            values = hyperparams_bounds["num_particles"]['values']
+            high = {2: 200, 6: 500}[self.num_dams] if config.topology == "pyramid" else values['high']
+            config.num_particles = trial.suggest_int(
+                "num_particles", low=values['low'], high=high, step=values['step']
+            )
+            # Suggest a "topology_num_neighbors" and a "topology_minkowski_p_norm" whn the topology needs it
+            if config.topology == "random" or config.topology == "ring":
+                neighbors_step = 5
+                config.topology_num_neighbors = trial.suggest_int(
+                    "topology_num_neighbors",
+                    low=neighbors_step, high=int((config.num_particles - 2) / neighbors_step) * neighbors_step,
+                    step=neighbors_step
+                )
+            if config.topology == "ring":
+                config.topology_minkowski_p_norm = trial.suggest_categorical(
+                    "topology_minkowski_p_norm", choices=[1, 2]
+                )
+
         def objective(trial: Trial):
             # Trial: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html
             config = deepcopy(self.config)
@@ -172,24 +205,7 @@ class Baseline:
                 value = suggest_method(attribute, **info['values'])
                 setattr(config, attribute, value)
             if isinstance(config, PSOConfiguration):
-                # Due to performance issues, the max value of "num_particles" is lower with the "pyramid" topology
-                values = hyperparams_bounds["num_particles"]['values']
-                high = {2: 200, 6: 500}[self.num_dams] if config.topology == "pyramid" else values['high']
-                config.num_particles = trial.suggest_int(
-                    "num_particles", low=values['low'], high=high, step=values['step']
-                )
-                # Suggest a "topology_num_neighbors" and a "topology_minkowski_p_norm" whn the topology needs it
-                if config.topology == "random" or config.topology == "ring":
-                    neighbors_step = 5
-                    config.topology_num_neighbors = trial.suggest_int(
-                        "topology_num_neighbors",
-                        low=neighbors_step, high=int((config.num_particles-2) / neighbors_step) * neighbors_step,
-                        step=neighbors_step
-                    )
-                if config.topology == "ring":
-                    config.topology_minkowski_p_norm = trial.suggest_categorical(
-                        "topology_minkowski_p_norm", choices=[1, 2]
-                    )
+                handle_pso_config(trial=trial, config=config)
             config.__post_init__()
             trial_num = trial.number
             self.log(f"[Trial {trial_num}] Configuration: {config}")

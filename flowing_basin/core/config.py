@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field, asdict, fields
 import json
-from copy import deepcopy
 
 
 @dataclass(kw_only=True)
@@ -16,10 +15,10 @@ class BaseConfiguration:
     def to_dict(self) -> dict:
 
         """
-        Turn the original dataclass (before any post-processing) into a JSON-serializable dictionary
+        Turn the dataclass into a JSON-serializable dictionary
         """
 
-        data_json = asdict(self.prior)
+        data_json = asdict(self)
         return data_json
 
     @classmethod
@@ -44,16 +43,6 @@ class BaseConfiguration:
         return cls(**data_json)  # noqa
 
     def __post_init__(self):
-
-        self.check()
-        self.prior = deepcopy(self)
-        self.post_process()
-
-    def check(self):
-
-        pass
-
-    def post_process(self):
 
         pass
 

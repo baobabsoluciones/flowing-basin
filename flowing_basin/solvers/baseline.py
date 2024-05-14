@@ -1,6 +1,7 @@
 import os
 from copy import deepcopy
 from datetime import datetime
+from dataclasses import fields
 from cornflow_client.core.tools import load_json
 from flowing_basin.core import Instance, Solution, Configuration
 from flowing_basin.solvers.rl import GeneralConfiguration
@@ -33,25 +34,32 @@ class Baseline:
     instance_names_eval = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
     instance_names_tune = ["Percentile25", "Percentile75"]
 
-    def __init__(self, general_config: str, solver: str, verbose: int = 1, max_time: float = None):
-
-        self.verbose = verbose
-        self.solver = solver
-        self.solver_class, config_class = Baseline.solver_classes[self.solver]
-
-        solver_config_path = os.path.join(Baseline.hyperparams_values_folder, f"{self.solver.lower()}.json")
-        solver_config_dict = load_json(solver_config_path)
-        if "max_time" in solver_config_dict and max_time is not None:
-            solver_config_dict["max_time"] = max_time
+    def __init__(
+            self, general_config: str, solver: str, verbose: int = 1,
+            max_time: float = None, tuned_hyperparams: bool = False
+    ):
 
         self.general_config = general_config
+        self.solver = solver
+        self.verbose = verbose
+        self.solver_class, config_class = Baseline.solver_classes[self.solver]
+
         general_config_dict = Baseline.get_general_config_dict(self.general_config)
         general_config_obj = GeneralConfiguration.from_dict(general_config_dict)
         self.num_dams = general_config_obj.num_dams
 
-        Baseline.copy_missing_values(solver_config_dict, general_config_dict)
-        self.config = config_class.from_dict(solver_config_dict)
-        # TODO: Allow the option to take the config directly from hyperparams_best_folder instead
+        if not tuned_hyperparams:
+            solver_config_path = os.path.join(Baseline.hyperparams_values_folder, f"{self.solver.lower()}.json")
+            solver_config_dict = load_json(solver_config_path)
+            Baseline.copy_missing_values(solver_config_dict, general_config_dict)
+            self.config = config_class.from_dict(solver_config_dict)
+
+        else:
+            path_config = os.path.join(Baseline.hyperparams_best_folder, self.general_config, f"{self.solver}.json")
+            self.config = config_class.from_json(path_config)
+
+        if any(field.name == "max_time" for field in fields(self.config)) and max_time is not None:
+            self.config.max_time = max_time
 
     def log(self, msg: str, verbose: int = 0):
         """Print the given message."""
@@ -112,6 +120,9 @@ class Baseline:
         if instance_names is None:
             instance_names = Baseline.instance_names_tune
 
+        path_bounds = os.path.join(Baseline.hyperparams_bounds_folder, f"{self.solver}.json")
+        hyperparams_bounds = load_json(path_bounds)
+
         def get_instance_objective(config: Configuration, instance_name: str) -> float:
             """Calculate the objective function value for the given instance and normalize it"""
             instance = Instance.from_name(instance_name, num_dams=self.num_dams)
@@ -151,20 +162,52 @@ class Baseline:
         def objective(trial: Trial):
             # Trial: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html
             config = deepcopy(self.config)
-            # TODO: We must replace attributes in tuning_bounds with trial.suggest_...()
-            return get_trial_objective(config=config, trial_num=trial.number)
+            for attribute, info in hyperparams_bounds.items():
+                # The suggestion of "num_particles" will be done later
+                if attribute == "num_particles":
+                    continue
+                suggest_method = dict(
+                    float=trial.suggest_float, int=trial.suggest_int, categorical=trial.suggest_categorical
+                )[info['type']]
+                value = suggest_method(attribute, **info['values'])
+                setattr(config, attribute, value)
+            if isinstance(config, PSOConfiguration):
+                # Due to performance issues, the max value of "num_particles" is lower with the "pyramid" topology
+                values = hyperparams_bounds["num_particles"]['values']
+                high = {2: 200, 6: 500}[self.num_dams] if config.topology == "pyramid" else values['high']
+                config.num_particles = trial.suggest_int(
+                    "num_particles", low=values['low'], high=high, step=values['step']
+                )
+                # Suggest a "topology_num_neighbors" and a "topology_minkowski_p_norm" whn the topology needs it
+                if config.topology == "random" or config.topology == "ring":
+                    neighbors_step = 5
+                    config.topology_num_neighbors = trial.suggest_int(
+                        "topology_num_neighbors",
+                        low=neighbors_step, high=int((config.num_particles-2) / neighbors_step) * neighbors_step,
+                        step=neighbors_step
+                    )
+                if config.topology == "ring":
+                    config.topology_minkowski_p_norm = trial.suggest_categorical(
+                        "topology_minkowski_p_norm", choices=[1, 2]
+                    )
+            config.__post_init__()
+            trial_num = trial.number
+            self.log(f"[Trial {trial_num}] Configuration: {config}")
+            return get_trial_objective(config=config, trial_num=trial_num)
 
         # Study: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.study.Study.html#optuna.study.Study
-        study = optuna.create_study()
+        study = optuna.create_study(direction="maximize")
         study.optimize(objective, n_trials=num_trials)
+        self.log(
+            f"Finished hyperparameter tuning. "
+            f"Best trial is Trial {study.best_trial.number} with vale {study.best_trial.value}"
+        )
 
-        config = deepcopy(self.config)
-        self.copy_values(config, tuned_hyperparams=study.best_params)
-
+        best_config = deepcopy(self.config)
+        self.copy_values(best_config, tuned_hyperparams=study.best_params)
         path_config = os.path.join(Baseline.hyperparams_best_folder, self.general_config, f"{self.solver}.json")
-        config.to_json(path_config)
-        # TODO: We will probably have problems with the self.prior thing in Configuration...
-        #   Add option prior=False to Configration?
+        best_config.to_json(path_config)
+        self.log(f"Saved best configuration to {path_config}.")
 
     @staticmethod
     def get_general_config_dict(general_config: str) -> dict:
@@ -188,6 +231,10 @@ class Baseline:
         """
         for key, value in solver_config_dict.items():
             if value is None:
+                if key not in general_config_dict:
+                    raise ValueError(
+                        f"The missing attribute {key} is not among the general config attributes: {general_config_dict}"
+                    )
                 solver_config_dict[key] = general_config_dict[key]
 
     @staticmethod
@@ -196,5 +243,9 @@ class Baseline:
         Copies all values of `tuned_hyperparams` to `config`.
         Assumes all attributes in `tuned_hyperparams` are present in `config`.
         """
-        for key, value in tuned_hyperparams.items():
-            setattr(config, key, value)
+        config_attrs = {field.name for field in fields(config)}
+        for attribute, value in tuned_hyperparams.items():
+            if attribute not in config_attrs:
+                raise ValueError(f"The attribute {attribute} is not among the config attributes: {config_attrs}")
+            setattr(config, attribute, value)
+        config.__post_init__()

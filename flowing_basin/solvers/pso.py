@@ -27,6 +27,9 @@ class PSOConfiguration(Configuration):  # noqa
     # Discrete PySwarms optimizer options
     bounds_handling: str = "periodic"
     topology: str = "star"
+    topology_num_neighbors: int = None
+    topology_minkowski_p_norm: int = None
+    # topology_range: int = None
 
     # Max iterations OR max time
     max_iterations: int = None
@@ -35,22 +38,48 @@ class PSOConfiguration(Configuration):  # noqa
     # RiverBasin simulator options
     mode: str = "nonlinear"
 
+    def get_topology_kwargs(self):
+
+        topology_kwargs = {
+            "star": {},
+            "ring": {"p": self.topology_minkowski_p_norm, "k": self.topology_num_neighbors},
+            # "von_neumann": {"p": self.topology_minkowski_p_norm, "r": self.topology_range},
+            "pyramid": {},
+            "random": {"k": self.topology_num_neighbors}
+        }
+        return topology_kwargs[self.topology]
+
     def __post_init__(self):
 
         super(PSOConfiguration, self).__post_init__()
 
         # Assert given string values are valid
+        # NOTE: the "von_neumann" topology is excluded from the list of valid topologies because,
+        # with the >200 dimensions of our problem, the generated number of neighbours as a Delannoy number
+        # is exceedingly high, even with a range of 1
         valid_attr_values = dict(
             mode={"linear", "nonlinear"},
             bounds_handling={"periodic", "nearest", "intermediate", "shrink", "reflective", "random"},
-            topology={"star", "ring", "von_neumann", "pyramid", "random"}
+            topology={"star", "ring", "pyramid", "random"},
+            topology_minkowski_p_norm={1, 2, None}
         )
         for attr_name, valid_values in valid_attr_values.items():
             if getattr(self, attr_name) not in valid_values:
                 raise ValueError(
                     f"Invalid value for '{attr_name}': {getattr(self, attr_name)}. "
-                    f"Allowed values are {valid_values}"
+                    f"Allowed values are {valid_values}."
                 )
+
+        if self.topology_num_neighbors is not None and self.topology_num_neighbors > self.num_particles - 1:
+            raise ValueError(
+                f"The topology number of neighbours, {self.topology_num_neighbors}, "
+                f"must be lower than the number of particles, {self.num_particles}."
+            )
+
+        # Assert the required topology kwargs are given
+        for key, value in self.get_topology_kwargs().items():
+            if value is None:
+                raise ValueError(f"Topology {self.topology} requires a value for {key}.")
 
         # Assert a max iterations or max time is given
         if self.max_iterations is None and self.max_time is None:
@@ -289,17 +318,17 @@ class PSO(Experiment):
             max_time = float('inf')
 
         # Optimization loop
+        # Based on https://github.com/ljvmiranda921/pyswarms/blob/master/pyswarms/single/general_optimizer.py
+        # and https://github.com/ljvmiranda921/pyswarms/blob/master/pyswarms/base/base_single.py
+        swarm.pbest_cost = np.full(self.config.num_particles, np.inf)
         while current_time < max_time and num_iters < max_iters:
 
             # Update personal best
             swarm.current_cost = self.calculate_cost(swarm.position, is_relvars=self.config.use_relvars)
-            if num_iters == 0:
-                swarm.pbest_cost = self.calculate_cost(swarm.pbest_pos, is_relvars=self.config.use_relvars)
             swarm.pbest_pos, swarm.pbest_cost = P.compute_pbest(swarm)
 
             # Update global best
-            if np.min(swarm.pbest_cost) < swarm.best_cost:
-                swarm.best_pos, swarm.best_cost = topology.compute_gbest(swarm)
+            swarm.best_pos, swarm.best_cost = topology.compute_gbest(swarm, **self.config.get_topology_kwargs())
             obj_fun_history.append((current_time, - swarm.best_cost))
             if self.verbose:
                 print(f"{num_iters:<15}{current_time:<15.2f}{-swarm.best_cost:<15.2f}")
@@ -312,15 +341,19 @@ class PSO(Experiment):
             current_time = time.perf_counter() - start_time + time_offset
             num_iters += 1
 
+        # Obtain the final best_cost and the final best_position
+        final_best_cost = swarm.best_cost.copy()
+        final_best_pos = swarm.pbest_pos[swarm.pbest_cost.argmin()].copy()
+
         if self.verbose:
-            print(f"Optimization finished.\nBest position is {swarm.best_pos}\nBest cost is {swarm.best_cost}")
+            print(f"Optimization finished.\nBest position is {final_best_pos}\nBest cost is {final_best_cost}")
 
         # Assert optimal party is between bounds
-        assert (swarm.best_pos >= self.bounds[0]).all() and (swarm.best_pos <= self.bounds[1]).all()
+        assert (final_best_pos >= self.bounds[0]).all() and (final_best_pos <= self.bounds[1]).all()
 
         # Execute simulator with optimal particle
         self.river_basin.deep_update(
-            self.reshape_as_flows_or_relvars(swarm=swarm.best_pos.reshape(1, -1)),
+            self.reshape_as_flows_or_relvars(swarm=final_best_pos.reshape(1, -1)),
             is_relvars=self.config.use_relvars,
         )
 

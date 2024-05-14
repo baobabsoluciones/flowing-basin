@@ -1,8 +1,38 @@
 from flowing_basin.core import BaseConfiguration, Configuration
 from dataclasses import dataclass, asdict, field
+from copy import deepcopy
 import json
 import warnings
 import numpy as np
+
+
+@dataclass(kw_only=True)
+class BaseProcessableConfiguration(BaseConfiguration):
+
+    """Configuration that required post-processing after creation."""
+
+    def to_dict(self) -> dict:
+
+        """
+        Turn the original dataclass (before any post-processing) into a JSON-serializable dictionary
+        """
+
+        data_json = asdict(self.prior)
+        return data_json
+
+    def __post_init__(self):
+
+        self.check()
+        self.prior = deepcopy(self)
+        self.post_process()
+
+    def post_process(self):
+
+        pass
+
+    def check(self):
+
+        pass
 
 
 @dataclass(kw_only=True)
@@ -13,9 +43,9 @@ class GeneralConfiguration(Configuration):  # noqa
     do_history_updates: bool = True
     num_dams: int = 2
 
-    def check(self):
+    def __post_init__(self):
 
-        super(GeneralConfiguration, self).check()
+        super(GeneralConfiguration, self).__post_init__()
 
         # Check self.mode
         valid_modes = {"linear", "nonlinear"}
@@ -25,7 +55,7 @@ class GeneralConfiguration(Configuration):  # noqa
 
 # noinspection PyDataclass
 @dataclass(kw_only=True)
-class ObservationConfiguration(BaseConfiguration):  # noqa
+class ObservationConfiguration(BaseProcessableConfiguration):  # noqa
 
     features: list[str]  # Features included in the observation
     unique_features: list[str]  # Features that should NOT be repeated for each dam
@@ -203,7 +233,7 @@ class ObservationConfiguration(BaseConfiguration):  # noqa
 
 
 @dataclass(kw_only=True)
-class ActionConfiguration(BaseConfiguration):  # noqa
+class ActionConfiguration(BaseProcessableConfiguration):  # noqa
 
     action_type: str
     optimal_flow_values: dict[str, list[float]] = field(default_factory=lambda: dict())
@@ -239,7 +269,7 @@ class ActionConfiguration(BaseConfiguration):  # noqa
 
 
 @dataclass(kw_only=True)
-class RewardConfiguration(BaseConfiguration):  # noqa
+class RewardConfiguration(BaseProcessableConfiguration):  # noqa
 
     # noinspection PyUnresolvedReferences
     """
@@ -298,7 +328,7 @@ class RewardConfiguration(BaseConfiguration):  # noqa
 
 # noinspection PyDataclass
 @dataclass(kw_only=True)
-class TrainingConfiguration(BaseConfiguration):  # noqa
+class TrainingConfiguration(BaseProcessableConfiguration):  # noqa
 
     """
     :param length_episodes:
@@ -480,7 +510,7 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         Raises an error if data is not consistent
         """
 
-        GeneralConfiguration.check(self)
+        GeneralConfiguration.__post_init__(self)
         ObservationConfiguration.check(self)
         ActionConfiguration.check(self)
         RewardConfiguration.check(self)
@@ -499,7 +529,6 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         by the number of additional periods per action block.
         """
 
-        GeneralConfiguration.post_process(self)
         ObservationConfiguration.post_process(self)
         ActionConfiguration.post_process(self)
         RewardConfiguration.post_process(self)

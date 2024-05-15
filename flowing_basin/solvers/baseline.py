@@ -166,6 +166,8 @@ class Baseline:
             for replication_num in range(num_replications):
                 trial_objective += get_replication_objectice(config=config, replication_num=replication_num)
             trial_objective /= num_replications
+            # TODO: in case the number of replications is high, I should trial.report() each replication objective
+            #   to enable pruning and accelerate tuning: https://optuna.readthedocs.io/en/v2.0.0/tutorial/pruning.html
             self.log(
                 f"[Trial {trial_num}] Total average normalized objective function value: {trial_objective}"
             )

@@ -10,12 +10,9 @@
         "random_biased_flows": false,
         "random_biased_sorting": false,
         "startups_penalty": 0.0,
-        "volume_exceedance_bonus": 0,
-        "volume_objectives": {
-            "dam1": 70882.0,
-            "dam2": 58343.0
-        },
-        "volume_shortage_penalty": 0
+        "volume_exceedance_bonus": 0.0,
+        "volume_objectives": {},
+        "volume_shortage_penalty": 0.0
     },
     "dams": [
         {
@@ -126,7 +123,7 @@
                 "limit_zones": 0.0,
                 "startups": 0.0,
                 "total_income_eur": 4746.464000000002,
-                "volume_exceedance_m3": 0,
+                "volume_exceedance_m3": 36837.0,
                 "volume_shortage_m3": 0
             },
             "power": [
@@ -440,7 +437,7 @@
                 "limit_zones": 5.0,
                 "startups": 1.0,
                 "total_income_eur": 7337.656679999059,
-                "volume_exceedance_m3": 0,
+                "volume_exceedance_m3": 41226.0,
                 "volume_shortage_m3": 0
             },
             "power": [
@@ -651,6 +648,7 @@
         "end_decisions": "2021-01-22 23:45",
         "start": "2021-01-22 00:00"
     },
+    "instance_name": "Percentile100",
     "objective_function": 12084.120679999061,
     "price": [
         35.95,
@@ -753,7 +751,6 @@
         32.6,
         32.6
     ],
-    "solution_datetime": "2024-01-12 14:41",
-    "solver": "Heuristic",
-    "instance_name": "Percentile100"
+    "solution_datetime": "2024-05-16 00:40",
+    "solver": "Heuristic"
 }

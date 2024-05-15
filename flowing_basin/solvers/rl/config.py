@@ -510,7 +510,6 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         Raises an error if data is not consistent
         """
 
-        GeneralConfiguration.__post_init__(self)
         ObservationConfiguration.check(self)
         ActionConfiguration.check(self)
         RewardConfiguration.check(self)

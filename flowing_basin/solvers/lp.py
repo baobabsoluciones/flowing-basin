@@ -200,10 +200,14 @@ class LPModel(Experiment):
         """
         Parámetro volumen final objetivo (m3): VolFinal
         """
-        VolFinal = {
-            dam_id: self.config.volume_objectives[dam_id]
-            for dam_id in self.instance.get_ids_of_dams()
-        }
+        if self.config.volume_objectives:
+            VolFinal = {
+                dam_id: self.config.volume_objectives[dam_id]
+                for dam_id in self.instance.get_ids_of_dams()
+            }
+        else:
+            # If no objective final volume is given, we assume it is equal to the minimum volume
+            VolFinal = {dam_id: self.instance.get_min_vol_of_dam(dam_id) for dam_id in self.instance.get_ids_of_dams()}
         """
         Parámetro caudal entrante al primer embalse (m3/s): Q0
         """
@@ -544,8 +548,8 @@ class LPModel(Experiment):
                 for dam_id in self.instance.get_ids_of_dams()
             }
         else:
-            # If no objective final volume is given, we assume it is 0
-            VolFinal = {dam_id: 0. for dam_id in self.instance.get_ids_of_dams()}
+            # If no objective final volume is given, we assume it is equal to the minimum volume
+            VolFinal = {dam_id: self.instance.get_min_vol_of_dam(dam_id) for dam_id in self.instance.get_ids_of_dams()}
         """
         Parámetro caudal entrante al primer embalse (m3/s): Q0
         """

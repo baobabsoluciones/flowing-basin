@@ -31,10 +31,10 @@ def get_experiment11_agents(generals: list[str] = None, rewards: list[str] = Non
 if __name__ == "__main__":
 
     # general = 'G1'
-    regex = get_experiment11_agents()
+    # regex = get_experiment11_agents()
     # agents = ReinforcementLearning.get_all_agents(regex)
     # print(f"Found {len(agents)} agents in folder:", agents)
-    ReinforcementLearning.barchart_training_times(regex, hours=False)
+    # ReinforcementLearning.barchart_training_times(regex, hours=False)
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
     # ReinforcementLearning.print_max_avg_incomes(
     #     regex, permutation='GOART', baselines=["MILP", "rl-greedy", "rl-random"],
@@ -42,7 +42,8 @@ if __name__ == "__main__":
     # )
     # ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
 
+    regex = "rl-A113G1O2R1T4$"
     # ReinforcementLearning.print_spaces(regex)
     # ReinforcementLearning.print_training_times(regex)
     # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
-    # ReinforcementLearning.barchart_instances_incomes(regex, baselines=["rl-greedy"])
+    ReinforcementLearning.barchart_instances_incomes(regex, baselines=["Heuristic", "MILP", "rl-greedy", "rl-random"])

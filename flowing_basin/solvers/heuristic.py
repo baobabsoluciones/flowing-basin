@@ -59,6 +59,15 @@ class HeuristicSingleDam:
         self.greedy = greedy
         self.do_tests = do_tests
 
+        # Volume objectives
+        # If no objective final volume is given, we assume it is equal to the minimum volume (always satisfied)
+        if self.config.volume_objectives:
+            self.volume_objectives = self.config.volume_objectives.copy()
+        else:
+            self.volume_objectives = {
+                dam_id: self.instance.get_min_vol_of_dam(dam_id) for dam_id in self.instance.get_ids_of_dams()
+            }
+
         # Important constants
         # The initial volume is clipped between the min and max volumes (like in the simulator)
         self.time_steps = list(range(self.instance.get_largest_impact_horizon()))
@@ -445,7 +454,7 @@ class HeuristicSingleDam:
         """
 
         objective_available_volume = (
-            self.config.volume_objectives[self.dam_id] - self.min_vol
+            self.volume_objectives[self.dam_id] - self.min_vol
             if not self.config.maximize_final_vol else self.max_available_vol
         )
         decision_horizon = self.instance.get_decision_horizon()
@@ -453,7 +462,7 @@ class HeuristicSingleDam:
         sorted_relevant_groups = self.relevant_groups_for_final_vol(sorted_groups)
         volume_gap = objective_available_volume - self.available_volumes[decision_horizon - 1]
 
-        while volume_gap > 0. and len(sorted_relevant_groups) > 0:
+        while volume_gap > -1e-4 and len(sorted_relevant_groups) > 0:
 
             # Select the group with the lowest weight or score (average lagged price)
             least_important_group = sorted_relevant_groups[-1]
@@ -619,8 +628,8 @@ class HeuristicSingleDam:
 
         # Net income (WITH startup costs and objective final volumes)
         final_volume = self.dam.final_volume.item()
-        volume_shortage = max(0, self.config.volume_objectives[self.dam_id] - final_volume)
-        volume_exceedance = max(0, final_volume - self.config.volume_objectives[self.dam_id])
+        volume_shortage = max(0, self.volume_objectives[self.dam_id] - final_volume)
+        volume_exceedance = max(0, final_volume - self.volume_objectives[self.dam_id])
         num_startups = self.dam.channel.power_group.acc_num_startups.item()
         num_limit_zones = self.dam.channel.power_group.acc_num_times_in_limit.item()
         penalty = (
@@ -772,7 +781,7 @@ class Heuristic(Experiment):
                 assert self.compare_flows_and_volumes(
                     assigned_flows=assigned_flows, actual_flows=actual_flows,
                     predicted_vols=predicted_vols, actual_vols=actual_vols
-                ), f"For {dam_id}, volume and flows from heuristic do not match those form the simulator."
+                ), f"For {dam_id}, volume and flows from heuristic do not match those from the simulator."
 
             # Flow contribution to the next dam
             flow_contribution = turbined_flows

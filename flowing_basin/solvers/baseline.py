@@ -9,6 +9,7 @@ from flowing_basin.solvers import (
     Heuristic, HeuristicConfiguration, LPModel, LPConfiguration, PSO, PSOConfiguration,
     PsoRbo, PsoRboConfiguration
 )
+from flowing_basin.solvers.common import BASELINES_FOLDER, get_all_baselines, get_all_old_baselines, barchart_instances
 import optuna
 from optuna.trial import Trial
 
@@ -16,7 +17,7 @@ from optuna.trial import Trial
 class Baseline:
 
     """
-    Class to use solvers like MILP or PSO as RL baselines
+    Class to use solvers like MILP or PSO (that may act as RL baselines)
     """
 
     solver_classes = {
@@ -29,7 +30,6 @@ class Baseline:
     hyperparams_bounds_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/tuning_bounds")
     hyperparams_best_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/tuning_best")
     config_info = (os.path.join(os.path.dirname(__file__), "../rl_data/configs/general"), GeneralConfiguration)
-    baselines_folder = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
     baselines_filename = "instance{instance_name}_{solver}.json"
     instance_names_eval = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
     instance_names_tune = ["Percentile25", "Percentile75"]
@@ -120,7 +120,7 @@ class Baseline:
                     sol_filename = add_filename_tail(sol_filename, f"replication{replication_num}")
                 if filename_tail:
                     sol_filename = add_filename_tail(sol_filename, filename_tail)
-                sol_path = os.path.join(Baseline.baselines_folder, self.general_config, sol_filename)
+                sol_path = os.path.join(BASELINES_FOLDER, self.general_config, sol_filename)
                 self.solve_instance(instance, sol_path=sol_path)
             self.log(f"[Replication {replication_num}] Finished replication {replication_num}.")
 
@@ -267,3 +267,48 @@ class Baseline:
                 raise ValueError(f"The attribute {attribute} is not among the config attributes: {config_attrs}")
             setattr(config, attribute, value)
         config.__post_init__()
+
+
+class Baselines:
+
+    """
+    Utility class to analyze multiple solvers at the same time
+    """
+
+    def __init__(self, general_config: str, solvers: list[str], include_old: bool = False):
+
+        self.general_config = general_config
+        self.solvers = solvers
+
+        # Get all solutions of the given solvers
+        self.solutions = []
+        for baseline in get_all_baselines(self.general_config):
+            if baseline.get_solver() in self.solvers:
+                self.solutions.append(baseline)
+
+        # Add old solutions
+        if include_old:
+            for baseline in get_all_old_baselines(self.general_config):
+                solver = baseline.get_solver()
+                if solver in self.solvers:
+                    solver += ' (old)'
+                    baseline.set_solver(solver)
+                    if solver not in self.solvers:
+                        self.solvers.append(solver)
+                    self.solutions.append(baseline)
+
+    def barchart_instances(self):
+
+        """
+        Plot a barchart with the objective function value of each solver at every instance.
+        @return:
+        """
+
+        # Get values: dict[solver, dict[instance, value]]
+        values = {solver: dict() for solver in self.solvers}
+        for solution in self.solutions:
+            values[solution.get_solver()].update({solution.get_instance_name(): solution.get_objective_function()})
+
+        barchart_instances(
+            values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
+        )

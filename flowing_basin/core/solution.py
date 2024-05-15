@@ -381,6 +381,14 @@ class Solution(SolutionCore):
 
         return self.data.get("solver")
 
+    def set_solver(self, solver: str):
+
+        """
+        Set the name of the solver
+        """
+
+        self.data["solver"] = solver
+
     def get_num_dams(self) -> int:
 
         """

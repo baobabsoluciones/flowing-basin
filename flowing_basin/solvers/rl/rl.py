@@ -4,6 +4,7 @@ from flowing_basin.solvers.rl import (
     RLConfiguration, RLEnvironment, RLTrain, RLRun
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
+from flowing_basin.solvers.common import get_all_baselines, barchart_instances
 from cornflow_client.core.tools import load_json
 from stable_baselines3 import SAC, A2C, PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -40,12 +41,12 @@ class ReinforcementLearning:
     test_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_test.pickle")
 
     models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
-    baselines_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/baselines")
     tensorboard_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/tensorboard_logs")
     best_hyperparams_folder = os.path.join(os.path.dirname(__file__), "../../rl_zoo/best_hyperparams")
 
     observation_records = ["record_raw_obs", "record_normalized_obs", "record_projected_obs"]  # As the attributes in RLEnvironment
     static_projectors = ["identity", "QuantilePseudoDiscretizer"]
+
     obs_basic_type_length = 2  # Length of the observation code that indicates the basic type (e.g., "O121" -> "O1")
     obs_type_length = 3  # Length of the observation code that indicates the type (e.g., "O121" -> "O12")
     obs_collection_pos = 2  # Position of the digit that MAY indicate a collection method (e.g., "O12" -> "2")
@@ -1053,33 +1054,7 @@ class ReinforcementLearning:
         :param general_config:
         """
 
-        solvers = list(values.keys())
-        bar_width = 0.4 * 2. / len(solvers)
-        offsets = [i * bar_width for i in range(len(solvers))]
-
-        instances = list(values[solvers[0]].keys())
-        x_values = np.arange(len(instances))
-
-        # Plot the bars for all instances, one solver at a time
-        fig, ax = plt.subplots()
-        for solver, offset in zip(solvers, offsets):
-            # Items must be ordered according to their instance percentile number (e.g. 'Percentile70' -> 70)
-            # in order to match the x labels
-            sorted_values = dict(sorted(
-                values[solver].items(), key=lambda item: int(re.search(r'\d+', item[0]).group())
-            ))  # noqa
-            print(f"Histogram values for {solver}:", x_values + offset, list(sorted_values.values()))
-            ax.bar(x_values + offset, list(sorted_values.values()), width=bar_width, label=solver)
-        ax.set_xticks(x_values + bar_width / 2)
-        ax.set_xticklabels(instances, rotation='vertical')
-
-        ax.set_xlabel('Instances')
-        ax.set_ylabel(value_type)
-        ax.set_title(f'Bar chart of {agent_name} for all instances in {general_config}')
-        ax.legend()
-
-        plt.tight_layout()
-        plt.show()
+        barchart_instances(values=values, value_type=value_type, title=agent_name, general_config=general_config)
 
     @staticmethod
     def print_max_avg_incomes(
@@ -1329,14 +1304,7 @@ class ReinforcementLearning:
         :param general_config: General configuration ("G0" or "G1")
         """
 
-        sols = []
-        parent_dir = os.path.join(ReinforcementLearning.baselines_folder, general_config)
-        for file in os.listdir(parent_dir):
-            if file.endswith('.json'):
-                full_path = os.path.join(parent_dir, file)
-                sol = Solution.from_json(full_path)
-                sols.append(sol)
-        return sols
+        return get_all_baselines(general_config)
 
     @staticmethod
     def get_all_configs(config_letter: str, relevant_digits: int = None) -> list[str]:

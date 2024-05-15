@@ -4,6 +4,7 @@ This script creates the baselines "rl-random" and "rl-greedy".
 """
 
 from flowing_basin.solvers.rl import ReinforcementLearning
+from flowing_basin.solvers.common import BASELINES_FOLDER
 from flowing_basin.core import Instance
 import os.path
 
@@ -13,7 +14,7 @@ policies = ["random", "greedy"]
 unbiased = True
 
 for general in general_configs:
-    baselines_folder = os.path.join(ReinforcementLearning.baselines_folder, general)
+    baselines_folder = os.path.join(BASELINES_FOLDER, general)
     rl = ReinforcementLearning(f"A1{general}O2R1T2", verbose=2)
     for policy in policies:
         for instance in instances:

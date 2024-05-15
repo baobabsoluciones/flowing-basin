@@ -3,6 +3,7 @@ from flowing_basin.tools import RiverBasin
 from cornflow_client.constants import SOLUTION_STATUS_FEASIBLE, STATUS_UNDEFINED
 import numpy as np
 from dataclasses import dataclass
+from bisect import bisect_left
 import warnings
 import time
 import pyswarms.backend as P
@@ -34,6 +35,13 @@ class PSOConfiguration(Configuration):  # noqa
     # Max iterations OR max time
     max_iterations: int = None
     max_time: float = None
+
+    # Early stopping / convergence criteria
+    # If the objective function has not improved
+    # more than `convergence_tolerance * 100`% in the last  `convergence_time` seconds,
+    # assume the PSO has converged and stop the execution
+    convergence_tolarance: float = 0.005
+    convergence_time: float = 150
 
     # RiverBasin simulator options
     mode: str = "nonlinear"
@@ -305,7 +313,8 @@ class PSO(Experiment):
         start_time = time.perf_counter()
         current_time = time_offset
         num_iters = 0
-        obj_fun_history = []
+        obj_history_times = []
+        obj_history_values = []
         if self.verbose:
             print(f"{'Iteration':<15}{'Time (s)':<15}{'Objective (€)':<15}")
 
@@ -329,9 +338,30 @@ class PSO(Experiment):
 
             # Update global best
             swarm.best_pos, swarm.best_cost = topology.compute_gbest(swarm, **self.config.get_topology_kwargs())
-            obj_fun_history.append((current_time, - swarm.best_cost))
+            current_value = - swarm.best_cost
+            obj_history_times.append(current_time)
+            obj_history_values.append(current_value)
             if self.verbose:
-                print(f"{num_iters:<15}{current_time:<15.2f}{-swarm.best_cost:<15.2f}")
+                print(f"{num_iters:<15}{current_time:<15.2f}{current_value:<15.2f}")
+
+            # Early stopping / convergence criteria
+            if current_time - time_offset > self.config.convergence_time:
+
+                # Identify the objective function value from `convergence_time` seconds ago using binary search
+                target_time = current_time - self.config.convergence_time
+                target_time_index = bisect_left(a=obj_history_times, x=target_time)
+                target_value = obj_history_values[target_time_index]
+
+                # Check if the value has improved less than `convergence_tolerance * 100`%
+                relative_improvement = (current_value - target_value) / target_value if target_value > 0 else float('inf')
+                if relative_improvement < self.config.convergence_tolarance:
+                    print(
+                        f"The value {self.config.convergence_time}s ago was {target_value}; now it is {current_value}. "
+                        f"Since the relative improvement is "
+                        f"{relative_improvement*100:.2f}% < {self.config.convergence_tolarance*100:.2f}%, "
+                        f"the execution will be stopped now."
+                    )
+                    break
 
             # Update position and velocity matrices
             swarm.velocity = topology.compute_velocity(swarm, bounds=self.bounds)
@@ -374,11 +404,6 @@ class PSO(Experiment):
             powers[dam_id] = self.river_basin.all_past_powers[dam_id]  # Array of shape num_time_steps x 1
             powers[dam_id] = np.transpose(powers[dam_id])[0]  # Array of shape num_time_steps
 
-        # Get objective function history
-        time_stamps, obj_fun_values = zip(*obj_fun_history)
-        time_stamps = list(time_stamps)
-        obj_fun_values = list(obj_fun_values)
-
         # Get datetimes
         start_datetime, end_datetime, _, _, _, solution_datetime = self.get_instance_solution_datetimes()
 
@@ -394,8 +419,8 @@ class PSO(Experiment):
                 configuration=self.config.to_dict(),
                 objective_function=self.env_objective_function().item(),
                 objective_history=dict(
-                    objective_values_eur=obj_fun_values,
-                    time_stamps_s=time_stamps,
+                    objective_values_eur=obj_history_values,
+                    time_stamps_s=obj_history_times,
                 ),
                 dams=[
                     dict(

@@ -76,7 +76,8 @@ class ReinforcementLearning:
         self.obs_records_path = os.path.join(ReinforcementLearning.observation_records_folder, folder_name)
 
     def train(
-            self, save_agent: bool = True, save_replay_buffer: bool = False, save_obs: bool = False, num_timesteps: int = None
+            self, save_agent: bool = True, save_replay_buffer: bool = False, save_obs: bool = False,
+            save_tensorboard: bool = True, num_timesteps: int = None
     ) -> RLTrain | None:
 
         """
@@ -88,6 +89,7 @@ class ReinforcementLearning:
             (the replay buffer may occupy several GB for big observation spaces).
         :param save_obs: Whether to save the observations experienced during training or not
             (these observations may occupy several GB for big observation spaces).
+        :param save_tensorboard: Whether to save the tensorboard logs or not.
         :param num_timesteps: If given, override the number of timesteps in the configuration (only for testing purposes)
         """
 
@@ -103,7 +105,7 @@ class ReinforcementLearning:
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
             path_folder=self.get_agent_folder_path() if save_agent else None,
-            path_tensorboard=ReinforcementLearning.tensorboard_folder if save_agent else None,
+            path_tensorboard=ReinforcementLearning.tensorboard_folder if save_agent and save_tensorboard else None,
             experiment_id=self.agent_name,
             verbose=self.verbose,
             num_timesteps=num_timesteps

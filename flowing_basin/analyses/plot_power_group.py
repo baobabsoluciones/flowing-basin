@@ -1,3 +1,9 @@
+"""
+plot_power_group.py
+This script draws the power curve of both dams,
+optionally adding a histogram of the outflows of a solver
+"""
+
 from cornflow_client.core.tools import load_json
 from flowing_basin.tools import PowerGroup
 from flowing_basin.core import Instance

@@ -1,3 +1,8 @@
+"""
+plot_channel.py
+Plot the flow limit of dam2 with respect to its volume
+"""
+
 from cornflow_client.core.tools import load_json
 from flowing_basin.core import Instance
 from flowing_basin.solvers.rl import ReinforcementLearning

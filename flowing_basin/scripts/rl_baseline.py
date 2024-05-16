@@ -5,8 +5,8 @@ Script to compute solutions using PSO, MILP, etc. as baselines for RL
 
 from flowing_basin.solvers import Baseline
 
-for config in ['G0', 'G1']:
-    Baseline(general_config=config, solver='Heuristic').solve()
+for config in ['G2', 'G3']:
+    Baseline(general_config=config, solver='MILP').solve()
 
 # Baseline(general_config='G1', solver='PSO', max_time=5).tune(
 #     num_trials=2, instance_names=['Percentile25'], num_replications=1

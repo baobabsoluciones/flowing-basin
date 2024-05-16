@@ -20,15 +20,16 @@ def get_all_baselines(general_config: str) -> list[Solution]:
     return scan_baselines(parent_dir)
 
 
-def get_all_old_baselines(general_config: str) -> list[Solution]:
+def get_all_baselines_folder(folder_name: str, general_config: str) -> list[Solution]:
 
     """
-    Get all baseline solutions in the "old" folder.
+    Get all baseline solutions in the folder `folder_name`.
 
+    :param folder_name: Name of the folder in which to find the baselines
     :param general_config: General configuration (e.g. "G1")
     """
 
-    parent_dir = os.path.join(BASELINES_FOLDER, "old", general_config)
+    parent_dir = os.path.join(BASELINES_FOLDER, folder_name, general_config)
     return scan_baselines(parent_dir)
 
 

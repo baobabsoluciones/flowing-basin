@@ -9,7 +9,7 @@ from flowing_basin.solvers import (
     Heuristic, HeuristicConfiguration, LPModel, LPConfiguration, PSO, PSOConfiguration,
     PsoRbo, PsoRboConfiguration
 )
-from flowing_basin.solvers.common import BASELINES_FOLDER, get_all_baselines, get_all_old_baselines, barchart_instances
+from flowing_basin.solvers.common import BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances
 import optuna
 from optuna.trial import Trial
 
@@ -39,6 +39,16 @@ class Baseline:
             max_time: float = None, tuned_hyperparams: bool = False
     ):
 
+        """
+        Initialize a Baseline object.
+
+        :param general_config: General configuration (e.g., "G1")
+        :param solver: Solver that wants to be used (e.g., 'MILP')
+        :param verbose: Level of detail of the information printed on screen (if 0, nothing gets printed) (default: 1)
+        :param max_time: If given, override the configuration's max_time if there is one
+        :tuned_hyperparams: Whether to tuse tuned hyperparameters or not (default: False)
+        """
+
         self.general_config = general_config
         self.solver = solver
         self.verbose = verbose
@@ -49,14 +59,19 @@ class Baseline:
         self.num_dams = general_config_obj.num_dams
 
         if not tuned_hyperparams:
+            # Use hyperparams from `flowing_basin/hyperparams/values` and save sol in `flowing_basin/rl_data/baselines`
             solver_config_path = os.path.join(Baseline.hyperparams_values_folder, f"{self.solver.lower()}.json")
             solver_config_dict = load_json(solver_config_path)
             Baseline.copy_missing_values(solver_config_dict, general_config_dict)
             self.config = config_class.from_dict(solver_config_dict)
+            self.sol_folder_name = ""
 
         else:
+            # Use hyperparams from `flowing_basin/hyperparams/tuning_best` and
+            # save sol in `flowing_basin/rl_data/baselines/tuned`
             path_config = os.path.join(Baseline.hyperparams_best_folder, self.general_config, f"{self.solver}.json")
             self.config = config_class.from_json(path_config)
+            self.sol_folder_name = "tuned"
 
         if any(field.name == "max_time" for field in fields(self.config)) and max_time is not None:
             self.config.max_time = max_time
@@ -120,7 +135,7 @@ class Baseline:
                     sol_filename = add_filename_tail(sol_filename, f"replication{replication_num}")
                 if filename_tail:
                     sol_filename = add_filename_tail(sol_filename, filename_tail)
-                sol_path = os.path.join(BASELINES_FOLDER, self.general_config, sol_filename)
+                sol_path = os.path.join(BASELINES_FOLDER, self.sol_folder_name, self.general_config, sol_filename)
                 self.solve_instance(instance, sol_path=sol_path)
             self.log(f"[Replication {replication_num}] Finished replication {replication_num}.")
 
@@ -275,7 +290,15 @@ class Baselines:
     Utility class to analyze multiple solvers at the same time
     """
 
-    def __init__(self, general_config: str, solvers: list[str], include_old: bool = False):
+    def __init__(self, general_config: str, solvers: list[str], include_folders: list[str] = None):
+
+        """
+        Initialize a Baselines object.
+
+        :param general_config: General configuration (e.g., "G1")
+        :param solvers: Solvers that want to be analyzed (e.g., ['MILP', 'PSO', ...])
+        :param include_folders: Additional folders in which to look for solutions (e.g. ['old', 'tuned'])
+        """
 
         self.general_config = general_config
         self.solvers = solvers
@@ -287,15 +310,16 @@ class Baselines:
                 self.solutions.append(baseline)
 
         # Add old solutions
-        if include_old:
-            for baseline in get_all_old_baselines(self.general_config):
-                solver = baseline.get_solver()
-                if solver in self.solvers:
-                    solver += ' (old)'
-                    baseline.set_solver(solver)
-                    if solver not in self.solvers:
-                        self.solvers.append(solver)
-                    self.solutions.append(baseline)
+        if include_folders is not None:
+            for folder_name in include_folders:
+                for baseline in get_all_baselines_folder(folder_name=folder_name, general_config=self.general_config):
+                    solver = baseline.get_solver()
+                    if solver in self.solvers:
+                        solver += f' ({folder_name})'
+                        baseline.set_solver(solver)
+                        if solver not in self.solvers:
+                            self.solvers.append(solver)
+                        self.solutions.append(baseline)
 
     def barchart_instances(self):
 

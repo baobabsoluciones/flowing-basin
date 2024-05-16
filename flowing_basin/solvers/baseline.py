@@ -113,31 +113,61 @@ class Baseline:
 
         return solver.solution
 
-    def solve(self, instance_names: list[str] = None, num_replications: int = 1, filename_tail: str = ""):
+    def solve(self, instance_names: list[str] = None, num_replications: int = None, filename_tail: str = ""):
         """
         Solve each instance and save it in the corresponding baselines folder.
+        :param instance_names: Names of the instances to solve
+        :param num_replications: Total number of replications (including previous executions of this program)
+        :param filename_tail: Whether to add something at the end of each filename
         """
 
         def add_filename_tail(filename: str, tail: str):
+            """Add the given `tail` to the end of the `filename`, without changing the file extension."""
             filename_parts = filename.split('.')
             new_filename = filename_parts[0] + f"_{tail}." + filename_parts[1]
             return new_filename
 
+        def get_sol_path(inst_name: str, repl_num: int = None):
+            """Get the path to the solution with the given replication number."""
+            sol_filename = Baseline.baselines_filename.format(instance_name=inst_name, solver=self.solver)
+            if repl_num is not None:
+                sol_filename = add_filename_tail(sol_filename, f"replication{repl_num}")
+            if filename_tail:
+                sol_filename = add_filename_tail(sol_filename, filename_tail)
+            return os.path.join(BASELINES_FOLDER, self.sol_folder_name, self.general_config, sol_filename)
+
+        def find_first_repl_num(inst_name: str):
+            """Find the first replication number such that the solution file does not exist."""
+            repl_num = 0
+            while os.path.exists(get_sol_path(inst_name=inst_name, repl_num=repl_num)):
+                repl_num += 1
+            return repl_num
+
+        def solve_instance(inst_name: str, repl_num: int = None):
+            """Solve the given instance with the given replication number."""
+            instance = Instance.from_name(instance_name, num_dams=self.num_dams)
+            sol_path = get_sol_path(inst_name=inst_name, repl_num=repl_num)
+            self.log(f"[Replication {repl_num}] Solving {instance_name} in replication {repl_num}...")
+            self.solve_instance(instance, sol_path=sol_path)
+            self.log(f"[Replication {repl_num}] Finished solving {instance_name} in replication {repl_num}.")
+
         if instance_names is None:
             instance_names = Baseline.instance_names_eval
 
-        for replication_num in range(num_replications):
-            self.log(f"[Replication {replication_num}] Starting replication {replication_num}...")
-            for instance_name in instance_names:
-                instance = Instance.from_name(instance_name, num_dams=self.num_dams)
-                sol_filename = Baseline.baselines_filename.format(instance_name=instance_name, solver=self.solver)
-                if num_replications > 1:
-                    sol_filename = add_filename_tail(sol_filename, f"replication{replication_num}")
-                if filename_tail:
-                    sol_filename = add_filename_tail(sol_filename, filename_tail)
-                sol_path = os.path.join(BASELINES_FOLDER, self.sol_folder_name, self.general_config, sol_filename)
-                self.solve_instance(instance, sol_path=sol_path)
-            self.log(f"[Replication {replication_num}] Finished replication {replication_num}.")
+        for instance_name in instance_names:
+            if num_replications is None:
+                solve_instance(inst_name=instance_name)
+            else:
+                replication_num = find_first_repl_num(instance_name)
+                final_replication_num = num_replications - 1
+                if replication_num > final_replication_num:
+                    self.log(
+                        f"[Instance {instance_name}] The given final number of replications is {num_replications}, "
+                        f"but the solver {self.solver} already has {replication_num} solutions for {instance_name}."
+                    )
+                while replication_num <= final_replication_num:
+                    solve_instance(inst_name=instance_name, repl_num=replication_num)
+                    replication_num += 1
 
     def tune(self, num_trials: int, instance_names: list[str] = None, num_replications: int = 5):
         """

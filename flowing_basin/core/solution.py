@@ -41,6 +41,19 @@ class Solution(SolutionCore):
         # Calculate number of decision time steps
         num_decision_time_steps = len(self.get_decisions_time_steps())
 
+        # Check if solution distinguishes between assigned and exiting flows, which is no longer supported
+        # Currently, solutions must contain only the exiting flows, even if they not always comply with flow smoothing
+        for dam_id in self.get_ids_of_dams():
+            predicted_flows = self.data["dams"][dam_id].get("flows_predicted")
+            if predicted_flows is not None:
+                inconsistencies.update(
+                    {
+                        "The solution distinguishes between assigned and exiting flows; this is no longer supported":
+                            f"Dam {dam_id} has predicted flows {predicted_flows} "
+                            f"and assigned flows {self.get_exiting_flows_of_dam(dam_id)}."
+                    }
+                )
+
         # If the volumes and powers of the dams are provided, their length should be the same as the number of flows
         inconsistent_dams = dict(flows=[], volumes=[], powers=[])
         for dam_id in self.get_ids_of_dams():
@@ -418,23 +431,6 @@ class Solution(SolutionCore):
 
         return self.data["dams"][idx]["flows"]
 
-    def get_predicted_exiting_flows_of_dam(self, idx: str) -> list[float]:
-
-        """
-        Get the actual exiting flows predicted for the given dam
-        (these may be different from the assigned flows due to clipping).
-
-        :param idx: ID of the dam in the river basin
-        :return: List indicating the predicted flow exiting the reservoir at each point in time (m3/s)
-        """
-
-        predicted_flows = self.data["dams"][idx].get("flows_predicted")
-        if predicted_flows is None:
-            # Assume predicted flows equal the assigned flows
-            predicted_flows = self.get_exiting_flows_of_dam(idx)
-
-        return predicted_flows
-
     def get_objective_function(self) -> float | None:
 
         """
@@ -637,7 +633,6 @@ class Solution(SolutionCore):
         info_time_steps = self.get_information_time_steps()
 
         flows = self.get_exiting_flows_of_dam(dam_id)
-        flows_predicted = self.get_predicted_exiting_flows_of_dam(dam_id)
         volumes = self.get_volumes_of_dam(dam_id)
 
         ax.plot(decision_time_steps, volumes, color='b', label="Predicted volume")
@@ -648,9 +643,7 @@ class Solution(SolutionCore):
 
         twinax = ax.twinx()
         twinax.plot(info_time_steps, self.get_all_prices(), color='r', label="Price")
-        if flows != flows_predicted:
-            twinax.plot(decision_time_steps, flows, color='g', linestyle='--', label="Flow (assigned)")
-        twinax.plot(decision_time_steps, flows_predicted, color='g', linestyle='-', label="Flow")
+        twinax.plot(decision_time_steps, flows, color='g', linestyle='-', label="Flow")
         twinax.set_ylabel("Flow (m3/s), Price (€)")
         twinax.legend()
 

@@ -108,7 +108,8 @@ def lighten_color(color, amount=0.5):
 
 def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:
     """
-    Sorts the dictionary by instance percentile number and returns the implicit solvers and instances
+    Sorts the dictionary by instance percentile number and returns the implicit solvers and instances.
+    It also checks that all solvers have been used for the same instances.
     :param values: dict[solver, dict[instance, Any]]
     :return: List of solvers and list of instances
     """
@@ -120,6 +121,11 @@ def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], lis
     for solver in solvers:
         values[solver] = dict(sorted(values[solver].items(), key=lambda x: extract_percentile(x[0])))  # noqa
     instances = list(values[solvers[0]].keys())
+
+    if any(instances != list(values[solver].keys()) for solver in solvers[1:]):
+        values_keys = {solver: list(values[solver].keys()) for solver in solvers}
+        raise ValueError(f"The instances solved by every solver do not match: {values_keys}")
+
     return solvers, instances
 
 

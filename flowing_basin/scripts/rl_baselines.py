@@ -34,5 +34,5 @@ def plot_history_values_instances(solvers: list[str], save_fig: bool = False):
 
 if __name__ == "__main__":
 
-    # barchart_instances(['MILP', 'PSO'])
-    plot_history_values_instances(['MILP', 'PSO'], save_fig=True)
+    # barchart_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
+    plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)

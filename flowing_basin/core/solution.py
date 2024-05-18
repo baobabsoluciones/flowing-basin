@@ -452,39 +452,40 @@ class Solution(SolutionCore):
 
         return self.data["dams"][idx].get("objective_function_details")
 
-    def get_history_time_stamps(self) -> list[float] | None:
+    def get_history_time_stamps(self) -> list[float]:
 
         """
         Get the time stamps for the history of objective function values (or gap values)
         """
 
-        time_stamps = self.data.get("objective_history")
-        if time_stamps is not None:
-            time_stamps = time_stamps["time_stamps_s"]
+        objective_history = self.data.get("objective_history")
+        if objective_history is not None:
+            return objective_history["time_stamps_s"]
+        else:
+            # Assume it is instantaneous
+            return [0.]
 
-        return time_stamps
-
-    def get_last_time_stamp(self) -> float | None:
+    def get_last_time_stamp(self) -> float:
 
         """
         Get the last time stamp, which gives the time taken to compute the solution in seconds
         """
 
         time_stamps = self.get_history_time_stamps()
-        if time_stamps is not None:
-            return time_stamps[-1]
+        return time_stamps[-1]
 
-    def get_history_objective_function_values(self) -> list[float] | None:
+    def get_history_objective_function_values(self) -> list[float]:
 
         """
         Get the history of objective function values
         """
 
-        values = self.data.get("objective_history")
-        if values is not None:
-            values = values["objective_values_eur"]
-
-        return values
+        objective_history = self.data.get("objective_history")
+        if objective_history is not None:
+            return objective_history["objective_values_eur"]
+        else:
+            # Assume it is instantaneous
+            return [self.get_objective_function()]
 
     def get_history_gap_values(self) -> list[float] | None:
 

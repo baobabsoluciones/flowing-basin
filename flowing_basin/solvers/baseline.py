@@ -11,7 +11,8 @@ from flowing_basin.solvers import (
     PsoRbo, PsoRboConfiguration
 )
 from flowing_basin.solvers.common import (
-    BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances_ax, barchart_instances
+    BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances_ax, barchart_instances,
+    confidence_interval, lighten_color, preprocess_values
 )
 import optuna
 from optuna.trial import Trial
@@ -355,10 +356,15 @@ class Baselines:
                             self.solvers.append(solver)
                         self.solutions.append(baseline)
 
-    def get_solver_instance_history_values(self, num_timestamps: int = 300) -> dict[str, dict[str, np.ndarray]]:
+    def get_solver_instance_history_values(
+            self, num_timestamps: int = 300
+    ) -> tuple[np.ndarray, dict[str, dict[str, np.ndarray]]]:
         """
-        Get an array of historic values for every solver and every instance
-        :return: dict[solver, dict[instance, array]], where each array is of shape (num_timestamps, num_replications)
+        Get an array of historic objective function values for every solver and every instance
+
+        :return: Tuple with:
+            i) array of shape (num_timestamps,) with the timestamps;
+            ii) dict[solver, dict[instance, array]], where each array is of shape (num_timestamps, num_replications)
         """
 
         max_timestamp = max(sol.get_last_time_stamp() for sol in self.solutions)
@@ -374,11 +380,12 @@ class Baselines:
             else:
                 old_array = history_values[solver][instance_name]
                 history_values[solver][instance_name] = np.insert(old_array, old_array.shape[1], interp_values, axis=1)
-        return history_values
+
+        return common_timestamps, history_values
 
     def get_solver_instance_final_values(self) -> dict[str, dict[str, list[float]]]:
         """
-        Get the list of final values (one per replication) for every solver and every instance
+        Get the list of final objective function values (one per replication) for every solver and every instance
         :return: dict[solver, dict[instance, values]]
         """
         final_values = {solver: dict() for solver in self.solvers}
@@ -390,6 +397,38 @@ class Baselines:
             else:
                 final_values[solver][instance_name].append(solution.get_objective_function())
         return final_values
+
+    def plot_history_values_instances(self, filename: str = None):
+
+        """
+        Plot the historic objective function values of all solvers in each instance
+        """
+
+        timestamps, values = self.get_solver_instance_history_values()
+        solvers, instances = preprocess_values(values)
+
+        default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color'][:len(solvers)]
+        _, axes = plt.subplots(1, len(instances), figsize=(20, 4), sharey='all')
+        axes[0].set_ylabel("Income (€)")
+
+        for instance_name, ax in zip(instances, axes):
+            for solver, color in zip(solvers, default_colors):
+                values_solver = values[solver][instance_name]
+                values_mean = np.mean(values_solver, axis=1)
+                ax.plot(timestamps, values_mean, label=solver, color=color)
+                if values_solver.shape[1] > 1:
+                    lower, upper = confidence_interval(values_solver)
+                    ax.fill_between(x=timestamps, y1=lower, y2=upper, color=lighten_color(color))
+            ax.set_xlabel("Time (s)")
+            ax.set_xticks([timestamps[0], timestamps[-1]])
+            ax.set_title(instance_name)
+            ax.legend()
+        solvers_title = ', '.join(solvers)
+        plt.suptitle(f"Evolution of {solvers_title} in {self.general_config}")
+        plt.tight_layout()
+        if filename is not None:
+            plt.savefig(filename)
+        plt.show()
 
     def barchart_instances_ax(self, ax: plt.Axes):
         """

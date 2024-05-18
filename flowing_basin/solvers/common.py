@@ -1,4 +1,5 @@
 import os
+from typing import Any
 from flowing_basin.core import Solution
 from matplotlib import pyplot as plt
 import numpy as np
@@ -84,6 +85,43 @@ def confidence_interval(data: np.ndarray, confidence: float = 0.95) -> tuple[np.
     return lower_bound, upper_bound
 
 
+def lighten_color(color, amount=0.5):
+    """
+    Function from StackOverflow (https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib)
+    Returns a lighter (amount<1) or darker (amount>1) version of the color
+    Examples:
+    >> lighten_color('green', 0.3)
+    # Returns a color that is like the 'green' color, but lighter
+    >> lighten_color('green', 1.3)
+    # Returns a color that is like the 'green' color, but darker
+    """
+    import matplotlib.colors as mc
+    import colorsys
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+
+
+def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """
+    Sorts the dictionary by instance percentile number and returns the implicit solvers and instances
+    :param values: dict[solver, dict[instance, Any]]
+    :return: List of solvers and list of instances
+    """
+
+    def extract_percentile(instance_name: str) -> int:
+        return int(instance_name.split('Percentile')[1])
+
+    solvers = list(values.keys())
+    for solver in solvers:
+        values[solver] = dict(sorted(values[solver].items(), key=lambda x: extract_percentile(x[0])))  # noqa
+    instances = list(values[solvers[0]].keys())
+    return solvers, instances
+
+
 def barchart_instances_ax(
         ax: plt.Axes, values: dict[str, dict[str, float | list[float]]],
         value_type: str, title: str, general_config: str
@@ -101,29 +139,19 @@ def barchart_instances_ax(
     :param general_config: General configuration (e.g. "G1")
     """
 
-    solvers = list(values.keys())
+    solvers, instances = preprocess_values(values)
     bar_width = 0.4 * 2. / len(solvers)
     offsets = [i * bar_width for i in range(len(solvers))]
-
-    # Instances are ordered according to their instance percentile number (e.g. 'Percentile70' -> 70)
-    instances = list(values[solvers[0]].keys())
-    instances.sort(key=lambda instance_name: int(re.search(r'\d+', instance_name).group()))
     x_values = np.arange(len(instances))
 
     # Plot the bars for all instances, one solver at a time
     for solver, offset in zip(solvers, offsets):
 
-        # Items must be ordered according to their instance percentile number (e.g. 'Percentile70' -> 70)
-        # in order to match the x labels
-        sorted_values = dict(sorted(
-            values[solver].items(), key=lambda item: int(re.search(r'\d+', item[0]).group())
-        ))  # noqa
-
         # Get the mean and, if they exist, upper and lower bounds
         values_mean = []
         values_lower = []
         values_upper = []
-        for instance_name, instance_values in sorted_values.items():
+        for instance_name, instance_values in values[solver].items():
             if isinstance(instance_values, list):
                 if len(instance_values) > 1:
                     values_mean.append(np.mean(instance_values))

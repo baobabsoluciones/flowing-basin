@@ -7,9 +7,13 @@ from flowing_basin.solvers import Baselines
 import matplotlib.pyplot as plt
 
 
+GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
+
+
 def barchart_instances(solvers: list[str], save_fig: bool = False):
 
-    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+    num_configs = len(GENERAL_CONFIGS)
+    fig, axes = plt.subplots(num_configs // 2, num_configs // 2, figsize=(12, 12))
     axes = axes.flatten()
     for i, ax in enumerate(axes):
         Baselines(solvers=solvers, general_config=f'G{i}').barchart_instances_ax(ax)
@@ -20,7 +24,15 @@ def barchart_instances(solvers: list[str], save_fig: bool = False):
     plt.show()
 
 
+def plot_history_values_instances(solvers: list[str], save_fig: bool = False):
+
+    solvers_title = "_".join(solvers)
+    for general_config in GENERAL_CONFIGS:
+        filename = f"reports/history_curves_{solvers_title}_{general_config}.png" if save_fig else None
+        Baselines(solvers=solvers, general_config=general_config).plot_history_values_instances(filename=filename)
+
+
 if __name__ == "__main__":
 
     # barchart_instances(['MILP', 'PSO'])
-    print(Baselines(solvers=['PSO'], general_config='G0').get_solver_instance_history_values())
+    plot_history_values_instances(['MILP', 'PSO'], save_fig=True)

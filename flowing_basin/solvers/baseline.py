@@ -356,7 +356,8 @@ class Baselines:
 
     def get_solver_instance_values(self) -> dict[str, dict[str, list[float]]]:
         """
-        Get the dict[solver, dict[instance, values]]
+        Get the list of replication values for every solver and every instance
+        :return: dict[solver, dict[instance, values]]
         """
         values = {solver: dict() for solver in self.solvers}
         for solution in self.solutions:

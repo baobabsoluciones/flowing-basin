@@ -7,7 +7,7 @@ from flowing_basin.solvers import Baselines
 import matplotlib.pyplot as plt
 
 
-def barchart_instances(solvers: list[str]):
+def barchart_instances(solvers: list[str], save_fig: bool = False):
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 12))
     axes = axes.flatten()
@@ -15,7 +15,8 @@ def barchart_instances(solvers: list[str]):
         Baselines(solvers=solvers, general_config=f'G{i}').barchart_instances_ax(ax)
     plt.tight_layout()
     solvers_title = "_".join(solvers)
-    plt.savefig(f"reports/barchart_instances_{solvers_title}.png")
+    if save_fig:
+        plt.savefig(f"reports/barchart_instances_{solvers_title}.png")
     plt.show()
 
 

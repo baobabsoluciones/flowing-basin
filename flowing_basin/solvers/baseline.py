@@ -449,15 +449,20 @@ class Baselines:
             values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
         )
 
-    def get_csv_instance_final_values(self) -> list[list[str | float]]:
+    def get_csv_instance_final_values(self, reference: str = None) -> list[list[str | float]]:
         """
         Create a list of lists representing a CSV file
         with the final objective function value of each solver in every instance.
+
+        :param reference: Solver to use as the reference
         """
 
         values = self.get_solver_instance_final_values()
         solvers, instances = preprocess_values(values)
         rows = []
+
+        if reference not in solvers:
+            raise ValueError(f"The reference must be one of the solvers, but {reference} is not in {solvers}")
 
         first_row = ["Solver"]
         for intance in instances:
@@ -466,14 +471,35 @@ class Baselines:
         rows.append(first_row)
 
         for solver in solvers:
+
             solver_row = [solver]
-            solver_values = []
+
+            # Value for each instance
             for instance in instances:
                 # Use the mean across all replications
                 instance_mean = np.mean(values[solver][instance])
-                solver_row.append(instance_mean)
-                solver_values.append(instance_mean)
-            solver_row.append(np.mean(solver_values))
+                if reference is None:
+                    solver_row.append(instance_mean)
+                else:
+                    ref_value = np.mean(values[reference][instance])
+                    if ref_value > 0:
+                        improvement = (instance_mean - ref_value) / ref_value
+                        solver_row.append(f"{'+'if improvement > 0 else ''}{improvement:.2%}")
+                    else:
+                        solver_row.append(f"+inf%")
+
+            # Mean across all instances
+            solver_mean = np.mean(list(values[solver].values()))
+            if reference is None:
+                solver_row.append(solver_mean)
+            else:
+                ref_mean = np.mean(list(values[reference].values()))
+                if ref_mean > 0:
+                    improvement = (solver_mean - ref_mean) / ref_mean
+                    solver_row.append(f"{'+' if improvement > 0 else ''}{improvement:.2%}")
+                else:
+                    solver_row.append(f"+inf%")
+
             rows.append(solver_row)
 
         return rows

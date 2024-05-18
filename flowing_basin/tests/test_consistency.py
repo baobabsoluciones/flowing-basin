@@ -1,4 +1,5 @@
 from flowing_basin.solvers.rl import ReinforcementLearning
+from flowing_basin.solvers.common import GENERAL_CONFIGS
 from flowing_basin.core import Instance, Solution, Configuration
 from flowing_basin.tools import RiverBasin
 from unittest import TestCase
@@ -128,7 +129,7 @@ class TestBaselinesConsistency(TestConsistency):
     def setUp(self) -> None:
 
         solutions = {
-            sol for general_config in ["G0", "G1"] for sol in ReinforcementLearning.get_all_baselines(general_config)
+            sol for general_config in GENERAL_CONFIGS for sol in ReinforcementLearning.get_all_baselines(general_config)
         }
         solvers = {sol.get_solver() for sol in solutions}
         self.solutions = {solver: [sol for sol in solutions if sol.get_solver() == solver] for solver in solvers}
@@ -182,7 +183,7 @@ class TestBaselinesConsistency(TestConsistency):
                     d_flattened[k_outer] = v_outer
             return d_flattened
 
-        for general_config in ["G0", "G1"]:
+        for general_config in GENERAL_CONFIGS:
 
             sols = ReinforcementLearning.get_all_baselines(general_config)
             configs = set()
@@ -204,10 +205,10 @@ class TestBaselinesConsistency(TestConsistency):
                 config_hashable = tuple(sorted(config_flattened.items()))
                 configs.add(config_hashable)
 
+            configs_str = '\n'.join([str(config) for config in configs])
             self.assertEqual(
                 len(configs), 1,
-                msg=f"The configurations under {general_config} are not unique: "
-                    f"{'\n'.join([str(config) for config in configs])}."
+                msg=f"The configurations under {general_config} are not unique: {configs_str}."
             )
 
 

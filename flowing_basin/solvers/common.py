@@ -3,11 +3,11 @@ from typing import Any
 from flowing_basin.core import Solution
 from matplotlib import pyplot as plt
 import numpy as np
-import re
 import scipy.stats as stats
 
 
 BASELINES_FOLDER = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
+GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
 
 
 def get_all_baselines(general_config: str) -> list[Solution]:

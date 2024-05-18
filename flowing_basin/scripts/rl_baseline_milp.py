@@ -5,6 +5,7 @@ The solutions themselves are calculated in `flowing_basin/scripts/rl_baseline.py
 """
 
 from flowing_basin.solvers.rl import ReinforcementLearning
+from flowing_basin.solvers.common import GENERAL_CONFIGS
 import matplotlib.pyplot as plt
 import re
 
@@ -14,9 +15,7 @@ def extract_percentile(item):
     return int(match.group()) if match else float('inf')
 
 
-general_configs = ["G0", "G1"]
-
-for general in general_configs:
+for general in GENERAL_CONFIGS:
 
     instance_gap = []
     for baseline in ReinforcementLearning.get_all_baselines(general):

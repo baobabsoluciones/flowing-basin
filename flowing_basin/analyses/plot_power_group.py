@@ -8,7 +8,7 @@ from cornflow_client.core.tools import load_json
 from flowing_basin.tools import PowerGroup
 from flowing_basin.core import Instance
 from flowing_basin.solvers.rl import ReinforcementLearning
-from flowing_basin.solvers.common import lighten_color
+from flowing_basin.solvers.common import lighten_color, CONSTANTS_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -26,7 +26,7 @@ else:
     filename_solver = ''
     plot_title = ''
 filename = f'power_group_charts/power_vs_turbine_flow{filename_solver}.eps'
-constants = Instance.from_dict(load_json(ReinforcementLearning.constants_path))
+constants = Instance.from_dict(load_json(CONSTANTS_PATH.format(num_dams=2)))
 
 if PLOT_SOLVER_FLOWS and SOLVER == "MILP":
     solver_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}

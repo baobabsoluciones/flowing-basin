@@ -330,6 +330,7 @@ class RewardConfiguration(BaseProcessableConfiguration):  # noqa
 @dataclass(kw_only=True)
 class TrainingConfiguration(BaseProcessableConfiguration):  # noqa
 
+    # noinspection PyUnresolvedReferences
     """
     :param length_episodes:
         The length of episodes.
@@ -524,8 +525,7 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
     def post_process(self):
 
         """
-        Extend the sight of all features
-        by the number of additional periods per action block.
+        Add missing dam IDs and extent the sight of each feature by the action block
         """
 
         ObservationConfiguration.post_process(self)
@@ -533,6 +533,19 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         RewardConfiguration.post_process(self)
         TrainingConfiguration.post_process(self)
 
+        # Add missing dam IDs when num_dams > 2
+        self.dam_ids = [
+            "dam1", "dam2", "dam3_dam2copy", "dam4_dam2copy", "dam5_dam1copy", "dam6_dam1copy"
+        ][:self.num_dams]
+        for feature in self.features:
+            for dam_id in self.dam_ids:
+                if (feature, dam_id) not in self.num_steps_sight:
+                    # If dam is not dam1 or dam2,
+                    # it will be e.g. dam3_dam2copy (a copy of dam2) or dam4_dam1copy (a copy of dam1)
+                    copied_dam_id = dam_id[dam_id.rfind("_") + 1: dam_id.rfind("copy")]
+                    self.num_steps_sight[feature, dam_id] = self.num_steps_sight[feature, copied_dam_id]
+
+        # Extend the sight of all features by the number of additional periods per action block
         for feature in self.features:
             if feature not in self.features_not_expand:
                 for dam_id in self.dam_ids:

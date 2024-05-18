@@ -5,11 +5,11 @@ Plot the flow limit of dam2 with respect to its volume
 
 from cornflow_client.core.tools import load_json
 from flowing_basin.core import Instance
-from flowing_basin.solvers.rl import ReinforcementLearning
+from flowing_basin.solvers.common import CONSTANTS_PATH
 from matplotlib import pyplot as plt
 import numpy as np
 
-constants = Instance.from_dict(load_json(ReinforcementLearning.constants_path))
+constants = Instance.from_dict(load_json(CONSTANTS_PATH.format(num_dams=2)))
 points = constants.get_flow_limit_obs_for_channel("dam2")
 observed_vols = points["observed_vols"]
 observed_flows = points["observed_flows"]

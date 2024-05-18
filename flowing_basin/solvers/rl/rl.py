@@ -4,7 +4,7 @@ from flowing_basin.solvers.rl import (
     RLConfiguration, RLEnvironment, RLTrain, RLRun
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
-from flowing_basin.solvers.common import get_all_baselines, barchart_instances
+from flowing_basin.solvers.common import get_all_baselines, barchart_instances, CONSTANTS_PATH
 from cornflow_client.core.tools import load_json
 from stable_baselines3 import SAC, A2C, PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -36,7 +36,6 @@ class ReinforcementLearning:
     observation_records_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/observation_records")
 
     # General data
-    constants_path = os.path.join(os.path.dirname(__file__), "../../data/constants/constants_2dams.json")
     train_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_train.pickle")
     test_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_test.pickle")
 
@@ -60,8 +59,9 @@ class ReinforcementLearning:
         self.config_full_name = ''.join(self.config_names.values())  # Identical to `config_name`, but in alphabetical order
 
         self.config = self.get_config(self.config_names)
+        self.constants_path = CONSTANTS_PATH.format(num_dams=self.config.num_dams)
         self.agent_name = f"rl-{self.config_full_name}"
-        self.constants = Instance.from_dict(load_json(ReinforcementLearning.constants_path))
+        self.constants = Instance.from_dict(load_json(self.constants_path))
 
         # The first two digits in the observation name (e.g., "O211" -> "O21")
         # indicate the type of observations that should be used for the projector
@@ -101,7 +101,7 @@ class ReinforcementLearning:
             projector=self.create_projector(),
             update_observation_record=save_obs,
             save_replay_buffer=save_replay_buffer,
-            path_constants=ReinforcementLearning.constants_path,
+            path_constants=self.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
             path_folder=self.get_agent_folder_path() if save_agent else None,
@@ -180,7 +180,7 @@ class ReinforcementLearning:
             train = RLTrain(
                 config=reduced_config,
                 projector=Projector.create_projector(reduced_config),
-                path_constants=ReinforcementLearning.constants_path,
+                path_constants=CONSTANTS_PATH.format(num_dams=reduced_config.num_dams),
                 path_train_data=ReinforcementLearning.train_data_path,
                 path_test_data=ReinforcementLearning.test_data_path,
                 path_folder=reduced_agent_path,
@@ -201,7 +201,7 @@ class ReinforcementLearning:
             env = RLEnvironment(
                 config=reduced_config,
                 projector=Projector.create_projector(reduced_config),
-                path_constants=ReinforcementLearning.constants_path,
+                path_constants=CONSTANTS_PATH.format(num_dams=reduced_config.num_dams),
                 path_historical_data=ReinforcementLearning.train_data_path,
                 update_observation_record=True
             )
@@ -312,7 +312,7 @@ class ReinforcementLearning:
         env = RLEnvironment(
             config=self.config,
             projector=self.create_projector(),
-            path_constants=ReinforcementLearning.constants_path,
+            path_constants=self.constants_path,
             path_historical_data=ReinforcementLearning.train_data_path,
             update_observation_record=update_obs
         )
@@ -1186,7 +1186,7 @@ class ReinforcementLearning:
             env = RLEnvironment(
                 config=config,
                 projector=Projector.create_projector(config),
-                path_constants=ReinforcementLearning.constants_path,
+                path_constants=CONSTANTS_PATH.format(num_dams=config.num_dams),
                 path_historical_data=ReinforcementLearning.train_data_path,
                 update_observation_record=False
             )

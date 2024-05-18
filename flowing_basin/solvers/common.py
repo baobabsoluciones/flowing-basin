@@ -6,6 +6,7 @@ import numpy as np
 import scipy.stats as stats
 
 
+CONSTANTS_PATH = os.path.join(os.path.dirname(__file__), "../data/constants/constants_{num_dams}dams.json")
 BASELINES_FOLDER = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
 GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
 

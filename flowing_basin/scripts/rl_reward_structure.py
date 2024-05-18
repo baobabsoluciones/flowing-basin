@@ -41,7 +41,10 @@ else:
     for baseline in ReinforcementLearning.get_all_baselines(general_config):
 
         # Get the reward per timestep
-        run = rl_for_solver.run_imitator(solution=baseline, instance=Instance.from_name(baseline.get_instance_name()))
+        run = rl_for_solver.run_imitator(
+            solution=baseline,
+            instance=Instance.from_name(baseline.get_instance_name(), num_dams=rl_for_solver.config.num_dams)
+        )
         avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
 
         # Add to results
@@ -59,7 +62,10 @@ else:
     greedy_instances_values = dict()
     for baseline in ReinforcementLearning.get_all_baselines(general_config):
         if baseline.get_solver() == 'rl-greedy':
-            run = rl_for_greedy.run_imitator(solution=baseline, instance=Instance.from_name(baseline.get_instance_name()))
+            run = rl_for_greedy.run_imitator(
+                solution=baseline,
+                instance=Instance.from_name(baseline.get_instance_name(), num_dams=rl_for_solver.config.num_dams)
+            )
             avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
             greedy_instances_values[baseline.get_instance_name()] = avg_reward
 

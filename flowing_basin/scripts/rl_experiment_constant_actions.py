@@ -6,7 +6,7 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 from flowing_basin.core import Instance
 from matplotlib import pyplot as plt
 
-instances = [Instance.from_name(f"Percentile{percentile:02}") for percentile in range(0, 110, 10)]
+instances = [Instance.from_name(f"Percentile{percentile:02}", num_dams=2) for percentile in range(0, 110, 10)]
 # instances = [Instance.from_name("Percentile50")]
 general_configs = ["G0", "G1"]
 percentages = [i / 10 for i in range(11)]

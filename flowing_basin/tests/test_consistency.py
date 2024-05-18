@@ -30,7 +30,7 @@ class TestConsistency(TestCase):
         )
 
         config = solution.get_configuration()
-        instance = Instance.from_name(solution.get_instance_name())
+        instance = Instance.from_name(solution.get_instance_name(), num_dams=solution.get_num_dams())
         mode = getattr(config, 'mode', 'linear')
         detail_penalty = dict(
             startups=config.startups_penalty,
@@ -239,7 +239,7 @@ class TestAgentsConsistency(TestConsistency):
 
         for agent in self.agents:
             rl = ReinforcementLearning(agent)
-            runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+            runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances(rl.config.num_dams))
             for run in runs:
                 self.check_consistency(run.solution)
             print(f"Test passed by agent {agent}.")
@@ -254,7 +254,7 @@ class TestAgentsConsistency(TestConsistency):
 
             rl = ReinforcementLearning(agent)
             solution = random.choice(rl.get_all_baselines(rl.config_names['G']))
-            instance = Instance.from_name(solution.get_instance_name())
+            instance = Instance.from_name(solution.get_instance_name(), num_dams=rl.config.num_dams)
             run = rl.run_imitator(solution=solution, instance=instance)
 
             # Detect the edge case

@@ -80,7 +80,7 @@ class TrainingDataCallback(BaseCallback):
         self.eval_freq = eval_freq
         self.config = config
 
-        instance_objects = [Instance.from_name(instance) for instance in instances]
+        instance_objects = [Instance.from_name(instance, num_dams=self.config.num_dams) for instance in instances]
         self.runs = [
             RLRun(instance=instance_object, config=self.config, projector=projector)
             for instance_object in instance_objects

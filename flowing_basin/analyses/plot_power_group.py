@@ -37,7 +37,7 @@ if PLOT_SOLVER_FLOWS and SOLVER == "MILP":
 elif PLOT_SOLVER_FLOWS:
     solver_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}
     rl = ReinforcementLearning(SOLVER)
-    runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+    runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances(num_dams=rl.config.num_dams))
     for run in runs:
         sol = run.solution
         for dam_id in sol.get_ids_of_dams():

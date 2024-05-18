@@ -737,7 +737,7 @@ class ReinforcementLearning:
         projector = self.create_projector()
         for inst in instance:
             if isinstance(inst, str):
-                inst = Instance.from_name(inst)
+                inst = Instance.from_name(inst, num_dams=self.config.num_dams)
             run = RLRun(
                 config=self.config,
                 instance=inst,
@@ -839,7 +839,7 @@ class ReinforcementLearning:
             else:
                 policy = named_policy
 
-            for instance in self.get_all_fixed_instances():
+            for instance in self.get_all_fixed_instances(new_config.num_dams):
 
                 if self.verbose >= 2:
                     print(f"[{agent_name}] [{reward_config}] [{instance.get_instance_name()}] Running...")
@@ -1018,7 +1018,7 @@ class ReinforcementLearning:
                 # Calculate a fresh avg income using the best model
                 rl = ReinforcementLearning(agent)
                 values[agent] = dict()
-                runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+                runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances(rl.config.num_dams))
                 for run in runs:
                     if rl.config.action_type == "adjustments":
                         # Get the best solution achieved, not the latest one
@@ -1108,7 +1108,7 @@ class ReinforcementLearning:
                 # Calculate a fresh avg income using the best model
                 rl = ReinforcementLearning(agent)
                 incomes = []
-                runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances())
+                runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances(rl.config.num_dams))
                 for run in runs:
                     if rl.config.action_type == "adjustments":
                         # Get the best solution achieved, not the latest one
@@ -1333,14 +1333,16 @@ class ReinforcementLearning:
         return config_names
 
     @staticmethod
-    def get_all_fixed_instances() -> list[Instance]:
+    def get_all_fixed_instances(num_dams: int) -> list[Instance]:
 
         """
         Get all fixed instances that are being used to evaluate the agents and baselines.
         These instances are Percentile00, Percentile10, ..., Percentile100, from driest to rainiest.
         """
 
-        instances = [Instance.from_name(f"Percentile{percentile:02}") for percentile in range(0, 110, 10)]
+        instances = [
+            Instance.from_name(f"Percentile{percentile:02}", num_dams=num_dams) for percentile in range(0, 110, 10)
+        ]
         return instances
 
     @staticmethod
@@ -1353,13 +1355,16 @@ class ReinforcementLearning:
         :return:
         """
 
-        def get_solution_avg_reward(sol: Solution) -> float:
+        def get_solution_avg_reward(sol: Solution, num_dams: int) -> float:
             """
             Get the reward per timestep of an agent imitating the solution
             :param sol:
+            :param num_dams:
             :return:
             """
-            run = rl.run_imitator(solution=sol, instance=Instance.from_name(sol.get_instance_name()))
+            run = rl.run_imitator(
+                solution=sol, instance=Instance.from_name(sol.get_instance_name(), num_dams=num_dams)
+            )
             avg_reward = sum(run.rewards_per_period) / len(run.rewards_per_period)
             return avg_reward
 
@@ -1368,19 +1373,23 @@ class ReinforcementLearning:
         greedy_values = dict()
         for baseline in ReinforcementLearning.get_all_baselines(rl.config_names['G']):
             if baseline.get_solver() == solver:
-                solver_values[baseline.get_instance_name()] = get_solution_avg_reward(baseline)
+                solver_values[baseline.get_instance_name()] = get_solution_avg_reward(
+                    baseline, num_dams=rl.config.num_dams
+                )
             elif baseline.get_solver() == 'rl-greedy':
-                greedy_values[baseline.get_instance_name()] = get_solution_avg_reward(baseline)
+                greedy_values[baseline.get_instance_name()] = get_solution_avg_reward(
+                    baseline, num_dams=rl.config.num_dams
+                )
 
-        sorted_greedy_values = dict(sorted(greedy_values.items()))
+        sorted_greedy_values = dict(sorted(greedy_values.items()))  # noqa
         print(f"Instance values of rl-greedy:", sorted_greedy_values)
         x = np.array(list(sorted_greedy_values.values()))
 
-        sorted_solver_values = dict(sorted(solver_values.items()))
+        sorted_solver_values = dict(sorted(solver_values.items()))  # noqa
         print(f"Instance values of solver {solver}:", sorted_solver_values)
         y = np.array(list(sorted_solver_values.values()))
 
-        slope, intercept = np.polyfit(x, y, 1)
+        slope, intercept = np.polyfit(x, y, 1)  # noqa
         print(
             f"Fitted line for solver {solver} in {rl.config_names['G']}: "
             f"{slope} * x + {intercept} | R = {np.corrcoef(x, y)[0, 1]}"

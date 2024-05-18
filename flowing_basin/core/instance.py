@@ -37,7 +37,7 @@ class Instance(InstanceCore):
         return data_p
 
     @classmethod
-    def from_name(cls, instance_name: str, num_dams: int = 2) -> "Instance":
+    def from_name(cls, instance_name: str, num_dams: int) -> "Instance":
 
         instance_filename = Instance.instances_filenames.format(instance_name=instance_name, num_dams=num_dams)
         instance_path = os.path.join(Instance.instances_folder, instance_filename)

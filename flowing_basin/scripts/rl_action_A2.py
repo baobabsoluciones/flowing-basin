@@ -12,7 +12,7 @@ baseline_colors = {
     'rl-greedy': 'gray'
 }
 rl = ReinforcementLearning("rl-A23G0O3R1T3", verbose=2)
-instances = rl.get_all_fixed_instances()
+instances = rl.get_all_fixed_instances(rl.config.num_dams)
 num_cols = math.ceil(math.sqrt(len(instances)))
 num_rows = math.ceil(len(instances) / num_cols)
 fig, axs = plt.subplots(num_rows, num_cols)

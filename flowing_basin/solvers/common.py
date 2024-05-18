@@ -4,6 +4,7 @@ from flowing_basin.core import Solution
 from matplotlib import pyplot as plt
 import numpy as np
 import scipy.stats as stats
+import csv
 
 
 CONSTANTS_PATH = os.path.join(os.path.dirname(__file__), "../data/constants/constants_{num_dams}dams.json")
@@ -104,6 +105,27 @@ def lighten_color(color, amount=0.5):
         c = color
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+
+
+def print_save_csv(rows: list[list[Any]], csv_filepath: str = None):
+    """
+    Save and print the given list of lists as a CSV file
+    @param rows:
+    @param csv_filepath:
+    @return:
+    """
+
+    # Save results in .csv file
+    if csv_filepath is not None:
+        with open(csv_filepath, 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in rows:
+                writer.writerow(row)
+
+    # Print results
+    for row in rows:
+        row = [f'{el:.2f}' if isinstance(el, float) else el for el in row]
+        print(','.join(row))
 
 
 def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:

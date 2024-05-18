@@ -448,3 +448,32 @@ class Baselines:
         barchart_instances(
             values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
         )
+
+    def get_csv_instance_final_values(self) -> list[list[str | float]]:
+        """
+        Create a list of lists representing a CSV file
+        with the final objective function value of each solver in every instance.
+        """
+
+        values = self.get_solver_instance_final_values()
+        solvers, instances = preprocess_values(values)
+        rows = []
+
+        first_row = ["Solver"]
+        for intance in instances:
+            first_row.append(intance)
+        first_row.append("Average")
+        rows.append(first_row)
+
+        for solver in solvers:
+            solver_row = [solver]
+            solver_values = []
+            for instance in instances:
+                # Use the mean across all replications
+                instance_mean = np.mean(values[solver][instance])
+                solver_row.append(instance_mean)
+                solver_values.append(instance_mean)
+            solver_row.append(np.mean(solver_values))
+            rows.append(solver_row)
+
+        return rows

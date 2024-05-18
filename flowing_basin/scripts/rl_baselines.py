@@ -4,6 +4,7 @@ Script to analyze existing solutions that act as baselines for RL
 """
 
 from flowing_basin.solvers import Baselines
+from flowing_basin.solvers.common import print_save_csv
 import matplotlib.pyplot as plt
 
 
@@ -32,7 +33,21 @@ def plot_history_values_instances(solvers: list[str], save_fig: bool = False):
         Baselines(solvers=solvers, general_config=general_config).plot_history_values_instances(filename=filename)
 
 
+def csv_instance_final_values(solvers: list[str], save_csv: bool = False):
+
+    rows_total = []
+    for general_config in GENERAL_CONFIGS:
+        rows = Baselines(solvers=solvers, general_config=general_config).get_csv_instance_final_values()
+        for row in rows:
+            row.insert(0, general_config)
+        rows_total.extend(rows)
+    solvers_title = "_".join(solvers)
+    csv_filename = f"reports/final_values_{solvers_title}.csv" if save_csv else None
+    print_save_csv(rows_total, csv_filepath=csv_filename)
+
+
 if __name__ == "__main__":
 
     # barchart_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
-    plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
+    # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
+    csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)

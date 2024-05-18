@@ -4,7 +4,7 @@ from flowing_basin.solvers.rl import (
     RLConfiguration, RLEnvironment, RLTrain, RLRun
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
-from flowing_basin.solvers.common import get_all_baselines, barchart_instances, CONSTANTS_PATH
+from flowing_basin.solvers.common import get_all_baselines, barchart_instances, CONSTANTS_PATH, print_save_csv
 from cornflow_client.core.tools import load_json
 from stable_baselines3 import SAC, A2C, PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -968,17 +968,8 @@ class ReinforcementLearning:
         for agent, training_time in zip(agents, training_times):
             results.append([agent, training_time])
 
-        # Save results in .csv file
-        if csv_filepath is not None:
-            with open(csv_filepath, 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                for result in results:
-                    writer.writerow(result)
-
-        # Print results
-        for line in results:
-            line = [f'{el:.2f}' if isinstance(el, float) else el for el in line]
-            print(','.join(line))
+        # Save results in .csv file and print them
+        print_save_csv(results, csv_filepath=csv_filepath)
 
     @staticmethod
     def barchart_instances_incomes(

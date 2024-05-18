@@ -464,6 +464,16 @@ class Solution(SolutionCore):
 
         return time_stamps
 
+    def get_last_time_stamp(self) -> float | None:
+
+        """
+        Get the last time stamp, which gives the time taken to compute the solution in seconds
+        """
+
+        time_stamps = self.get_history_time_stamps()
+        if time_stamps is not None:
+            return time_stamps[-1]
+
     def get_history_objective_function_values(self) -> list[float] | None:
 
         """
@@ -502,7 +512,7 @@ class Solution(SolutionCore):
 
         return final_gap
 
-    def get_history_objective_function_value(self, time_s: float) -> float:
+    def get_history_objective_function_value(self, time_s: float | np.ndarray) -> float | np.ndarray:
 
         """
         Get the objective function value

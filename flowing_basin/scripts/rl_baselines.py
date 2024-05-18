@@ -22,4 +22,5 @@ def barchart_instances(solvers: list[str], save_fig: bool = False):
 
 if __name__ == "__main__":
 
-    barchart_instances(['MILP', 'PSO'])
+    # barchart_instances(['MILP', 'PSO'])
+    print(Baselines(solvers=['PSO'], general_config='G0').get_solver_instance_history_values())

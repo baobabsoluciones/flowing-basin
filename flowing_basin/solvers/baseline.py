@@ -2,6 +2,7 @@ import os
 from copy import deepcopy
 from datetime import datetime
 from dataclasses import fields
+import numpy as np
 from cornflow_client.core.tools import load_json
 from flowing_basin.core import Instance, Solution, Configuration
 from flowing_basin.solvers.rl import GeneralConfiguration
@@ -354,27 +355,48 @@ class Baselines:
                             self.solvers.append(solver)
                         self.solutions.append(baseline)
 
-    def get_solver_instance_values(self) -> dict[str, dict[str, list[float]]]:
+    def get_solver_instance_history_values(self, num_timestamps: int = 300) -> dict[str, dict[str, np.ndarray]]:
         """
-        Get the list of replication values for every solver and every instance
-        :return: dict[solver, dict[instance, values]]
+        Get an array of historic values for every solver and every instance
+        :return: dict[solver, dict[instance, array]], where each array is of shape (num_timestamps, num_replications)
         """
-        values = {solver: dict() for solver in self.solvers}
+
+        max_timestamp = max(sol.get_last_time_stamp() for sol in self.solutions)
+        common_timestamps = np.linspace(0., max_timestamp, num_timestamps)
+
+        history_values = {solver: dict() for solver in self.solvers}
         for solution in self.solutions:
             solver = solution.get_solver()
             instance_name = solution.get_instance_name()
-            if instance_name not in values[solver]:
-                values[solver].update({instance_name: [solution.get_objective_function()]})
+            interp_values = solution.get_history_objective_function_value(common_timestamps)
+            if instance_name not in history_values[solver]:
+                history_values[solver].update({instance_name: interp_values.reshape(-1, 1)})
             else:
-                values[solver][instance_name].append(solution.get_objective_function())
-        return values
+                old_array = history_values[solver][instance_name]
+                history_values[solver][instance_name] = np.insert(old_array, old_array.shape[1], interp_values, axis=1)
+        return history_values
+
+    def get_solver_instance_final_values(self) -> dict[str, dict[str, list[float]]]:
+        """
+        Get the list of final values (one per replication) for every solver and every instance
+        :return: dict[solver, dict[instance, values]]
+        """
+        final_values = {solver: dict() for solver in self.solvers}
+        for solution in self.solutions:
+            solver = solution.get_solver()
+            instance_name = solution.get_instance_name()
+            if instance_name not in final_values[solver]:
+                final_values[solver].update({instance_name: [solution.get_objective_function()]})
+            else:
+                final_values[solver][instance_name].append(solution.get_objective_function())
+        return final_values
 
     def barchart_instances_ax(self, ax: plt.Axes):
         """
         Plot a barchart in the given Axes with the objective function value of each solver at every instance.
         :param ax: matplotlib.pyplot Axes object
         """
-        values = self.get_solver_instance_values()
+        values = self.get_solver_instance_final_values()
         barchart_instances_ax(
             ax, values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
         )
@@ -383,7 +405,7 @@ class Baselines:
         """
         Plot a barchart with the objective function value of each solver at every instance.
         """
-        values = self.get_solver_instance_values()
+        values = self.get_solver_instance_final_values()
         barchart_instances(
             values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
         )

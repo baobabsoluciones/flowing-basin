@@ -9,9 +9,12 @@ from flowing_basin.solvers import (
     Heuristic, HeuristicConfiguration, LPModel, LPConfiguration, PSO, PSOConfiguration,
     PsoRbo, PsoRboConfiguration
 )
-from flowing_basin.solvers.common import BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances
+from flowing_basin.solvers.common import (
+    BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances_ax, barchart_instances
+)
 import optuna
 from optuna.trial import Trial
+from matplotlib import pyplot as plt
 
 
 class Baseline:
@@ -351,18 +354,35 @@ class Baselines:
                             self.solvers.append(solver)
                         self.solutions.append(baseline)
 
-    def barchart_instances(self):
-
+    def get_solver_instance_values(self) -> dict[str, dict[str, list[float]]]:
         """
-        Plot a barchart with the objective function value of each solver at every instance.
-        @return:
+        Get the dict[solver, dict[instance, values]]
         """
-
-        # Get values: dict[solver, dict[instance, value]]
         values = {solver: dict() for solver in self.solvers}
         for solution in self.solutions:
-            values[solution.get_solver()].update({solution.get_instance_name(): solution.get_objective_function()})
+            solver = solution.get_solver()
+            instance_name = solution.get_instance_name()
+            if instance_name not in values[solver]:
+                values[solver].update({instance_name: [solution.get_objective_function()]})
+            else:
+                values[solver][instance_name].append(solution.get_objective_function())
+        return values
 
+    def barchart_instances_ax(self, ax: plt.Axes):
+        """
+        Plot a barchart in the given Axes with the objective function value of each solver at every instance.
+        :param ax: matplotlib.pyplot Axes object
+        """
+        values = self.get_solver_instance_values()
+        barchart_instances_ax(
+            ax, values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
+        )
+
+    def barchart_instances(self):
+        """
+        Plot a barchart with the objective function value of each solver at every instance.
+        """
+        values = self.get_solver_instance_values()
         barchart_instances(
             values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
         )

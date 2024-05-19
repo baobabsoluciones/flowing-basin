@@ -824,7 +824,11 @@ class Heuristic(Experiment):
                 initial_flows={
                     dam_id: self.instance.get_initial_lags_of_channel(dam_id)[0]
                     for dam_id in self.instance.get_ids_of_dams()
-                }
+                },
+                max_flows={
+                    dam_id: self.instance.get_max_flow_of_channel(dam_id)
+                    for dam_id in self.instance.get_ids_of_dams()
+                },
             ), (
                 "The solution from the heuristic does not comply with the flow smoothing parameter."
             )

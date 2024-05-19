@@ -102,7 +102,11 @@ for solver, example, num_dams, power_penalty in product(SOLVERS, INSTANCES, NUMS
         initial_flows={
             dam_id: instance.get_initial_lags_of_channel(dam_id)[0]
             for dam_id in instance.get_ids_of_dams()
-        }
+        },
+        max_flows={
+            dam_id: instance.get_max_flow_of_channel(dam_id)
+            for dam_id in instance.get_ids_of_dams()
+        },
     ):
         warnings.warn("The solution does not comply with the flow smoothing parameter.")
     print("Optimal solution:", solver_object.solution.data)

@@ -385,7 +385,7 @@ class Baselines:
 
     def get_solver_instance_final_values(self) -> dict[str, dict[str, list[float]]]:
         """
-        Get the list of final objective function values (one per replication) for every solver and every instance
+        Get the list of final objective function values (one per replication) for every solver and every instance.
         :return: dict[solver, dict[instance, values]]
         """
         final_values = {solver: dict() for solver in self.solvers}
@@ -397,6 +397,44 @@ class Baselines:
             else:
                 final_values[solver][instance_name].append(solution.get_objective_function())
         return final_values
+
+    def get_solver_instance_smoothing_violations(self) -> dict[str, dict[str, list[float]]]:
+        """
+        Get the list of the number of flow smoothing violations (one per replication)
+        for every solver and every instance.
+        :return: dict[solver, dict[instance, num_violations]]
+        """
+
+        violation_values = {solver: dict() for solver in self.solvers}
+
+        for solution in self.solutions:
+
+            solver = solution.get_solver()
+            instance_name = solution.get_instance_name()
+            config = solution.get_configuration()
+
+            general_config_dict = Baseline.get_general_config_dict(self.general_config)
+            general_config_obj = GeneralConfiguration.from_dict(general_config_dict)
+            num_dams = general_config_obj.num_dams
+            instance = Instance.from_name(instance_name, num_dams=num_dams)
+            initial_flows = {
+                dam_id: instance.get_initial_lags_of_channel(dam_id)[0] for dam_id in instance.get_ids_of_dams()
+            }
+            max_flows = {
+                dam_id: instance.get_max_flow_of_channel(dam_id) for dam_id in instance.get_ids_of_dams()
+            }
+
+            num_violations = solution.get_num_flow_smoothing_violations(
+                flow_smoothing=config.flow_smoothing,
+                initial_flows=initial_flows,
+                max_flows=max_flows
+            )
+            if instance_name not in violation_values[solver]:
+                violation_values[solver].update({instance_name: [num_violations]})
+            else:
+                violation_values[solver][instance_name].append(num_violations)
+
+        return violation_values
 
     def plot_history_values_instances(self, filename: str = None):
 
@@ -461,7 +499,7 @@ class Baselines:
         solvers, instances = preprocess_values(values)
         rows = []
 
-        if reference not in solvers:
+        if reference is not None and reference not in solvers:
             raise ValueError(f"The reference must be one of the solvers, but {reference} is not in {solvers}")
 
         first_row = ["Solver"]

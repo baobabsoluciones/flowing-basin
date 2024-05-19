@@ -207,37 +207,64 @@ class Solution(SolutionCore):
 
         return inconsistencies
 
-    def complies_with_flow_smoothing(
-            self, flow_smoothing: int, initial_flows: dict[str, float], epsilon: float = 1e-6
-    ) -> bool:
+    def get_num_flow_smoothing_violations(
+            self, flow_smoothing: int, initial_flows: dict[str, float], max_flows: dict[str, float],
+            min_relvar: float = 0.01, epsilon: float = 1e-6
+    ) -> int:
 
         """
-        Indicates whether the solution complies with the given flow smoothing parameter or not
+        Indicates the number of times in which the given flow smoothing parameter is violated
 
         :param flow_smoothing:
         :param initial_flows: First lag of each dam
+        :param max_flows: Maximum flow of each dam
+        :param min_relvar:
+            Minimum variation between the current and previous flow (as a fraction of the maximum flow)
+            necessary to consider a violation has happened
         :param epsilon: Small tolerance for rounding errors
         :return:
         """
 
         # If there is no flow smoothing, then there is no need to check
         if flow_smoothing == 0:
-            return True
+            return 0
 
-        compliance = True
+        num_violations = 0
         for dam_id in self.get_ids_of_dams():
+
             flows = self.get_exiting_flows_of_dam(dam_id)
             variations = []
             previous_flow = initial_flows[dam_id]
+
             for flow in flows:
+
                 current_variation = flow - previous_flow
-                if any([current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]):
-                    # print(dam_id, flow, current_variation, variations[-flow_smoothing:])
-                    compliance = False
+                if abs(current_variation) < min_relvar * max_flows[dam_id]:
+                    current_variation = 0.
+
+                is_violation = any(
+                    [current_variation * past_variation < - epsilon for past_variation in variations[-flow_smoothing:]]
+                )
+                if is_violation:
+                    # Reset the list of past variations to avoid counting the same violation twice
+                    # print(num_violations, dam_id, flow, current_variation, variations[-flow_smoothing:])
+                    variations = []
+                    num_violations += 1
+
                 variations.append(current_variation)
                 previous_flow = flow
 
-        return compliance
+        return num_violations
+
+    def complies_with_flow_smoothing(self, **kwargs) -> bool:
+
+        """
+        Indicates whether the solution complies with the given flow smoothing parameter or not
+
+        :param kwargs: Arguments passed to `get_num_flow_smoothing_violations`
+        :return:
+        """
+        return self.get_num_flow_smoothing_violations(**kwargs) == 0
 
     def get_instance_name(self) -> str:
 

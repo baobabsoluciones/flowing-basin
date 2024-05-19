@@ -67,5 +67,5 @@ if __name__ == "__main__":
 
     # barchart_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
-    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], reference="rl-greedy", save_csv=True)
-    csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=False, save_csv=True)
+    csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)
+    # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=False, save_csv=True)

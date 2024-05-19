@@ -552,7 +552,7 @@ class Baselines:
                 # Use the mean across all replications
                 instance_mean = np.mean(values[solver][instance])
                 if reference is None:
-                    solver_row.append(instance_mean)
+                    solver_row.append(f"{instance_mean:.0f}")
                 else:
                     ref_value = np.mean(values[reference][instance])
                     if ref_value > 0:
@@ -564,7 +564,7 @@ class Baselines:
             # Mean across all instances
             solver_mean = np.mean(list(values[solver].values()))
             if reference is None:
-                solver_row.append(solver_mean)
+                solver_row.append(f"{solver_mean:.0f}")
             else:
                 ref_mean = np.mean(list(values[reference].values()))
                 if ref_mean > 0:

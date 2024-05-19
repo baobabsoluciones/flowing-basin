@@ -1,6 +1,6 @@
 import os
 from typing import Any
-from flowing_basin.core import Solution
+from flowing_basin.core import Instance, Solution
 from matplotlib import pyplot as plt
 import numpy as np
 import scipy.stats as stats
@@ -12,39 +12,43 @@ BASELINES_FOLDER = os.path.join(os.path.dirname(__file__), "../rl_data/baselines
 GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
 
 
-def get_all_baselines(general_config: str) -> list[Solution]:
+def get_all_instances(num_dams: int) -> list[Instance]:
+    """
+    Get instances Percentile00, Percentile10, ..., Percentile100, from driest to rainiest.
+    """
+    instances = [
+        Instance.from_name(f"Percentile{percentile:02}", num_dams=num_dams) for percentile in range(0, 110, 10)
+    ]
+    return instances
 
+
+def get_all_baselines(general_config: str) -> list[Solution]:
     """
     Get all baseline solutions by scanning the baselines folder.
 
     :param general_config: General configuration (e.g. "G1")
     """
-
     parent_dir = os.path.join(BASELINES_FOLDER, general_config)
     return scan_baselines(parent_dir)
 
 
 def get_all_baselines_folder(folder_name: str, general_config: str) -> list[Solution]:
-
     """
     Get all baseline solutions in the folder `folder_name`.
 
     :param folder_name: Name of the folder in which to find the baselines
     :param general_config: General configuration (e.g. "G1")
     """
-
     parent_dir = os.path.join(BASELINES_FOLDER, folder_name, general_config)
     return scan_baselines(parent_dir)
 
 
 def scan_baselines(folder_path: str) -> list[Solution]:
-
     """
     Scan the baselines in the given folder.
 
     :param folder_path: Path to the folder in which to scan the baselines
     """
-
     sols = []
     for file in os.listdir(folder_path):
         if file.endswith('.json'):

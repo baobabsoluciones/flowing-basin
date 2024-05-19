@@ -868,7 +868,7 @@ class Instance(InstanceCore):
         avg_price = sum(self.data["energy_prices"]) / len(self.data["energy_prices"])
         return avg_price
 
-    def calculate_total_avg_inflow(self) -> float:
+    def get_total_avg_inflow(self) -> float:
 
         """
         Calculate the total average inflow of the day.

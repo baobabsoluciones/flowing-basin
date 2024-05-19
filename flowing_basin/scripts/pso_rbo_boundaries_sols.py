@@ -137,7 +137,7 @@ for (instance_index, instance_name), (num_dams_index, num_dams) in product(
             instance = Instance.from_json(
                 f"../instances/instances_big/instance{instance_name}_{num_dams}dams_1days.json"
             )
-            avg_inflow = instance.calculate_total_avg_inflow()
+            avg_inflow = instance.get_total_avg_inflow()
             power_installed = sum(instance.get_max_power_of_power_group(dam_id) for dam_id in instance.get_ids_of_dams())
             if OBJ_FUN_NORM_METHOD == 'NEW':
                 avg_price = instance.get_avg_price()

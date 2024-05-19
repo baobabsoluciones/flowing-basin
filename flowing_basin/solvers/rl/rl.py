@@ -4,7 +4,9 @@ from flowing_basin.solvers.rl import (
     RLConfiguration, RLEnvironment, RLTrain, RLRun
 )
 from flowing_basin.solvers.rl.feature_extractors import Projector
-from flowing_basin.solvers.common import get_all_baselines, barchart_instances, CONSTANTS_PATH, print_save_csv
+from flowing_basin.solvers.common import (
+    get_all_instances, get_all_baselines, barchart_instances, CONSTANTS_PATH, print_save_csv
+)
 from cornflow_client.core.tools import load_json
 from stable_baselines3 import SAC, A2C, PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -1325,16 +1327,11 @@ class ReinforcementLearning:
 
     @staticmethod
     def get_all_fixed_instances(num_dams: int) -> list[Instance]:
-
         """
         Get all fixed instances that are being used to evaluate the agents and baselines.
         These instances are Percentile00, Percentile10, ..., Percentile100, from driest to rainiest.
         """
-
-        instances = [
-            Instance.from_name(f"Percentile{percentile:02}", num_dams=num_dams) for percentile in range(0, 110, 10)
-        ]
-        return instances
+        return get_all_instances(num_dams)
 
     @staticmethod
     def get_slope_intercept(agent: str, solver: str) -> tuple[float, float]:

@@ -32,7 +32,7 @@ for example in EXAMPLES:
         print("prices (next 12 steps):", instance.get_price(time, num_steps=12))
 
         # Average inflow
-        calculated_avg_inflow = instance.calculate_total_avg_inflow()
+        calculated_avg_inflow = instance.get_total_avg_inflow()
         print("total avg inflow:", calculated_avg_inflow)
         date = instance.get_start_decisions_datetime().date()
         daily_inflow_data = pd.read_pickle("../data/history/historical_data_daily_avg_inflow.pickle")

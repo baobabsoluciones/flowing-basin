@@ -190,7 +190,7 @@ class Baseline:
             instance = Instance.from_name(instance_name, num_dams=self.num_dams)
             solution = self.solve_instance(instance, config=config)
             objective_val = solution.get_objective_function()
-            avg_inflow = instance.calculate_total_avg_inflow()
+            avg_inflow = instance.get_total_avg_inflow()
             avg_price = instance.get_avg_price()
             norm_objective_val = objective_val / (avg_inflow * avg_price)
             self.log(

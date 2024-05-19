@@ -398,10 +398,12 @@ class Baselines:
                 final_values[solver][instance_name].append(solution.get_objective_function())
         return final_values
 
-    def get_solver_instance_smoothing_violations(self) -> dict[str, dict[str, list[float]]]:
+    def get_solver_instance_smoothing_violations(self, in_percentage: bool = True) -> dict[str, dict[str, list[float]]]:
         """
         Get the list of the number of flow smoothing violations (one per replication)
         for every solver and every instance.
+
+        :param in_percentage: Whether to give the violation count as a % of the total number of periods
         :return: dict[solver, dict[instance, num_violations]]
         """
 
@@ -429,6 +431,8 @@ class Baselines:
                 initial_flows=initial_flows,
                 max_flows=max_flows
             )
+            if in_percentage:
+                num_violations = num_violations / (len(solution.get_decisions_time_steps()) * solution.get_num_dams())
             if instance_name not in violation_values[solver]:
                 violation_values[solver].update({instance_name: [num_violations]})
             else:
@@ -486,6 +490,37 @@ class Baselines:
         barchart_instances(
             values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
         )
+
+    def get_csv_instance_smoothing_violations(self, in_percentage: bool = True) -> list[list[str | float]]:
+        """
+        Create a list of lists representing a CSV file
+        with the final objective function value of each solver in every instance.
+
+        :param in_percentage: Whether to give the violation count as a % of the total number of periods
+        """
+
+        values = self.get_solver_instance_smoothing_violations(in_percentage)
+        solvers, instances = preprocess_values(values)
+        rows = []
+
+        first_row = ["Solver"]
+        for intance in instances:
+            first_row.append(intance)
+        first_row.append("Average")
+        rows.append(first_row)
+
+        for solver in solvers:
+            solver_row = [solver]
+            # Value for each instance
+            for instance in instances:
+                # Use the mean across all replications
+                instance_mean = np.mean(values[solver][instance])
+                solver_row.append(f"{instance_mean:.2%}" if in_percentage else f"{instance_mean:.2f}")
+            # Mean across all instances
+            solver_mean = np.mean(list(values[solver].values()))
+            solver_row.append(f"{solver_mean:.2%}" if in_percentage else f"{solver_mean:.2f}")
+            rows.append(solver_row)
+        return rows
 
     def get_csv_instance_final_values(self, reference: str = None) -> list[list[str | float]]:
         """

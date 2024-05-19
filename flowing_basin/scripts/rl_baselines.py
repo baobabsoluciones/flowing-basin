@@ -42,8 +42,24 @@ def csv_instance_final_values(solvers: list[str], reference: str = None, save_cs
             row.insert(0, general_config)
         rows_total.extend(rows)
     solvers_title = "_".join(solvers)
-    reference_title = f"ref_{reference}" if reference is not None else ""
-    csv_filename = f"reports/final_values_{solvers_title}_{reference_title}.csv" if save_csv else None
+    reference_title = f"_ref_{reference}" if reference is not None else ""
+    csv_filename = f"reports/final_values_{solvers_title}{reference_title}.csv" if save_csv else None
+    print_save_csv(rows_total, csv_filepath=csv_filename)
+
+
+def csv_instance_smoothing_violations(solvers: list[str], in_percentage: bool = True, save_csv: bool = False):
+
+    rows_total = []
+    for general_config in GENERAL_CONFIGS:
+        rows = Baselines(
+            solvers=solvers, general_config=general_config
+        ).get_csv_instance_smoothing_violations(in_percentage)
+        for row in rows:
+            row.insert(0, general_config)
+        rows_total.extend(rows)
+    solvers_title = "_".join(solvers)
+    pct_title = "_pct" if in_percentage else ""
+    csv_filename = f"reports/smoothing_violations_{solvers_title}{pct_title}.csv" if save_csv else None
     print_save_csv(rows_total, csv_filepath=csv_filename)
 
 
@@ -52,4 +68,4 @@ if __name__ == "__main__":
     # barchart_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], reference="rl-greedy", save_csv=True)
-    print(Baselines(solvers=['PSO'], general_config='G0').get_solver_instance_smoothing_violations())
+    csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=False, save_csv=True)

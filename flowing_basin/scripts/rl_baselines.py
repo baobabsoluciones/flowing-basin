@@ -36,11 +36,12 @@ def plot_history_values_instances(solvers: list[str], save_fig: bool = False):
 def csv_instance_final_values(solvers: list[str], reference: str = None, save_csv: bool = False):
 
     rows_total = []
-    for general_config in GENERAL_CONFIGS:
+    for i, general_config in enumerate(GENERAL_CONFIGS):
         rows = Baselines(solvers=solvers, general_config=general_config).get_csv_instance_final_values(reference)
         for row in rows:
             row.insert(0, general_config)
-        rows_total.extend(rows)
+        rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
+    rows_total[0][0] = 'Configuration'
     solvers_title = "_".join(solvers)
     reference_title = f"_ref_{reference}" if reference is not None else ""
     csv_filename = f"reports/final_values_{solvers_title}{reference_title}.csv" if save_csv else None
@@ -50,16 +51,30 @@ def csv_instance_final_values(solvers: list[str], reference: str = None, save_cs
 def csv_instance_smoothing_violations(solvers: list[str], in_percentage: bool = True, save_csv: bool = False):
 
     rows_total = []
-    for general_config in GENERAL_CONFIGS:
+    for i, general_config in enumerate(GENERAL_CONFIGS):
         rows = Baselines(
             solvers=solvers, general_config=general_config
         ).get_csv_instance_smoothing_violations(in_percentage)
         for row in rows:
             row.insert(0, general_config)
-        rows_total.extend(rows)
+        rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
+    rows_total[0][0] = 'Configuration'
     solvers_title = "_".join(solvers)
     pct_title = "_pct" if in_percentage else ""
     csv_filename = f"reports/smoothing_violations_{solvers_title}{pct_title}.csv" if save_csv else None
+    print_save_csv(rows_total, csv_filepath=csv_filename)
+
+
+def csv_final_milp_gap(save_csv: bool = False):
+
+    rows_total = []
+    for i, general_config in enumerate(GENERAL_CONFIGS):
+        rows = Baselines(solvers=['MILP'], general_config=general_config).get_csv_milp_final_gaps()
+        for row in rows:
+            row.insert(0, general_config)
+        rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
+    rows_total[0][0] = 'Configuration'
+    csv_filename = f"reports/final_milp_gap.csv" if save_csv else None
     print_save_csv(rows_total, csv_filepath=csv_filename)
 
 
@@ -67,5 +82,8 @@ if __name__ == "__main__":
 
     # barchart_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
-    csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)
+    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)
+    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], reference='rl-greedy', save_csv=True)
     # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=False, save_csv=True)
+    # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=True, save_csv=True)
+    csv_final_milp_gap(save_csv=True)

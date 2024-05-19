@@ -12,7 +12,7 @@ from flowing_basin.solvers import (
 )
 from flowing_basin.solvers.common import (
     BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances_ax, barchart_instances,
-    confidence_interval, lighten_color, preprocess_values
+    confidence_interval, lighten_color, preprocess_values, extract_percentile
 )
 import optuna
 from optuna.trial import Trial
@@ -490,6 +490,34 @@ class Baselines:
         barchart_instances(
             values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
         )
+
+    def get_csv_milp_final_gaps(self) -> list[list[str | float]]:
+        """
+        Create a list of lists representing a CSV file
+        with the final MILP gap in every instance.
+        """
+
+        # Get dict[instance, final_gap] sorted by percentile number
+        final_gaps = dict()
+        for solution in self.solutions:
+            if solution.get_solver() == 'MILP':
+                final_gaps[solution.get_instance_name()] = solution.get_final_gap_value()
+        final_gaps = dict(sorted(final_gaps.items(), key=lambda x: extract_percentile(x[0])))  # noqa
+
+        rows = []
+        first_row = []
+        for instance in final_gaps.keys():
+            first_row.append(instance)
+        first_row.append("Average")
+        rows.append(first_row)
+
+        second_row = []
+        for instance in final_gaps.keys():
+            second_row.append(f"{final_gaps[instance]:.2f}%")
+        second_row.append(f"{np.mean(list(final_gaps.values())):.2f}%")
+        rows.append(second_row)
+
+        return rows
 
     def get_csv_instance_smoothing_violations(self, in_percentage: bool = True) -> list[list[str | float]]:
         """

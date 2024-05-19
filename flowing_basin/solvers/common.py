@@ -132,6 +132,11 @@ def print_save_csv(rows: list[list[Any]], csv_filepath: str = None):
         print(','.join(row))
 
 
+def extract_percentile(instance_name: str) -> int:
+    """Extract the percentile number from the instance name: 'Percentile70' -> 70"""
+    return int(instance_name.split('Percentile')[1])
+
+
 def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:
     """
     Sorts the dictionary by instance percentile number and returns the implicit solvers and instances.
@@ -139,9 +144,6 @@ def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], lis
     :param values: dict[solver, dict[instance, Any]]
     :return: List of solvers and list of instances
     """
-
-    def extract_percentile(instance_name: str) -> int:
-        return int(instance_name.split('Percentile')[1])
 
     solvers = list(values.keys())
     for solver in solvers:

@@ -330,7 +330,7 @@ class PSO(Experiment):
         # Based on https://github.com/ljvmiranda921/pyswarms/blob/master/pyswarms/single/general_optimizer.py
         # and https://github.com/ljvmiranda921/pyswarms/blob/master/pyswarms/base/base_single.py
         swarm.pbest_cost = np.full(self.config.num_particles, np.inf)
-        while current_time < max_time and num_iters < max_iters:
+        while True:
 
             # Update personal best
             swarm.current_cost = self.calculate_cost(swarm.position, is_relvars=self.config.use_relvars)
@@ -370,6 +370,8 @@ class PSO(Experiment):
             # Next iteration
             current_time = time.perf_counter() - start_time + time_offset
             num_iters += 1
+            if current_time > max_time or num_iters > max_iters:
+                break
 
         # Obtain the final best_cost and the final best_position
         final_best_cost = swarm.best_cost.copy()

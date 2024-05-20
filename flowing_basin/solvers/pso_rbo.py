@@ -15,8 +15,7 @@ class PsoRboConfiguration(PSOConfiguration, HeuristicConfiguration):
     def __post_init__(self):
 
         # Call the __post_init__ of parent classes
-        super(PSOConfiguration, self).__post_init__()
-        super(HeuristicConfiguration, self).__post_init__()
+        super().__post_init__()
 
         if not self.random_biased_flows and not self.random_biased_sorting:
             raise ValueError(
@@ -145,7 +144,7 @@ class PsoRbo(Experiment):
 
         return flows
 
-    def generate_random_flows(self, num_solutions: int):
+    def generate_random_flows(self, num_solutions: int, epsilon: float = 1e-6):
 
         """
         Generate a number of random solutions.
@@ -160,10 +159,10 @@ class PsoRbo(Experiment):
             self.instance.get_largest_impact_horizon(), self.instance.get_num_dams(), num_solutions
         )
 
-        # Random numbers between 0 and max_flow
+        # Random numbers between 0 and max_flow - epsilon (we subtract epsilon to avoid an out-of-bounds error)
         flows = flows * np.array(
             [
-                self.instance.get_max_flow_of_channel(dam_id)
+                self.instance.get_max_flow_of_channel(dam_id) - epsilon
                 for dam_id in self.instance.get_ids_of_dams()
             ]
         ).reshape((1, -1, 1))

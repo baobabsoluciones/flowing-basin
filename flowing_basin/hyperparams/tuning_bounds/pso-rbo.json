@@ -61,11 +61,29 @@
             ]
         }
     },
+    "random_biased_flows": {
+        "type": "categorical",
+        "values": {
+            "choices": [
+                true,
+                false
+            ]
+        }
+    },
     "prob_below_half": {
         "type": "float",
         "values": {
             "low": 0.0,
             "high": 0.5
+        }
+    },
+    "random_biased_sorting": {
+        "type": "categorical",
+        "values": {
+            "choices": [
+                true,
+                false
+            ]
         }
     },
     "common_ratio": {

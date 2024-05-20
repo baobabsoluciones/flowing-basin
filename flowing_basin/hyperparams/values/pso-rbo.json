@@ -9,7 +9,7 @@
     "topology": "star",
     "max_time": 900,
     "maximize_final_vol": false,
-    "random_biased_flows": true,
+    "random_biased_flows": false,
     "random_biased_sorting": true,
     "prob_below_half": 0.15,
     "common_ratio": 0.6,

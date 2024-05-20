@@ -216,15 +216,21 @@ class Baseline:
             for replication_num in range(num_replications):
                 trial_objective += get_replication_objectice(config=config, replication_num=replication_num)
             trial_objective /= num_replications
-            # TODO: in case the number of replications is high, I should trial.report() each replication objective
-            #   to enable pruning and accelerate tuning: https://optuna.readthedocs.io/en/v2.0.0/tutorial/pruning.html
             self.log(
                 f"[Trial {trial_num}] Total average normalized objective function value: {trial_objective}"
             )
             return trial_objective
 
+        def set_attribute(attribute: str, trial: Trial, config: Configuration):
+            """Set the given attribute in the configuration"""
+            suggest_method = dict(
+                float=trial.suggest_float, int=trial.suggest_int, categorical=trial.suggest_categorical
+            )[hyperparams_bounds[attribute]['type']]
+            value = suggest_method(attribute, **hyperparams_bounds[attribute]['values'])
+            setattr(config, attribute, value)
+
         def handle_pso_config(trial: Trial, config: PSOConfiguration):
-            """Set the missing required attributes for this specific case"""
+            """Set the missing required attributes for the PSO"""
             # Due to performance issues, the max value of "num_particles" is lower with the "pyramid" topology
             values = hyperparams_bounds["num_particles"]['values']
             high = {2: 200, 6: 500}[self.num_dams] if config.topology == "pyramid" else values['high']
@@ -244,24 +250,48 @@ class Baseline:
                     "topology_minkowski_p_norm", choices=[1, 2]
                 )
 
+        def handle_heuristic_config(trial: Trial, config: HeuristicConfiguration):
+            """Set the missing required attributes for the Heuristic"""
+            # Set "random_biased_flows" and "random_biased_sorting" if both attributes are in `hyperparams_bounds` file
+            # Otherwise, keep the values in `Baseline.hyperparams_values_folder`
+            if "random_biased_flows" in hyperparams_bounds and "random_biased_sorting" in hyperparams_bounds:
+                # Note both attributes cannot be False at the same time
+                set_attribute("random_biased_flows", trial=trial, config=config)
+                if config.random_biased_flows:
+                    set_attribute("random_biased_sorting", trial=trial, config=config)
+                else:
+                    config.random_biased_sorting = True
+            # Set additional required attributes
+            if config.random_biased_flows:
+                set_attribute("prob_below_half", trial=trial, config=config)
+            if config.random_biased_sorting:
+                set_attribute("common_ratio", trial=trial, config=config)
+
         def objective(trial: Trial):
+            """Objective function to maximize in the tuning process"""
             # Trial: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html
             config = deepcopy(self.config)
-            for attribute, info in hyperparams_bounds.items():
-                # The suggestion of "num_particles" will be done later
-                if attribute == "num_particles":
-                    continue
-                suggest_method = dict(
-                    float=trial.suggest_float, int=trial.suggest_int, categorical=trial.suggest_categorical
-                )[info['type']]
-                value = suggest_method(attribute, **info['values'])
-                setattr(config, attribute, value)
+            for attribute in hyperparams_bounds:
+                # The suggestion of these attributes will be done later
+                if attribute not in {
+                    "num_particles", "random_biased_flows", "random_biased_sorting", "prob_below_half", "common_ratio"
+                }:
+                    set_attribute(attribute, trial=trial, config=config)
             if isinstance(config, PSOConfiguration):
                 handle_pso_config(trial=trial, config=config)
+            if isinstance(config, HeuristicConfiguration):
+                handle_heuristic_config(trial=trial, config=config)
             config.__post_init__()
             trial_num = trial.number
             self.log(f"[Trial {trial_num}] Configuration: {config}")
             return get_trial_objective(config=config, trial_num=trial_num)
+
+        def copy_implicit_values(config: Configuration):
+            """Copy the values hard-coded in the functions above
+            (for example, `random_biased_sorting` in `handle_heuristic_config`)"""
+            if isinstance(config, HeuristicConfiguration):
+                if not config.random_biased_flows:
+                    config.random_biased_sorting = True
 
         # Study: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.study.Study.html#optuna.study.Study
         study = optuna.create_study(direction="maximize")
@@ -273,6 +303,8 @@ class Baseline:
 
         best_config = deepcopy(self.config)
         self.copy_values(best_config, tuned_hyperparams=study.best_params)
+        copy_implicit_values(best_config)
+
         path_config = os.path.join(Baseline.hyperparams_best_folder, self.general_config, f"{self.solver}.json")
         best_config.to_json(path_config)
         self.log(f"Saved best configuration to {path_config}.")

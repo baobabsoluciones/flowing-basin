@@ -290,11 +290,17 @@ class Baseline:
             """Copy the values hard-coded in the functions above
             (for example, `random_biased_sorting` in `handle_heuristic_config`)"""
             if isinstance(config, HeuristicConfiguration):
-                if not config.random_biased_flows:
-                    config.random_biased_sorting = True
+                if "random_biased_flows" in hyperparams_bounds and "random_biased_sorting" in hyperparams_bounds:
+                    if not config.random_biased_flows:
+                        config.random_biased_sorting = True
 
         # Study: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.study.Study.html#optuna.study.Study
-        study = optuna.create_study(direction="maximize")
+        # Saving studies: https://optuna.readthedocs.io/en/stable/tutorial/20_recipes/001_rdb.html
+        study_name = f"tuning_{self.solver}_{self.general_config}"
+        storage_name = "sqlite:///{}.db".format(study_name)  # This will create a file in whichever folder this is run
+        study = optuna.create_study(
+            direction="maximize", study_name=study_name, storage=storage_name, load_if_exists=True
+        )
         study.optimize(objective, n_trials=num_trials)
         self.log(
             f"Finished hyperparameter tuning. "

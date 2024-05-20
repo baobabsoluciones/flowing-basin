@@ -10,7 +10,7 @@ from flowing_basin.solvers import Baseline
 #     Baseline(general_config=config, solver='PSO').solve(num_replications=5)
 
 Baseline(general_config='G1', solver='PSO', max_time=5).tune(
-    num_trials=2, instance_names=['Percentile25'], num_replications=1
+    num_trials=3, instance_names=['Percentile25'], num_replications=1
 )
 # Baseline(general_config='G1', solver='PSO-RBO', max_time=10).tune(
 #     num_trials=50, instance_names=['Percentile25'], num_replications=1

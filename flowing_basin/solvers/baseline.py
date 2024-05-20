@@ -294,14 +294,22 @@ class Baseline:
                     if not config.random_biased_flows:
                         config.random_biased_sorting = True
 
-        # Study: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.study.Study.html#optuna.study.Study
+        # Create or load study
+        # Study class: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.study.Study.html#optuna.study.Study
         # Saving studies: https://optuna.readthedocs.io/en/stable/tutorial/20_recipes/001_rdb.html
         study_name = f"tuning_{self.solver}_{self.general_config}"
         storage_name = "sqlite:///{}.db".format(study_name)  # This will create a file in whichever folder this is run
         study = optuna.create_study(
             direction="maximize", study_name=study_name, storage=storage_name, load_if_exists=True
         )
-        study.optimize(objective, n_trials=num_trials)
+
+        # Optimize study for the remaining number of trials
+        num_trials_done = len(study.trials)
+        self.log(
+            f"Existing study has {num_trials_done} trials done. "
+            f"Optimizing for the remaining {num_trials - num_trials_done} trials..."
+        )
+        study.optimize(objective, n_trials=num_trials - num_trials_done)
         self.log(
             f"Finished hyperparameter tuning. "
             f"Best trial is Trial {study.best_trial.number} with vale {study.best_trial.value}"

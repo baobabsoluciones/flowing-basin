@@ -270,7 +270,8 @@ class PSO(Experiment):
         return - self.env_objective_function()
 
     def solve(
-        self, initial_solutions: np.ndarray = None, time_offset: float = 0., solver: str = "PSO", options: dict = None
+        self, initial_solutions: np.ndarray = None, time_offset: float = 0., solver: str = "PSO", options: dict = None,
+        epsilon: float = 1e-4
     ) -> dict:
 
         """
@@ -282,6 +283,7 @@ class PSO(Experiment):
             (used if there is any preprocessing before PSO, e.g. RBO), defaults to 0
         :param solver: Solver to indicate in the stored solution (e.g. PSO or PSO-RBO), defaults to PSO
         :param options: Unused argument, inherited from Experiment
+        :param epsilon: Tolerance for numerical imprecision when checking the results
         :return: A dictionary with status codes
         """
 
@@ -381,7 +383,7 @@ class PSO(Experiment):
             print(f"Optimization finished.\nBest position is {final_best_pos}\nBest cost is {final_best_cost}")
 
         # Assert optimal party is between bounds
-        assert (final_best_pos >= self.bounds[0]).all() and (final_best_pos <= self.bounds[1]).all()
+        assert (final_best_pos >= self.bounds[0] - epsilon).all() and (final_best_pos <= self.bounds[1] + epsilon).all()
 
         # Execute simulator with optimal particle
         self.river_basin.deep_update(

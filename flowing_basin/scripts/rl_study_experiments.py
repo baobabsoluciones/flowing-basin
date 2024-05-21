@@ -36,11 +36,11 @@ if __name__ == "__main__":
     # print(f"Found {len(agents)} agents in folder:", agents)
     # ReinforcementLearning.barchart_training_times(regex, hours=False)
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
-    ReinforcementLearning.print_max_avg_incomes(
-        regex, permutation='GOART', baselines=["MILP", "rl-greedy"],
-        csv_filepath=f"reports/results_{general}_experiment10.csv"
-    )
-    # ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
+    # ReinforcementLearning.print_max_avg_incomes(
+    #     regex, permutation='GOART', baselines=["MILP", "rl-greedy"],
+    #     csv_filepath=f"reports/results_{general}_experiment10.csv"
+    # )
+    ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
 
     # ReinforcementLearning.print_spaces(regex)
     # ReinforcementLearning.print_training_times(regex)

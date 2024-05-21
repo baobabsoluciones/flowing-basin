@@ -5,7 +5,7 @@ from dataclasses import fields
 import numpy as np
 from cornflow_client.core.tools import load_json
 from flowing_basin.core import Instance, Solution, Configuration
-from flowing_basin.solvers.rl import GeneralConfiguration
+from flowing_basin.solvers.rl import GeneralConfiguration, ReinforcementLearning
 from flowing_basin.solvers import (
     Heuristic, HeuristicConfiguration, LPModel, LPConfiguration, PSO, PSOConfiguration,
     PsoRbo, PsoRboConfiguration
@@ -174,10 +174,18 @@ class Baseline:
                     solve_instance(inst_name=instance_name, repl_num=replication_num)
                     replication_num += 1
 
-    def tune(self, num_trials: int, instance_names: list[str] = None, num_replications: int = 5):
+    def tune(
+            self, num_trials: int, instance_names: list[str] = None, num_replications: int = 5,
+            objective_type: str = 'improvement_rl_greedy'
+    ):
         """
         Use Optuna to find tuned hyperparameters
         """
+
+        valid_objective_types = {'normalized_income', 'improvement_rl_greedy'}
+        error_msg = f"The objective type {objective_type} is not valid. Valid options are {valid_objective_types}."
+        if objective_type not in valid_objective_types:
+            raise ValueError(error_msg)
 
         if instance_names is None:
             instance_names = Baseline.instance_names_tune
@@ -185,19 +193,39 @@ class Baseline:
         path_bounds = os.path.join(Baseline.hyperparams_bounds_folder, f"{self.solver}.json")
         hyperparams_bounds = load_json(path_bounds)
 
+        def get_greedy_value(instance_name: str) -> float:
+            """Get the objective function value of rl-greedy in the given instance."""
+            rl = ReinforcementLearning(f"A1{self.general_config}O2R1T2", verbose=2)
+            instance = Instance.from_name(instance_name, num_dams=rl.config.num_dams)
+            sol = rl.run_named_policy(policy_name="greedy", instance=instance)
+            inconsistencies = sol.check()
+            if inconsistencies:
+                raise ValueError("There are inconsistencies in the solution:", inconsistencies)
+            return sol.get_objective_function()
+
         def get_instance_objective(config: Configuration, instance_name: str) -> float:
-            """Calculate the objective function value for the given instance and normalize it"""
+            """Calculate the objective function value for the given instance and adjust it"""
             instance = Instance.from_name(instance_name, num_dams=self.num_dams)
             solution = self.solve_instance(instance, config=config)
             objective_val = solution.get_objective_function()
-            avg_inflow = instance.get_total_avg_inflow()
-            avg_price = instance.get_avg_price()
-            norm_objective_val = objective_val / (avg_inflow * avg_price)
-            self.log(
-                f"[Instance {instance_name}] Normalized objective function value: "
-                f"{objective_val} / ({avg_inflow} * {avg_price}) = {norm_objective_val}"
-            )
-            return norm_objective_val
+            if objective_type == 'normalized_income':
+                avg_inflow = instance.get_total_avg_inflow()
+                avg_price = instance.get_avg_price()
+                adjusted_objective_val = objective_val / (avg_inflow * avg_price)
+                self.log(
+                    f"[Instance {instance_name}] Normalized objective function value: "
+                    f"{objective_val} / ({avg_inflow} * {avg_price}) = {adjusted_objective_val}"
+                )
+            elif objective_type == 'improvement_rl_greedy':
+                greedy_value = greedy_values[instance_name]
+                adjusted_objective_val = (objective_val - greedy_value) / greedy_value
+                self.log(
+                    f"[Instance {instance_name}] Adjusted objective function value: "
+                    f"({objective_val} - {greedy_value}) / {greedy_value} = {adjusted_objective_val}"
+                )
+            else:
+                raise ValueError(error_msg)
+            return adjusted_objective_val
 
         def get_replication_objectice(config: Configuration, replication_num: int) -> float:
             """Calculate the objective function value for a single replication"""
@@ -293,6 +321,11 @@ class Baseline:
                 if "random_biased_flows" in hyperparams_bounds and "random_biased_sorting" in hyperparams_bounds:
                     if not config.random_biased_flows:
                         config.random_biased_sorting = True
+
+        # Precomputed values
+        greedy_values = None
+        if objective_type == 'improvement_rl_greedy':
+            greedy_values = {instance_name: get_greedy_value(instance_name) for instance_name in instance_names}
 
         # Create or load study
         # Study class: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.study.Study.html#optuna.study.Study

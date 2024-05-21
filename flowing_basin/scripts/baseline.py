@@ -1,5 +1,5 @@
 """
-rl_baseline.py
+baseline.py
 Script to compute solutions using PSO, MILP, etc. as baselines for RL
 """
 

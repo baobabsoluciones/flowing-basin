@@ -1,5 +1,5 @@
 """
-RL Random and Greedy Baselines
+baseline_random_greedy.py
 This script creates the baselines "rl-random" and "rl-greedy".
 """
 

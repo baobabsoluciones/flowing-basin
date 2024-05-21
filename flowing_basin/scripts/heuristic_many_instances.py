@@ -1,11 +1,15 @@
+"""
+heuristic_many_instances.py
+This script runs the heuristic (RBO) for many instances and analyzes the results
+TODO: Modify this script to work with the new cases and instances, using the Baseline class
+"""
+
 from flowing_basin.core import Instance
 from flowing_basin.solvers import HeuristicConfiguration, Heuristic
 from time import perf_counter
 from itertools import product
 from math import sqrt
-from dataclasses import asdict
 import csv
-import json
 
 # EXAMPLES = [f'_intermediate{i}' for i in range(11)]
 EXAMPLES = ['1', '3']
@@ -25,93 +29,92 @@ SAVE_REPORT = False
 REPORT_NAME = "random_biased_complete"
 DECIMAL_PLACES = 2
 
-report_filepath = f"reports/{REPORT_NAME}.csv"
-config_filepath = f"reports/{REPORT_NAME}_config.json"
+if __name__ == "__main__":
 
-report = [
-    ["instance", "no_dams", "num_trials", "exec_time_s", "min_val_eur", "max_val_eur", "avg_val_eur", "std_eur"]
-]
+    report_filepath = f"reports/{REPORT_NAME}.csv"
+    config_filepath = f"reports/{REPORT_NAME}_config.json"
 
-for example, num_dams in product(EXAMPLES, NUMS_DAMS):
+    report = [
+        ["instance", "no_dams", "num_trials", "exec_time_s", "min_val_eur", "max_val_eur", "avg_val_eur", "std_eur"]
+    ]
 
-    start = perf_counter()
-    obj_function_values = []
+    config = HeuristicConfiguration(
+        volume_shortage_penalty=0.,
+        volume_exceedance_bonus=0.,
+        startups_penalty=50,
+        limit_zones_penalty=0,
+        volume_objectives={},
+        flow_smoothing=K_PARAMETER,
+        mode="linear",
+        maximize_final_vol=MAXIMIZE_FINAL_VOL,
+        random_biased_flows=RANDOM_BIASED_FLOWS,
+        prob_below_half=PROB_BELOW_HALF,
+        random_biased_sorting=RANDOM_BIASED_SORTING,
+        common_ratio=COMMON_RATIO,
+    )
 
-    for replication in range(NUM_REPLICATIONS):
+    for example, num_dams in product(EXAMPLES, NUMS_DAMS):
 
-        instance = Instance.from_json(
-            f"../instances/instances_big/instance{example}_{num_dams}dams_{NUM_DAYS}days.json"
-        )
-        config = HeuristicConfiguration(
-            volume_shortage_penalty=3,
-            volume_exceedance_bonus=0,
-            startups_penalty=50,
-            limit_zones_penalty=0,
-            volume_objectives={
-                dam_id: instance.get_historical_final_vol_of_dam(dam_id) for dam_id in instance.get_ids_of_dams()
-            },
-            flow_smoothing=K_PARAMETER,
-            mode="linear",
-            maximize_final_vol=MAXIMIZE_FINAL_VOL,
-            random_biased_flows=RANDOM_BIASED_FLOWS,
-            prob_below_half=PROB_BELOW_HALF,
-            random_biased_sorting=RANDOM_BIASED_SORTING,
-            common_ratio=COMMON_RATIO,
-        )
+        start = perf_counter()
+        obj_function_values = []
 
-        heuristic = Heuristic(config=config, instance=instance, do_tests=True)
-        heuristic.solve()
-        obj_function_values.append(heuristic.solution.get_objective_function())
-        # print(heuristic.solution.data)
+        for replication in range(NUM_REPLICATIONS):
 
-    print(f"For instance {example} with {num_dams} dams:")
+            instance = Instance.from_json(
+                f"../instances/instances_big/instance{example}_{num_dams}dams_{NUM_DAYS}days.json"
+            )
+            heuristic = Heuristic(config=config, instance=instance, do_tests=True)
+            heuristic.solve()
+            obj_function_values.append(heuristic.solution.get_objective_function())
+            # print(heuristic.solution.data)
 
-    exec_time = perf_counter() - start
-    print(f"\tgenerated {NUM_REPLICATIONS} solutions in {exec_time}s.")
+        print(f"For instance {example} with {num_dams} dams:")
 
-    min_obj_val = min(obj_function_values)
-    max_obj_val = max(obj_function_values)
-    num_obj_val = len(obj_function_values)
-    avg_obj_val = sum(obj_function_values) / num_obj_val
-    std_obj_val = sqrt(sum([(obj_val - avg_obj_val) ** 2 for obj_val in obj_function_values]) / num_obj_val)
-    print(f"\tthe obj fun values are {obj_function_values}.")
-    print(f"\t - minimum: {min_obj_val}")
-    print(f"\t - maximum: {max_obj_val}")
-    print(f"\t - mean: {avg_obj_val}")
-    print(f"\t - standard deviation: {std_obj_val}")
+        exec_time = perf_counter() - start
+        print(f"\tgenerated {NUM_REPLICATIONS} solutions in {exec_time}s.")
 
-    report.append([
-        example, num_dams, NUM_REPLICATIONS, round(exec_time, DECIMAL_PLACES), round(min_obj_val, DECIMAL_PLACES),
-        round(max_obj_val, DECIMAL_PLACES), round(avg_obj_val, DECIMAL_PLACES), round(std_obj_val, DECIMAL_PLACES)
-    ])
+        min_obj_val = min(obj_function_values)
+        max_obj_val = max(obj_function_values)
+        num_obj_val = len(obj_function_values)
+        avg_obj_val = sum(obj_function_values) / num_obj_val
+        std_obj_val = sqrt(sum([(obj_val - avg_obj_val) ** 2 for obj_val in obj_function_values]) / num_obj_val)
+        print(f"\tthe obj fun values are {obj_function_values}.")
+        print(f"\t - minimum: {min_obj_val}")
+        print(f"\t - maximum: {max_obj_val}")
+        print(f"\t - mean: {avg_obj_val}")
+        print(f"\t - standard deviation: {std_obj_val}")
 
-# Print results
-print(
-    "--------",
-    "Results:",
-    *[
-        ''.join([f"{el:<15.2f}" if isinstance(el, float) else f"{el:<15}" for el in row]) for row in report
-    ],
-    "--------",
-    sep='\n'
-)
+        report.append([
+            example, num_dams, NUM_REPLICATIONS, round(exec_time, DECIMAL_PLACES), round(min_obj_val, DECIMAL_PLACES),
+            round(max_obj_val, DECIMAL_PLACES), round(avg_obj_val, DECIMAL_PLACES), round(std_obj_val, DECIMAL_PLACES)
+        ])
 
-if SAVE_REPORT:
+    # Print results
+    print(
+        "--------",
+        "Results:",
+        *[
+            ''.join([f"{el:<15.2f}" if isinstance(el, float) else f"{el:<15}" for el in row]) for row in report
+        ],
+        "--------",
+        sep='\n'
+    )
 
-    # Create report file
-    with open(report_filepath, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(report)
-    print(f"Created CSV file '{report_filepath}'.")
+    if SAVE_REPORT:
 
-    # Store configuration used
-    with open(config_filepath, 'w') as file:
-        json.dump(asdict(config), file, indent=2)
-    print(f"Created JSON file '{config_filepath}'.")
+        # Create report file
+        with open(report_filepath, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(report)
+        print(f"Created CSV file '{report_filepath}'.")
 
-# Solved 200 instances in 20.582084900001064s. <-- without prints and WITH TESTS
-# Solved 200 instances in 20.029083499975968s.
-# Solved 200 instances in 21.50905569997849s. <-- without prints and WITHOUT TESTS
-# Solved 200 instances in 20.016695700003766s.
-# I got inconsistent results when running code with and without tests; I am not sure which is faster
-# I think running the code w/o tests is faster, but running it w/ tests may be equivalent because of assert disabling
+        # Store configuration used
+        config.to_json(config_filepath)
+        print(f"Created JSON file '{config_filepath}'.")
+
+    # Solved 200 instances in 20.582084900001064s. <-- without prints and WITH TESTS
+    # Solved 200 instances in 20.029083499975968s.
+    # Solved 200 instances in 21.50905569997849s. <-- without prints and WITHOUT TESTS
+    # Solved 200 instances in 20.016695700003766s.
+    # I got inconsistent results when running code with and without tests; I am not sure which is faster
+    # I think running the code w/o tests is faster, but running it w/ tests may be equivalent because of assert disabling

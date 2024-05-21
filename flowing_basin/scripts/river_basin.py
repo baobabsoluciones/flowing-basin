@@ -1,3 +1,9 @@
+"""
+river_basin.py
+This script tests the simulator works as expected
+TODO: change this script into a proper test in the `tests` folder
+"""
+
 from flowing_basin.core import Instance
 from flowing_basin.tools import RiverBasin
 import numpy as np

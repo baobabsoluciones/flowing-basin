@@ -1,1 +1,0 @@
-This folder should contain the solutions of the basic PSO algorithm

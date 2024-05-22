@@ -1,0 +1,23 @@
+{
+    "bounds_handling": "shrink",
+    "cognitive_coefficient": 2.7971880868298067,
+    "convergence_time": 150,
+    "convergence_tolarance": 0.005,
+    "flow_smoothing": 2,
+    "inertia_weight": 0.6071216620685835,
+    "limit_zones_penalty": 50,
+    "max_iterations": null,
+    "max_relvar": 1.0,
+    "max_time": 900,
+    "mode": "linear",
+    "num_particles": 610,
+    "social_coefficient": 0.23776706830520822,
+    "startups_penalty": 50,
+    "topology": "star",
+    "topology_minkowski_p_norm": null,
+    "topology_num_neighbors": null,
+    "use_relvars": false,
+    "volume_exceedance_bonus": 0.0,
+    "volume_objectives": {},
+    "volume_shortage_penalty": 0.0
+}

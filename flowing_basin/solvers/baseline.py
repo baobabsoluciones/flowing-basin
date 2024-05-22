@@ -336,12 +336,17 @@ class Baseline:
             direction="maximize", study_name=study_name, storage=storage_name, load_if_exists=True
         )
 
-        # Optimize study for the remaining number of trials
+        # Show the trials already done in the study
         num_trials_done = len(study.trials)
-        self.log(
-            f"Existing study has {num_trials_done} trials done. "
-            f"Optimizing for the remaining {num_trials - num_trials_done} trials..."
-        )
+        self.log(f"Existing study has {num_trials_done} trials done.")
+        if num_trials_done > 0:
+            str_trials_done = '\n'.join(
+                [f'Trial {trial.number} | {trial.value} | {trial.params}' for trial in study.trials]
+            )
+            self.log(str_trials_done)
+
+        # Optimize study for the remaining number of trials
+        self.log(f"Optimizing for the remaining {num_trials - num_trials_done} trials...")
         study.optimize(objective, n_trials=num_trials - num_trials_done)
         self.log(
             f"Finished hyperparameter tuning. "

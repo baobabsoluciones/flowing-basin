@@ -24,7 +24,8 @@ In all of these, `X` can be nothing, `0`, `1`, `2`, `3` or `4`:
 Note one episode (day) is equivalent to `99 // num_actions_block` timesteps.
 
 In all of these, `Y` can be nothing, `0`, `1`, `2`, `3` or `4`:
-- If `Y` is nothing or `0`, the actor and critic networks have \[256, 256] neurons.
+- If `Y` is nothing or `0`, the actor and critic networks have the default value of StableBaselines3
+for the given algorithm (this is \[256, 256] neurons for SAC and \[64, 64] for PPO).
 - If `Y` is `1`, the actor and critic networks have \[512, 512] neurons.
 - If `Y` is `2`, the actor and critic networks have \[512, 256] neurons.
 - If `Y` is `3`, the actor and critic networks have \[`N`, 256] neurons,
@@ -34,6 +35,9 @@ where `N` equals the size of the observation space (i.e., the number of actor in
 - If `Y` is `6`, the actor network has \[`N`, 256] neurons and the critic \[256, 256],
 where `N` equals the size of the observation space (i.e., the number of actor input neurons).
 - If `Y` is `7`, the actor network has \[1536, 1536] neurons and the critic \[1024, 1024].
+- If `Y` is `8`, the actor and critic networks will have 3 times the default value of StableBaselines3
+for the given algorithm (this will be \[768, 768] neurons for SAC and \[192, 192] for PPO).
+- If `Y` is `9`, the actor and critic networks have \[1536, 768] neurons.
 
 In all of these, `Z` can be nothing, `0`, `1`, or `2`:
 - If `Z` is nothing or `0`, the RL algorithm used is SAC.

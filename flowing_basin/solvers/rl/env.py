@@ -80,7 +80,7 @@ class RLEnvironment(gym.Env):
             array_length = sum(
                 self.config.num_steps_sight[feature, dam_id]
                 for feature in self.config.features for dam_id in self.instance.get_ids_of_dams()
-                if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
+                if dam_id in self.config.features_dams[feature]
             )
             self.obs_shape = (array_length,)
 
@@ -179,7 +179,7 @@ class RLEnvironment(gym.Env):
                     startup_flows, shutdown_flows, epsilon=0.  # epsilon=0. to avoid touching the limit zones
                 )
                 i = 0
-                turbined_bin_flows = [0.] + turbined_bin_flows.tolist() + [max_flow]
+                turbined_bin_flows = [0.] + turbined_bin_flows.tolist() + [max_flow]  # noqa
                 self.turbine_count_flows[dam_id] = []
                 while i < len(turbined_bin_flows) - 1:
                     first_flow = turbined_bin_flows[i]
@@ -628,7 +628,7 @@ class RLEnvironment(gym.Env):
                 np.concatenate([
                     self.get_feature(feature, dam_id, values)
                     for feature in self.config.features
-                    if self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
+                    if dam_id in self.config.features_dams[feature]
                 ])
                 for dam_id in self.instance.get_ids_of_dams()
             ]).astype(np.float32)
@@ -697,7 +697,7 @@ class RLEnvironment(gym.Env):
                     print(''.join([
                         f"{obs[self.obs_indeces[dam_id, feature, time_step]]:^{spacing}.{decimals}f}"
                         if self.config.num_steps_sight[feature, dam_id] > time_step and (
-                            self.instance.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features
+                            dam_id in self.config.features_dams[feature]
                         )
                         else f"{'-':^{spacing}}"
                         for feature in self.config.features

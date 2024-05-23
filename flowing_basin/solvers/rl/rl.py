@@ -1,4 +1,5 @@
 from flowing_basin.core import Instance, Solution, TrainingData
+from flowing_basin.core.utils import custom_serializer
 from flowing_basin.solvers.rl import (
     GeneralConfiguration, ObservationConfiguration, ActionConfiguration, RewardConfiguration, TrainingConfiguration,
     RLConfiguration, RLEnvironment, RLTrain, RLRun
@@ -53,7 +54,7 @@ class ReinforcementLearning:
     obs_collection_pos = 2  # Position of the digit that MAY indicate a collection method (e.g., "O12" -> "2")
     obs_collection_codes = {'1', '2'}  # Digits that DO indicate a collection method (e.g., not "0" in "O10")
 
-    def __init__(self, config_name: str, verbose: int = 2):
+    def __init__(self, config_name: str, verbose: int = 1):
 
         self.verbose = verbose
         config_name = config_name
@@ -64,6 +65,9 @@ class ReinforcementLearning:
         self.constants_path = CONSTANTS_PATH.format(num_dams=self.config.num_dams)
         self.agent_name = f"rl-{self.config_full_name}"
         self.constants = Instance.from_dict(load_json(self.constants_path))
+        if self.verbose >= 2:
+            print(f"Agent {self.agent_name}'s configuration (after post-processing):")
+            print(json.dumps(self.config.to_dict(prior=False), indent=4, default=custom_serializer))
 
         # The first two digits in the observation name (e.g., "O211" -> "O21")
         # indicate the type of observations that should be used for the projector
@@ -260,6 +264,8 @@ class ReinforcementLearning:
         env = self.create_train_env(update_obs)
 
         # Check the environment does not have any errors according to StableBaselines3
+        # NOTE: This method is outdated, and you need to modify the function `_check_non_zero_start` in `env_checker.py`
+        # to exclude MultiDiscrete spaces, which do not have a `start` parameter anymore (it is always 0, as desired)
         check_env(env)
 
         if initial_date is not None:
@@ -562,7 +568,7 @@ class ReinforcementLearning:
                         else:
                             ax = axs[dam_index, feature_index + 1]
 
-                        if self.constants.get_order_of_dam(dam_id) == 1 or feature not in self.config.unique_features:
+                        if dam_id in self.config.features_dams[feature]:
                             index = indices[dam_id, feature, lookback]
                             if feature == "past_clipped" or feature == "past_vols":
                                 # The automatic bin method does not work correctly with these features

@@ -168,24 +168,36 @@ class RLTrain(Experiment):
         # Define policy keyword arguments
         if self.config.feature_extractor == 'MLP':
 
-            actor_layers = copy(self.config.actor_layers)
-            critic_layers = copy(self.config.critic_layers)
             policy_type = "MlpPolicy"
-            policy_kwargs = None
+            policy_kwargs = {}
 
-            if actor_layers is not None or critic_layers is not None:
+            if self.config.actor_layers is not None or self.config.critic_layers is not None:
 
                 net_arch = dict()
-                if actor_layers[0] == -1:
-                    actor_layers[0] = self.train_env.observation_space.shape[0]
+                default_layers = dict(SAC=[256, 256], A2C=[64, 64], PPO=[64, 64])[self.config.algorithm]
+
+                if isinstance(self.config.actor_layers, list):
+                    actor_layers = copy(self.config.actor_layers)
+                    if actor_layers[0] == -1:
+                        actor_layers[0] = self.train_env.observation_space.shape[0]
+                elif isinstance(self.config.actor_layers, int):
+                    actor_layers = [self.config.actor_layers * layer for layer in default_layers]
+                else:
+                    raise TypeError(f"Invalid type {type(self.config.actor_layers)} for {self.config.actor_layers=}")
                 net_arch.update({"pi": actor_layers})
 
                 # Name for on-policy algorithms (PPO, A2C...): "vf"
                 # Name for off-policy algorithms (SAC...): "qf"
                 # Source: https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#off-policy-algorithms
                 critic_name = "qf" if self.config.algorithm == "SAC" else "vf"
-                if critic_layers[0] == -1:
-                    critic_layers[0] = self.train_env.observation_space.shape[0]
+                if isinstance(self.config.critic_layers, list):
+                    critic_layers = copy(self.config.critic_layers)
+                    if critic_layers[0] == -1:
+                        critic_layers[0] = self.train_env.observation_space.shape[0]
+                elif isinstance(self.config.critic_layers, int):
+                    critic_layers = [self.config.critic_layers * layer for layer in default_layers]
+                else:
+                    raise TypeError(f"Invalid type {type(self.config.critic_layers)} for {self.config.critic_layers=}")
                 net_arch.update({critic_name: critic_layers})
 
                 policy_kwargs = dict(net_arch=net_arch)

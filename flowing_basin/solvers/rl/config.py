@@ -11,13 +11,15 @@ class BaseProcessableConfiguration(BaseConfiguration):
 
     """Configuration that required post-processing after creation."""
 
-    def to_dict(self) -> dict:
+    def to_dict(self, prior: bool = True) -> dict:
 
         """
         Turn the original dataclass (before any post-processing) into a JSON-serializable dictionary
         """
-
-        data_json = asdict(self.prior)
+        if prior:
+            data_json = asdict(self.prior)
+        else:
+            data_json = asdict(self)
         return data_json
 
     def __post_init__(self):
@@ -60,6 +62,7 @@ class ObservationConfiguration(BaseProcessableConfiguration):  # noqa
     features: list[str]  # Features included in the observation
     unique_features: list[str]  # Features that should NOT be repeated for each dam
     features_not_expand: list[str] = field(default_factory=list)  # Features that should NOT be expanded by the action block size
+    features_dams: dict[str, list[str]] = field(default_factory=dict)  # The dams present in each feature (automatically generated)
     num_steps_sight: dict[tuple[str, str] | str, int] | int  # Number of time steps for every (feature, dam_id)
     feature_extractor: str  # Either MLP or CNN or mixed
 
@@ -76,13 +79,13 @@ class ObservationConfiguration(BaseProcessableConfiguration):  # noqa
     # Data required to post-process config
     dam_ids: list[str]
 
-    def to_dict(self) -> dict:
+    def to_dict(self, prior: bool = True) -> dict:
 
         """
         Turn the original dataclass into a JSON-serializable dictionary
         """
 
-        data_json = super(ObservationConfiguration, self).to_dict()
+        data_json = super(ObservationConfiguration, self).to_dict(prior=prior)
 
         # Convert 'num_steps_sight' into a list of (key, value) pairs
         data_json["num_steps_sight"] = [{"key": k, "value": v} for k, v in data_json["num_steps_sight"].items()]
@@ -108,6 +111,11 @@ class ObservationConfiguration(BaseProcessableConfiguration):  # noqa
         Turn all keys of 'num_steps_sight' into (feature, dam_id)
         (i.e., remove any "other" or other short-hand values)
         """
+
+        # Post-process 'features_dams'
+        for feature in self.features:
+            if feature not in self.features_dams:
+                self.features_dams[feature] = self.dam_ids if feature not in self.unique_features else [self.dam_ids[0]]
 
         # Post-process 'num_steps_sight'
         # Turn all keys into (feature, dam_id)
@@ -341,8 +349,10 @@ class TrainingConfiguration(BaseProcessableConfiguration):  # noqa
 
     :param actor_layers:
         Neural network layers for the critic (value-function or Q-function).
+        If an integer, multiply default layers by this number.
     :param critic_layers:
         Neural network layers for the actor (policy, pi).
+        If an integer, multiply default layers by this number.
     :param activation_fn_name:
         Name of the activation function ('tanh', 'relu', 'elu', 'leaky_relu').
     :param log_std_init:
@@ -393,8 +403,8 @@ class TrainingConfiguration(BaseProcessableConfiguration):  # noqa
     normalization: bool = False
 
     # Policy keyword arguments
-    actor_layers: list[int] = None
-    critic_layers: list[int] = None
+    actor_layers: list[int] | int = None
+    critic_layers: list[int] | int = None
     activation_fn_name: str = None
     log_std_init: float = None
     ortho_init: bool = None
@@ -537,13 +547,21 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         self.dam_ids = [
             "dam1", "dam2", "dam3_dam2copy", "dam4_dam2copy", "dam5_dam1copy", "dam6_dam1copy"
         ][:self.num_dams]
-        for feature in self.features:
-            for dam_id in self.dam_ids:
+        for dam_id in self.dam_ids:
+            # If dam is not dam1 or dam2,
+            # it will be e.g. dam3_dam2copy (a copy of dam2) or dam4_dam1copy (a copy of dam1)
+            copied_dam_id = dam_id[dam_id.rfind("_") + 1: dam_id.rfind("copy")]
+            for feature in self.features:
+                # Fix 'features_dams'; note we do not include future_inflows because they are 0 for subsequent dams
+                should_add_dam_to_feature = feature not in self.unique_features and feature != "future_inflows"
+                if dam_id not in self.features_dams[feature] and should_add_dam_to_feature:
+                    self.features_dams[feature].append(dam_id)
+                # Fix 'num_steps_sight'
                 if (feature, dam_id) not in self.num_steps_sight:
-                    # If dam is not dam1 or dam2,
-                    # it will be e.g. dam3_dam2copy (a copy of dam2) or dam4_dam1copy (a copy of dam1)
-                    copied_dam_id = dam_id[dam_id.rfind("_") + 1: dam_id.rfind("copy")]
                     self.num_steps_sight[feature, dam_id] = self.num_steps_sight[feature, copied_dam_id]
+            # Fix 'optimal_flow_values'
+            if self.optimal_flow_values and dam_id not in self.optimal_flow_values:
+                self.optimal_flow_values[dam_id] = self.optimal_flow_values[copied_dam_id]
 
         # Extend the sight of all features by the number of additional periods per action block
         for feature in self.features:
@@ -569,7 +587,7 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         running_index = 0
         for d, dam_id in enumerate(self.dam_ids):
             for f, feature in enumerate(self.features):
-                if d == 0 or feature not in self.unique_features:
+                if dam_id in self.features_dams[feature]:
                     for t in range(self.num_steps_sight[feature, dam_id]):
                         if self.feature_extractor == 'MLP':
                             indices[dam_id, feature, t] = running_index

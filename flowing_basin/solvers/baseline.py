@@ -64,7 +64,15 @@ class Baseline:
         self._rl = None
         self._solver_class = None
         self._is_solver = self.solver in Baseline.baseline_solvers
-        self._is_named_policy = self.solver.split("rl-")[1] in RLRun.named_policies
+        if self._is_solver:
+            self._is_named_policy = False
+        else:
+            if not self.solver.startswith("rl-"):
+                raise ValueError(
+                    f"You cannot use the Baseline class with {self.solver}. "
+                    f"It must either be a valid solver ({', '.join(Baseline.baseline_solvers)}) or a RL agent (rl-...)."
+                )
+            self._is_named_policy = self.solver.split("rl-")[1] in RLRun.named_policies
 
         self.num_dams = None
         self.config = None
@@ -177,13 +185,18 @@ class Baseline:
 
         return solver.solution
 
-    def solve(self, instance_names: list[str] = None, num_replications: int = None, filename_tail: str = ""):
+    def solve(
+            self, instance_names: list[str] = None, num_replications: int = None, save_sol: bool = True
+    ) -> list[Solution]:
         """
         Solve each instance and save it in the corresponding baselines folder.
         :param instance_names: Names of the instances to solve
         :param num_replications: Total number of replications (including previous executions of this program)
-        :param filename_tail: Whether to add something at the end of each filename
+        :param save_sol: Whether to save the solutions or not
         """
+
+        if instance_names is None:
+            instance_names = Baseline.instance_names_eval
 
         def add_filename_tail(filename: str, tail: str):
             """Add the given `tail` to the end of the `filename`, without changing the file extension."""
@@ -196,8 +209,6 @@ class Baseline:
             sol_filename = Baseline.baselines_filename.format(instance_name=inst_name, solver=self.solver)
             if repl_num is not None:
                 sol_filename = add_filename_tail(sol_filename, f"replication{repl_num}")
-            if filename_tail:
-                sol_filename = add_filename_tail(sol_filename, filename_tail)
             return os.path.join(BASELINES_FOLDER, self.sol_folder_name, self.general_config, sol_filename)
 
         def find_first_repl_num(inst_name: str):
@@ -207,20 +218,20 @@ class Baseline:
                 repl_num += 1
             return repl_num
 
-        def solve_instance(inst_name: str, repl_num: int = None):
+        def solve_instance(inst_name: str, repl_num: int = None) -> Solution:
             """Solve the given instance with the given replication number."""
             instance = Instance.from_name(instance_name, num_dams=self.num_dams)
-            sol_path = get_sol_path(inst_name=inst_name, repl_num=repl_num)
+            sol_path = get_sol_path(inst_name=inst_name, repl_num=repl_num) if save_sol else None
             self.log(f"[Replication {repl_num}] Solving {instance_name} in replication {repl_num}...")
-            self.solve_instance(instance, sol_path=sol_path)
+            sol = self.solve_instance(instance, sol_path=sol_path)
             self.log(f"[Replication {repl_num}] Finished solving {instance_name} in replication {repl_num}.")
+            return sol
 
-        if instance_names is None:
-            instance_names = Baseline.instance_names_eval
-
+        solutions = []
         for instance_name in instance_names:
             if num_replications is None:
-                solve_instance(inst_name=instance_name)
+                solution = solve_instance(inst_name=instance_name)
+                solutions.append(solution)
             else:
                 replication_num = find_first_repl_num(instance_name)
                 final_replication_num = num_replications - 1
@@ -230,8 +241,10 @@ class Baseline:
                         f"but the solver {self.solver} already has {replication_num} solutions for {instance_name}."
                     )
                 while replication_num <= final_replication_num:
-                    solve_instance(inst_name=instance_name, repl_num=replication_num)
+                    solution = solve_instance(inst_name=instance_name, repl_num=replication_num)
+                    solutions.append(solution)
                     replication_num += 1
+        return solutions
 
     def tune(
             self, num_trials: int, instance_names: list[str] = None, num_replications: int = 5,
@@ -473,14 +486,18 @@ class Baselines:
     Utility class to analyze multiple solvers at the same time
     """
 
-    def __init__(self, general_config: str, solvers: list[str], include_folders: list[str] = None):
+    def __init__(
+            self, general_config: str, solvers: list[str],
+            include_folders: list[str] = None, include_solutions: list[Solution] = None
+    ):
 
         """
         Initialize a Baselines object.
 
         :param general_config: General configuration (e.g., "G1")
-        :param solvers: Solvers that want to be analyzed (e.g., ['MILP', 'PSO', ...])
+        :param solvers: Solvers whose solutions will be read in the folders (e.g., ['MILP', 'PSO', ...])
         :param include_folders: Additional folders in which to look for solutions (e.g. ['old', 'tuned'])
+        :param include_solutions: Additional solutions to include in the calculations (not present in the folders)
         """
 
         self.general_config = general_config
@@ -503,6 +520,14 @@ class Baselines:
                         if solver not in self.solvers:
                             self.solvers.append(solver)
                         self.solutions.append(baseline)
+
+        # Add extra solutions
+        if include_solutions is not None:
+            for sol in include_solutions:
+                self.solutions.append(sol)
+                solver = sol.get_solver()
+                if solver not in self.solvers:
+                    self.solvers.append(solver)
 
     def get_solver_instance_history_values(
             self, num_timestamps: int = 300

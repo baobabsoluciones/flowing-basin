@@ -22,11 +22,14 @@ from matplotlib import pyplot as plt
 class Baseline:
 
     """
-    Class to use solvers like MILP or PSO (that may act as RL baselines)
+    Class to run solvers or agents (or tune solvers) with a RL general configuration
+    and saving solutions in the RL baselines folder
     """
 
+    # RBO is just the Heuristic with different hyperparameter values
     solver_classes = {
         "Heuristic": (Heuristic, HeuristicConfiguration),
+        "RBO": (Heuristic, HeuristicConfiguration),
         "MILP": (LPModel, LPConfiguration),
         "PSO": (PSO, PSOConfiguration),
         "PSO-RBO": (PsoRbo, PsoRboConfiguration)
@@ -174,6 +177,7 @@ class Baseline:
             raise Exception(f"There are inconsistencies in the calculated solution: {sol_inconsistencies}")
 
         solver.solution.data["instance_name"] = instance_name
+        solver.solution.data["solver"] = self.solver
         self.log(
             f"{msg_header} Finished calculating solution with "
             f"objective function value {solver.solution.get_objective_function()}"

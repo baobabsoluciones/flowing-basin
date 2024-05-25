@@ -547,13 +547,15 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         self.dam_ids = [
             "dam1", "dam2", "dam3_dam2copy", "dam4_dam2copy", "dam5_dam1copy", "dam6_dam1copy"
         ][:self.num_dams]
+        # Do not include future_inflows or past_inflows in dam3, ..., dam6 because they are always 0
+        useless_features = {"future_inflows", "past_inflows"}
         for dam_id in self.dam_ids:
             # If dam is not dam1 or dam2,
             # it will be e.g. dam3_dam2copy (a copy of dam2) or dam4_dam1copy (a copy of dam1)
             copied_dam_id = dam_id[dam_id.rfind("_") + 1: dam_id.rfind("copy")]
             for feature in self.features:
-                # Fix 'features_dams'; note we do not include future_inflows because they are 0 for subsequent dams
-                should_add_dam_to_feature = feature not in self.unique_features and feature != "future_inflows"
+                # Fix 'features_dams'
+                should_add_dam_to_feature = feature not in self.unique_features and feature not in useless_features
                 if dam_id not in self.features_dams[feature] and should_add_dam_to_feature:
                     self.features_dams[feature].append(dam_id)
                 # Fix 'num_steps_sight'

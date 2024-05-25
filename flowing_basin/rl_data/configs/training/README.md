@@ -12,6 +12,8 @@ which is 3e-4 in SAC and PPO but 7e-4 in A2C).
 - `T5X0Z`: same as T1, but using the hyperparameters (including the learning rate, buffer size
 and network layers) suggested by RL Zoo's hyperparameter tuning with _no_ normalization.
 - `T6X0Z`: same as T5 but with normalization.
+- `T7XYZ`: same as T3, but with an even smaller replay buffer size (50_000) to use A113 actions
+with 6 dams.
 
 In all of these, `X` can be nothing, `0`, `1`, `2`, `3` or `4`:
 - If `X` is nothing or `0`, the training is done for 99000 timesteps.

@@ -19,7 +19,7 @@ for general in GENERAL_CONFIGS[2:]:
         for instance_name in instance_names:
             print(f"{general} rl-{policy} Solving {instance_name}...")
             instance = Instance.from_name(instance_name, num_dams=rl.config.num_dams)
-            sol = rl.run_named_policy(policy_name=policy, instance=instance, update_to_decisions=not unbiased)
+            sol = rl.run_named_policy(policy_name=policy, instance=instance, update_to_decisions=not unbiased).solution
             inconsistencies = sol.check()
             if inconsistencies:
                 raise ValueError("There are inconsistencies in the solution:", inconsistencies)

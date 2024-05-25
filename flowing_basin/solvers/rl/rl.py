@@ -761,7 +761,7 @@ class ReinforcementLearning:
 
         return runs
 
-    def run_named_policy(self, policy_name: str, instance: Instance, update_to_decisions: bool = False) -> Solution:
+    def run_named_policy(self, policy_name: str, instance: Instance, update_to_decisions: bool = False) -> RLRun:
 
         """
         Solve the given instance with a special policy ("random" or "greedy")
@@ -780,7 +780,7 @@ class ReinforcementLearning:
             update_to_decisions=update_to_decisions
         )
         run.solve(policy_name)
-        return run.solution
+        return run
 
     def run_imitator(self, solution: Solution, instance: Instance) -> RLRun:
 

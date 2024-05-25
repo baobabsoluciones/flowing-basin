@@ -21,7 +21,7 @@ for general in general_configs:
         policy = f"greedy_{pct}"
         pct_incomes = []
         for instance in instances:
-            sol = rl.run_named_policy(policy_name=policy, instance=instance)
+            sol = rl.run_named_policy(policy_name=policy, instance=instance).solution
             # for dam_id in sol.get_ids_of_dams():
             #     fig, ax = plt.subplots()
             #     sol.plot_solution_for_dam(dam_id, ax)

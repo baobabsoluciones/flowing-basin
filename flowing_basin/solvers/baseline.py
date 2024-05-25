@@ -4,8 +4,8 @@ from datetime import datetime
 from dataclasses import fields
 import numpy as np
 from cornflow_client.core.tools import load_json
-from flowing_basin.core import Instance, Solution, Configuration
-from flowing_basin.solvers.rl import GeneralConfiguration, ReinforcementLearning
+from flowing_basin.core import Instance, Solution, Configuration, Experiment
+from flowing_basin.solvers.rl import GeneralConfiguration, ReinforcementLearning, RLRun
 from flowing_basin.solvers import (
     Heuristic, HeuristicConfiguration, LPModel, LPConfiguration, PSO, PSOConfiguration,
     PsoRbo, PsoRboConfiguration
@@ -31,10 +31,13 @@ class Baseline:
         "PSO": (PSO, PSOConfiguration),
         "PSO-RBO": (PsoRbo, PsoRboConfiguration)
     }
+    baseline_solvers = set(solver_classes.keys())
+
     hyperparams_values_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/values")
     hyperparams_bounds_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/tuning_bounds")
     hyperparams_best_folder = os.path.join(os.path.dirname(__file__), "../hyperparams/tuning_best")
     config_info = (os.path.join(os.path.dirname(__file__), "../rl_data/configs/general"), GeneralConfiguration)
+
     baselines_filename = "instance{instance_name}_{solver}.json"
     instance_names_eval = [f"Percentile{percentile:02}" for percentile in range(0, 110, 10)]
     instance_names_tune = ["Percentile25", "Percentile75"]
@@ -57,7 +60,26 @@ class Baseline:
         self.general_config = general_config
         self.solver = solver
         self.verbose = verbose
-        self.solver_class, config_class = Baseline.solver_classes[self.solver]
+
+        self._rl = None
+        self._solver_class = None
+        self._is_solver = self.solver in Baseline.baseline_solvers
+        self._is_named_policy = self.solver.split("rl-")[1] in RLRun.named_policies
+
+        self.num_dams = None
+        self.config = None
+        self.sol_folder_name = None
+
+        if self._is_solver:
+            self._init_solver(max_time=max_time, tuned_hyperparams=tuned_hyperparams)
+        else:
+            self._init_agent()
+
+    def _init_solver(self, max_time: float, tuned_hyperparams: bool):
+
+        """Initialize a baseline solver (such as 'MILP')."""
+
+        self._solver_class, config_class = Baseline.solver_classes[self.solver]
 
         general_config_dict = Baseline.get_general_config_dict(self.general_config)
         general_config_obj = GeneralConfiguration.from_dict(general_config_dict)
@@ -81,11 +103,40 @@ class Baseline:
         if any(field.name == "max_time" for field in fields(self.config)) and max_time is not None:
             self.config.max_time = max_time
 
+    def _init_agent(self):
+
+        """Initialize a baseline agent (such as 'rl-greedy')."""
+
+        if self._is_named_policy:
+            self._rl = ReinforcementLearning(f"A1{self.general_config}O2R1T2", verbose=2)
+        else:
+            self._rl = ReinforcementLearning(self.solver, verbose=self.verbose)
+        self.config = self._rl.config
+        self.num_dams = self.config.num_dams
+        self.sol_folder_name = ""
+
+        if self._rl.config_names['G'] != self.general_config:
+            raise ValueError(
+                f"The agent's general config {self._rl.config_names['G']} does not match {self.general_config}"
+            )
+
     def log(self, msg: str, verbose: int = 0):
         """Print the given message."""
         if self.verbose > verbose:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
             print(f"{current_time} [Solver {self.solver}] [Configuration {self.general_config}] {msg}")
+
+    def get_solver(self, instance: Instance, config: Configuration = None) -> Experiment:
+        """
+        Get the solver object for the given instance
+        """
+        if config is None:
+            config = self.config
+        if self._is_solver:
+            solver = self._solver_class(instance=instance, config=config)
+        else:
+            raise ValueError(f"Cannot get solver of {self.solver}. Please use `solve_instance()` directly.")
+        return solver
 
     def solve_instance(self, instance: Instance, config: Configuration = None, sol_path: str = None) -> Solution:
         """
@@ -93,14 +144,22 @@ class Baseline:
         :return: The Solution of the given instance
         """
 
-        if config is None:
-            config = self.config
-        solver = self.solver_class(instance=instance, config=config)
         instance_name = instance.get_instance_name()
         msg_header = f"[Instance {instance_name}]"
 
         self.log(f"{msg_header} Starting to calculate the solution...")
-        solver.solve()
+        if self._is_solver:
+            solver = self.get_solver(instance=instance, config=config)
+            solver.solve(options=dict())
+        else:
+            if config is not None:
+                raise ValueError(f"Cannot solve instance with {self.solver} using a different configuration: {config}.")
+            if self._is_named_policy:
+                solver = self._rl.run_named_policy(self.solver.split("rl-")[1], instance=instance)
+                # run_named_policy() already executes the solve() method
+            else:
+                solver = self._rl.run_agent(instance=instance)
+                # run_agent() already executes the solve() method
 
         sol_inconsistencies = solver.solution.check()
         if sol_inconsistencies:
@@ -182,6 +241,11 @@ class Baseline:
         Use Optuna to find tuned hyperparameters
         """
 
+        if not self._is_solver:
+            raise ValueError(
+                f"Cannot tune {self.solver} in Baseline class. To tune RL agents, please go to flowing_basin/rl_zoo."
+            )
+
         valid_objective_types = {'normalized_income', 'improvement_rl_greedy'}
         error_msg = f"The objective type {objective_type} is not valid. Valid options are {valid_objective_types}."
         if objective_type not in valid_objective_types:
@@ -197,7 +261,7 @@ class Baseline:
             """Get the objective function value of rl-greedy in the given instance."""
             rl = ReinforcementLearning(f"A1{self.general_config}O2R1T2", verbose=2)
             instance = Instance.from_name(instance_name, num_dams=rl.config.num_dams)
-            sol = rl.run_named_policy(policy_name="greedy", instance=instance)
+            sol = rl.run_named_policy(policy_name="greedy", instance=instance).solution
             inconsistencies = sol.check()
             if inconsistencies:
                 raise ValueError("There are inconsistencies in the solution:", inconsistencies)

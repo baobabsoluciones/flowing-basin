@@ -1,6 +1,6 @@
 from flowing_basin.tools import RiverBasin
 from flowing_basin.core import Instance
-from flowing_basin.solvers import Baseline
+from flowing_basin.solvers import Baseline, PsoRbo
 from unittest import TestCase
 import numpy as np
 import random
@@ -26,7 +26,8 @@ class TestPsoRbo(TestCase):
 
         instance = Instance.from_name(instance_name, num_dams=num_dams)
         baseline = Baseline(solver='PSO-RBO', general_config=general_config)
-        pso_rbo = baseline.solver_class(instance=instance, config=baseline.config)
+        pso_rbo = baseline.get_solver(instance=instance, config=baseline.config)
+        assert isinstance(pso_rbo, PsoRbo)  # Make PyCharm inspections happy
 
         river_basin = RiverBasin(
             instance=instance, mode="linear", num_scenarios=baseline.config.num_particles, do_history_updates=False

@@ -482,6 +482,21 @@ class Baselines:
                 final_values[solver][instance_name].append(solution.get_objective_function())
         return final_values
 
+    def get_solver_instance_final_timestamps(self) -> dict[str, dict[str, list[float]]]:
+        """
+        Get the list of final timestamps (one per replication) for every solver and every instance.
+        :return: dict[solver, dict[instance, values]]
+        """
+        final_timestamps = {solver: dict() for solver in self.solvers}
+        for solution in self.solutions:
+            solver = solution.get_solver()
+            instance_name = solution.get_instance_name()
+            if instance_name not in final_timestamps[solver]:
+                final_timestamps[solver].update({instance_name: [solution.get_last_time_stamp()]})
+            else:
+                final_timestamps[solver][instance_name].append(solution.get_last_time_stamp())
+        return final_timestamps
+
     def get_solver_instance_smoothing_violations(self, in_percentage: bool = True) -> dict[str, dict[str, list[float]]]:
         """
         Get the list of the number of flow smoothing violations (one per replication)
@@ -631,6 +646,34 @@ class Baselines:
             # Mean across all instances
             solver_mean = np.mean(list(values[solver].values()))
             solver_row.append(f"{solver_mean:.2%}" if in_percentage else f"{solver_mean:.2f}")
+            rows.append(solver_row)
+        return rows
+
+    def get_csv_instance_final_timestamps(self) -> list[list[str | float]]:
+        """
+        Create a list of lists representing a CSV file
+        with the exectuion time of each solver in every instance.
+        """
+
+        values = self.get_solver_instance_final_timestamps()
+        solvers, instances = preprocess_values(values)
+        rows = []
+
+        first_row = ["Solver"]
+        for intance in instances:
+            first_row.append(intance)
+        first_row.append("Average")
+        rows.append(first_row)
+
+        for solver in solvers:
+            solver_row = [solver]
+            for instance in instances:
+                # Use the mean across all replications
+                instance_mean = np.mean(values[solver][instance])
+                solver_row.append(f"{instance_mean:.0f}")
+            # Mean across all instances
+            solver_mean = np.mean(list(values[solver].values()))
+            solver_row.append(f"{solver_mean:.0f}")
             rows.append(solver_row)
         return rows
 

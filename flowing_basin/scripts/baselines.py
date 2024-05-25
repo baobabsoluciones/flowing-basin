@@ -66,6 +66,29 @@ def csv_instance_final_values(
     print_save_csv(rows_total, csv_filepath=csv_filename)
 
 
+def csv_instance_final_timestamps(
+        solvers: list[str], include_folders: list[str] = None, general_configs: list[str] = None,
+        save_csv: bool = False
+):
+
+    if general_configs is None:
+        general_configs = GENERAL_CONFIGS
+
+    rows_total = []
+    for i, general_config in enumerate(general_configs):
+        baselines = Baselines(solvers=solvers, include_folders=include_folders, general_config=general_config)
+        rows = baselines.get_csv_instance_final_timestamps()
+        for row in rows:
+            row.insert(0, general_config)
+        rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
+    rows_total[0][0] = 'Configuration'
+
+    solvers_title = "_".join(solvers)
+    configs_title = ("_" + "_".join(general_configs)) if general_configs != GENERAL_CONFIGS else ""
+    csv_filename = f"reports/final_timestamps_{solvers_title}{configs_title}.csv" if save_csv else None
+    print_save_csv(rows_total, csv_filepath=csv_filename)
+
+
 def csv_instance_smoothing_violations(solvers: list[str], in_percentage: bool = True, save_csv: bool = False):
 
     rows_total = []
@@ -99,7 +122,8 @@ def csv_final_milp_gap(save_csv: bool = False):
 if __name__ == "__main__":
 
     # barchart_instances(['PSO'], include_folders=['tuned'], general_configs=['G0', 'G1'], save_fig=True)
-    csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', general_configs=['G0', 'G1'], save_csv=True)
+    # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', general_configs=['G0', 'G1'], save_csv=True)
+    csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)
     # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], reference='rl-greedy', save_csv=True)

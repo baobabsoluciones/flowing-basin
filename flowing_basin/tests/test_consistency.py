@@ -1,10 +1,13 @@
 from flowing_basin.solvers.rl import ReinforcementLearning
-from flowing_basin.solvers.common import GENERAL_CONFIGS
 from flowing_basin.core import Instance, Solution, Configuration
 from flowing_basin.tools import RiverBasin
 from unittest import TestCase
 import warnings
 import random
+
+
+# General configurations to test
+GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3', 'G9']
 
 
 class TestConsistency(TestCase):
@@ -127,42 +130,37 @@ class TestBaselinesConsistency(TestConsistency):
     """
 
     def setUp(self) -> None:
-
         solutions = {
-            sol for general_config in GENERAL_CONFIGS for sol in ReinforcementLearning.get_all_baselines(general_config)
+            (general_config, sol) for general_config in GENERAL_CONFIGS
+            for sol in ReinforcementLearning.get_all_baselines(general_config)
         }
-        solvers = {sol.get_solver() for sol in solutions}
-        self.solutions = {solver: [sol for sol in solutions if sol.get_solver() == solver] for solver in solvers}
+        solvers = {sol[1].get_solver() for sol in solutions}
+        self.solutions = {solver: [sol for sol in solutions if sol[1].get_solver() == solver] for solver in solvers}
+
+    def test_solver_consistency(self, solver: str):
+        """Test the consistency of the given solver."""
+        self.assertNotEqual(len(self.solutions[solver]), 0, msg=f"No {solver} solutions.")
+        for general_config, sol in self.solutions[solver]:
+            self.check_consistency(sol)
+            print(
+                f"[Solver {solver}] [Configuration {general_config}] [Instance {sol.get_instance_name()}] "
+                f"Successfully checked the consistency of the solution."
+            )
 
     def test_milp_consistency(self):
-
-        self.assertNotEqual(len(self.solutions["MILP"]), 0, msg="No MILP solutions.")
-        for sol in self.solutions["MILP"]:
-            self.check_consistency(sol)
+        self.test_solver_consistency('MILP')
 
     def test_pso_consistency(self):
-
-        self.assertNotEqual(len(self.solutions["PSO"]), 0, msg="No PSO solutions.")
-        for sol in self.solutions["PSO"]:
-            self.check_consistency(sol)
+        self.test_solver_consistency('PSO')
 
     def test_heuristic_consistency(self):
-
-        self.assertNotEqual(len(self.solutions["Heuristic"]), 0, msg="No Heuristic solutions.")
-        for sol in self.solutions["Heuristic"]:
-            self.check_consistency(sol)
+        self.test_solver_consistency('Heuristic')
 
     def test_rl_greedy_consistency(self):
-
-        self.assertNotEqual(len(self.solutions["rl-greedy"]), 0, msg="No rl-greedy solutions.")
-        for sol in self.solutions["rl-greedy"]:
-            self.check_consistency(sol)
+        self.test_solver_consistency('rl-greedy')
 
     def test_rl_random_consistency(self):
-
-        self.assertNotEqual(len(self.solutions["rl-random"]), 0, msg="No rl-random solutions.")
-        for sol in self.solutions["rl-random"]:
-            self.check_consistency(sol)
+        self.test_solver_consistency('rl-random')
 
     def test_config_concordance(self):
 

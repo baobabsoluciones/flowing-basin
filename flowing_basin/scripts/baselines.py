@@ -120,8 +120,8 @@ def csv_final_milp_gap(save_csv: bool = False):
 
 if __name__ == "__main__":
 
-    barchart_instances(['PSO'], include_folders=['tuned'], save_fig=True)
-    csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
+    # barchart_instances(['PSO'], include_folders=['tuned'], save_fig=True)
+    # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     # Compare rl-greedy with stored Heuristic solutions
     # csv_instance_final_values(['rl-greedy', 'Heuristic'], general_configs=['G9'])
-    # csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', general_configs=['G9'])
+    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', general_configs=['G9'], save_csv=True)
 
     # Compare rl-greedy with fresh new Heuristic solutions
     # sols = Baseline(solver="Heuristic", general_config='G1').solve(save_sol=False)

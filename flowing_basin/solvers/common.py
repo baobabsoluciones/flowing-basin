@@ -5,11 +5,22 @@ from matplotlib import pyplot as plt
 import numpy as np
 import scipy.stats as stats
 import csv
+from datetime import timedelta
 
 
 CONSTANTS_PATH = os.path.join(os.path.dirname(__file__), "../data/constants/constants_{num_dams}dams.json")
 BASELINES_FOLDER = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
 GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
+
+
+def get_episode_length(constants: Instance, num_days: int = 1) -> int:
+    """
+    Get the length of an episode (number of periods in a day + impact buffer).
+    """
+    impact_buffer = max(constants.get_relevant_lags_of_dam(dam_id)[0] for dam_id in constants.get_ids_of_dams())
+    day_periods = timedelta(days=num_days) // timedelta(seconds=constants.get_time_step_seconds())
+    length_episode = day_periods + impact_buffer
+    return length_episode
 
 
 def get_all_instances(num_dams: int) -> list[Instance]:

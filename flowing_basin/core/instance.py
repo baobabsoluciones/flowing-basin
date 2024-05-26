@@ -215,25 +215,19 @@ class Instance(InstanceCore):
         return instance_name
 
     def get_start_decisions_datetime(self) -> datetime:
-
         """
 
         :return: Starting datetime for the decisions, after the starting information offset
         """
-
         start = datetime.strptime(self.data["datetime"]["start"], "%Y-%m-%d %H:%M")
-
         return start
 
     def get_end_decisions_datetime(self) -> datetime:
-
         """
 
         :return: Final datetime for the decisions, before the impact buffer and final information offset
         """
-
         end = datetime.strptime(self.data["datetime"]["end_decisions"], "%Y-%m-%d %H:%M")
-
         return end
 
     def get_start_information_datetime(self) -> datetime:

@@ -342,6 +342,7 @@ class TrainingConfiguration(BaseProcessableConfiguration):  # noqa
     """
     :param length_episodes:
         The length of episodes.
+        This argument is kept for backwards compatibility, but it is actually IGNORED (not used anywhere).
     :param num_timesteps:
         Number of time steps in which to train the agent.
     :param algorithm:
@@ -525,12 +526,6 @@ class RLConfiguration(GeneralConfiguration, ObservationConfiguration, ActionConf
         ActionConfiguration.check(self)
         RewardConfiguration.check(self)
         TrainingConfiguration.check(self)
-
-        if self.action_type == "adjustments" and self.num_actions_block != self.length_episodes:
-            raise ValueError(
-                f"With {self.action_type=}, the block size should be equal to {self.length_episodes=}, "
-                f"but it is actually {self.num_actions_block=}."
-            )
 
     def post_process(self):
 

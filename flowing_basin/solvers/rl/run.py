@@ -171,21 +171,21 @@ class RLRun(Experiment):
         start_info_offset = instance.get_start_information_offset()
         clipped_flows = {
             dam_id: river_basin.all_past_clipped_flows.squeeze(axis=RLEnvironment.AXIS_SCENARIOS)[
-                start_info_offset:, self.instance.get_order_of_dam(dam_id) - 1
+                start_info_offset:, instance.get_order_of_dam(dam_id) - 1
             ].tolist()
-            for dam_id in self.instance.get_ids_of_dams()
+            for dam_id in instance.get_ids_of_dams()
         }
         volume = {
             dam_id: river_basin.all_past_volumes[dam_id].squeeze()[
                 start_info_offset:
             ].tolist()
-            for dam_id in self.instance.get_ids_of_dams()
+            for dam_id in instance.get_ids_of_dams()
         }
         power = {
             dam_id: river_basin.all_past_powers[dam_id].squeeze()[
                 start_info_offset:
             ].tolist()
-            for dam_id in self.instance.get_ids_of_dams()
+            for dam_id in instance.get_ids_of_dams()
         }
 
         (

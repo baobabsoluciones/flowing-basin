@@ -1,5 +1,6 @@
 from flowing_basin.core import Instance
 from flowing_basin.tools import RiverBasin, PowerGroup
+from flowing_basin.solvers.common import get_episode_length
 from flowing_basin.solvers.rl import RLConfiguration
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from cornflow_client.core.tools import load_json
@@ -295,8 +296,9 @@ class RLEnvironment(gym.Env):
         if instance is None:
 
             max_sight = max(self.config.num_steps_sight.values())
+            episode_length = get_episode_length(constants=self.constants)
             self.instance = self.create_instance(
-                length_episodes=self.config.length_episodes,
+                length_episodes=episode_length,
                 constants=self.constants,
                 historical_data=self.historical_data,
                 info_buffer_start=max_sight,
@@ -323,6 +325,13 @@ class RLEnvironment(gym.Env):
             )
 
             self.instance = instance
+
+        episode_length = self.instance.get_largest_impact_horizon()
+        if self.config.action_type == "adjustments" and self.config.num_actions_block != episode_length:
+            raise ValueError(
+                f"With action type {self.config.action_type}, the block size should be equal to {episode_length=}, "
+                f"but it is actually {self.config.num_actions_block}."
+            )
 
     def _reset_variables(self):
 

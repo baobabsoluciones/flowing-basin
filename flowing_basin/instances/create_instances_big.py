@@ -6,6 +6,7 @@ that have different numbers of dams
 
 from flowing_basin.core import Instance
 from flowing_basin.solvers.rl import RLEnvironment
+from flowing_basin.solvers.common import get_episode_length, CONSTANTS_PATH
 import pandas as pd
 from cornflow_client.core.tools import load_json
 from itertools import product
@@ -23,19 +24,12 @@ if __name__ == "__main__":
 
         base_instance = Instance.from_json(f"instances_base/instance{example}.json")
         start_date = base_instance.get_start_decisions_datetime()
-        impact_buffer = max(
-            [
-                base_instance.get_relevant_lags_of_dam(dam_id)[0]
-                for dam_index, dam_id in enumerate(base_instance.get_ids_of_dams())
-                if dam_index < num_dams
-            ]
-        )
 
-        length_episode = num_days * 24 * 4 + impact_buffer  # One day (+ impact buffer)
-        path_constants = f"../data/constants/constants_{num_dams}dams.json"
+        constants = Instance.from_dict(load_json(CONSTANTS_PATH.format(num_dams=num_dams)))
+        length_episode = get_episode_length(constants=constants, num_days=num_days)
         instance = RLEnvironment.create_instance(
             length_episodes=length_episode,
-            constants=load_json(path_constants),
+            constants=constants,
             historical_data=historical_data,
             initial_row_decisions=start_date,
             instance_name=example

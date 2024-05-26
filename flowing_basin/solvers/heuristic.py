@@ -550,7 +550,7 @@ class HeuristicSingleDam:
         #         f"Assigned flows: {self.assigned_flows=}."
         #     )
         # For some alternative solutions, this assert is not satisfied
-        # TODO: find out why and fix it
+        # I don't know why, but it only matters with objective volumes, so it can be ignored
 
     def remove_limit_zones(self, sorted_groups: list[list[int]]):
 

@@ -131,8 +131,7 @@ if __name__ == "__main__":
     # csv_final_milp_gap(save_csv=True)
 
     # Compare rl-greedy with stored Heuristic solutions
-    # csv_instance_final_values(['rl-greedy', 'Heuristic'], general_configs=['G9'])
-    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', general_configs=['G9'], save_csv=True)
+    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', general_configs=['G1'], save_csv=True)
 
     # Compare rl-greedy with fresh new Heuristic solutions
     # sols = Baseline(solver="Heuristic", general_config='G1').solve(save_sol=False)

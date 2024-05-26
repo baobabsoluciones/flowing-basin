@@ -4,3 +4,4 @@ flow smoothing of 2, startup and limit zone penalty of 50€.
 flow smoothing, startup or limit zone penalty.
 - `G2`: same as G0 but with 6 dams instead of just 2.
 - `G3`: same as G1 but with 6 dams instead of just 2.
+- `G9`: same as G1 but with 1 dam instead of 2.

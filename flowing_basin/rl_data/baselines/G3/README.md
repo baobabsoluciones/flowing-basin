@@ -5,4 +5,4 @@ under the same conditions as the RL models for general config `G3`:
  - Flow smoothing parameter set to 0.
  - Startup and limit zone penalty of 0€.
 
-**NOTE**: the solutions were calculated in `flowing_basin/scripts/rl_baseline.py`.
+**NOTE**: the solutions were calculated in `flowing_basin/scripts/baseline.py`.

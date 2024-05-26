@@ -23,6 +23,11 @@ class RLEnvironment(gym.Env):
      - It computes the rewards for the agent (proportional to the generated energy and its price)
     """
 
+    # RL environment assumes there is a single scenario, so arrays must be squeezed along this axis
+    # The variables all_past_flows, all_past_clipped_flows, and all_past_smoothed_flows
+    # are of shape num_time_steps x num_dams x num_scenarios, so...
+    AXIS_SCENARIOS = 2
+
     def __init__(
             self,
             config: RLConfiguration,
@@ -452,12 +457,12 @@ class RLEnvironment(gym.Env):
         """
 
         assigned_flows = np.flip(
-            self.river_basin.all_past_flows.squeeze()[
+            self.river_basin.all_past_flows.squeeze(axis=RLEnvironment.AXIS_SCENARIOS)[
             -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
             ]
         )
         actual_flows = np.flip(
-            self.river_basin.all_past_clipped_flows.squeeze()[
+            self.river_basin.all_past_clipped_flows.squeeze(axis=RLEnvironment.AXIS_SCENARIOS)[
             -self.config.num_steps_sight["past_clipped", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
             ]
         )
@@ -486,13 +491,13 @@ class RLEnvironment(gym.Env):
             ),
 
             "past_flows_raw": lambda dam_id: np.flip(
-                self.river_basin.all_past_flows.squeeze()[
+                self.river_basin.all_past_flows.squeeze(axis=RLEnvironment.AXIS_SCENARIOS)[
                 -self.config.num_steps_sight["past_flows_raw", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
                 ]
             ),
 
             "past_flows": lambda dam_id: np.flip(
-                self.river_basin.all_past_clipped_flows.squeeze()[
+                self.river_basin.all_past_clipped_flows.squeeze(axis=RLEnvironment.AXIS_SCENARIOS)[
                 -self.config.num_steps_sight["past_flows", dam_id]:, self.instance.get_order_of_dam(dam_id) - 1
                 ]
             ),

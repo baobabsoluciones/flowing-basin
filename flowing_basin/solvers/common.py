@@ -1,6 +1,7 @@
 import os
 from typing import Any
 from flowing_basin.core import Instance, Solution
+from flowing_basin.tools import PowerGroup
 from matplotlib import pyplot as plt
 import numpy as np
 import scipy.stats as stats
@@ -21,6 +22,47 @@ def get_episode_length(constants: Instance, num_days: int = 1) -> int:
     day_periods = timedelta(days=num_days) // timedelta(seconds=constants.get_time_step_seconds())
     length_episode = day_periods + impact_buffer
     return length_episode
+
+
+def get_real_max_flow(constants: Instance, dam_id: str) -> float:
+    """Get the real max flow of the given dam, obtained by interpolating the max volume."""
+    real_max_flow = constants.get_max_flow_of_channel(dam_id)
+    points = constants.get_flow_limit_obs_for_channel(dam_id)
+    if points is not None:  # Get the real max_flow (dam2)
+        max_vol = constants.get_max_vol_of_dam(dam_id)
+        real_max_flow = min(real_max_flow, np.interp(max_vol, points["observed_vols"], points["observed_flows"]))
+    return real_max_flow
+
+
+def get_turbine_count_intervals(constants: Instance, first_flow_padding: float = 0.005):
+    """
+    For every dam, get the turbine count, first flow, and last flow of each interval in the power group curve
+    :param constants: Instance object with at least the constant values
+    :param first_flow_padding: Parameter to keep all the flows in the interval within the same number of turbines
+    :return: {dam_id: [(turbine_count, first_flow, last_flow),]}
+    """
+    turbine_count_flows = dict()
+    for dam_id in constants.get_ids_of_dams():
+
+        max_flow = get_real_max_flow(constants=constants, dam_id=dam_id)
+        startup_flows = constants.get_startup_flows_of_power_group(dam_id)
+        shutdown_flows = constants.get_shutdown_flows_of_power_group(dam_id)
+        turbined_bin_flows, turbined_bin_groups = PowerGroup.get_turbined_bins_and_groups(
+            startup_flows, shutdown_flows, epsilon=0.  # epsilon=0. to avoid touching the limit zones
+        )
+
+        i = 0
+        turbined_bin_flows = [0.] + turbined_bin_flows.tolist() + [max_flow]  # noqa
+        turbine_count_flows[dam_id] = []
+        while i < len(turbined_bin_flows) - 1:
+            first_flow = turbined_bin_flows[i]
+            if first_flow != 0.:
+                first_flow += first_flow_padding
+            last_flow = turbined_bin_flows[i + 1]
+            turbine_count_flows[dam_id].append((turbined_bin_groups[i], first_flow, last_flow))
+            i = i + 1
+
+    return turbine_count_flows
 
 
 def get_all_instances(num_dams: int) -> list[Instance]:

@@ -82,13 +82,10 @@ class HeuristicSingleDam:
             )
         )
         turbine_count_intervals = get_turbine_count_intervals(constants=self.instance)
-        self.safe_turbine_flow_intervals = {
-            dam_id: [
-                (first_flow, last_flow) for turbine_count, first_flow, last_flow in turbine_count_intervals[dam_id]
-                if turbine_count == int(turbine_count)
-            ]
-            for dam_id in self.instance.get_ids_of_dams()
-        }
+        self.safe_turbine_flow_intervals = [
+            (first_flow, last_flow) for turbine_count, first_flow, last_flow in turbine_count_intervals[self.dam_id]
+            if turbine_count == int(turbine_count)
+        ]
 
         # Dynamic values
         self.assigned_flows = [0 for _ in range(self.instance.get_largest_impact_horizon())]
@@ -358,7 +355,11 @@ class HeuristicSingleDam:
         Get the closest lower flow that is not within a limit zone
         """
 
-        # If the flow already is within a safe interval (i.e., not a limit zone), simply return it
+        # If there is no penalty for limit zones, return the flow unchanged
+        if self.config.limit_zones_penalty == 0.:
+            return flow
+
+        # If the flow already is within a safe interval (i.e., not a limit zone), return the flow unchanged
         for first_flow, last_flow in self.safe_turbine_flow_intervals:
             if first_flow <= flow <= last_flow:
                 return flow
@@ -602,9 +603,7 @@ class HeuristicSingleDam:
 
             # Calculate the flow that should be assigned to the group
             available_volume = self.calculate_actual_available_volume(group) / len(group)
-            flow_to_assign = self.max_flow_from_available_volume(available_volume)
-            # TODO: Replace with the following line to test the new version:
-            #   flow_to_assign = self.get_flow_to_assign(available_volume)
+            flow_to_assign = self.get_flow_to_assign(available_volume)
             if self.config.random_biased_flows and not self.greedy:
                 flow_to_assign = self.generate_random_biased_number() * flow_to_assign
 

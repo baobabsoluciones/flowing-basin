@@ -131,11 +131,10 @@ if __name__ == "__main__":
     # csv_final_milp_gap(save_csv=True)
 
     # Compare rl-greedy with stored Heuristic solutions
-    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', general_configs=['G1'], save_csv=True)
+    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
 
-    # Compare rl-greedy with fresh new Heuristic solutions
-    # sols = Baseline(solver="Heuristic", general_config='G1').solve(save_sol=False)
-    # csv_instance_final_values(['rl-greedy'], reference='rl-greedy', general_configs=['G1'], include_solutions=sols)
+    # Compare new and old Heuristics
+    # csv_instance_final_values(['Heuristic'], reference='Heuristic (old)', include_folders=['old'], save_csv=True)
 
     # Run multiple replications of RBO
     # sols = Baseline(solver="RBO", general_config='G1').solve(save_sol=False, num_replications=2)

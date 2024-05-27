@@ -50,6 +50,7 @@ class TestConsistency(TestCase):
         river_basin = RiverBasin(
             instance=instance,
             flow_smoothing=0,
+            max_relvar=1.,
             num_scenarios=1,
             mode=mode,
             paths_power_models=None,

@@ -15,6 +15,7 @@ class RiverBasin:
         self,
         instance: Instance,
         flow_smoothing: int = 0,
+        max_relvar: float = 1.,
         num_scenarios: int = 1,
         mode: str = "nonlinear",
         paths_power_models: dict[str, str] = None,
@@ -36,6 +37,9 @@ class RiverBasin:
         # Number of periods in which we force to keep the direction (flow increasing OR decreasing) in each dam
         self.flow_smoothing = flow_smoothing
 
+        # Maximum variation between the outflow of one period to the next
+        self.max_relvar = max_relvar
+
         # Dams inside the flowing basin
         self.dams = [
             Dam(
@@ -43,6 +47,7 @@ class RiverBasin:
                 instance=self.instance,
                 paths_power_models=paths_power_models,
                 flow_smoothing=self.flow_smoothing,
+                max_relvar=self.max_relvar,
                 num_scenarios=self.num_scenarios,
                 mode=mode,
             )

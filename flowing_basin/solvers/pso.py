@@ -21,9 +21,8 @@ class PSOConfiguration(Configuration):  # noqa
     social_coefficient: float
     inertia_weight: float
 
-    # Particles represent flows, or flow variations? In the second case, are they capped?
+    # Particles represent flows, or relative flow variations?
     use_relvars: bool
-    max_relvar: float = 0.5  # Used only when use_relvars=True
 
     # Discrete PySwarms optimizer options
     bounds_handling: str = "periodic"
@@ -60,6 +59,9 @@ class PSOConfiguration(Configuration):  # noqa
     def __post_init__(self):
 
         super(PSOConfiguration, self).__post_init__()
+
+        if self.max_relvar < 1. and not self.use_relvars:
+            raise ValueError(f"The maximum relative flow variation is {self.max_relvar} < 1., but {self.use_relvars=}.")
 
         # Assert given string values are valid
         # NOTE: the "von_neumann" topology is excluded from the list of valid topologies because,
@@ -143,6 +145,7 @@ class PSO(Experiment):
             instance=self.instance,
             paths_power_models=paths_power_models,
             flow_smoothing=self.config.flow_smoothing,
+            max_relvar=self.config.max_relvar,
             mode=self.config.mode,
             do_history_updates=False
         )

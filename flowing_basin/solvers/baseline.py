@@ -340,6 +340,11 @@ class Baseline:
 
         def handle_pso_config(trial: Trial, config: PSOConfiguration):
             """Set the missing required attributes for the PSO"""
+            # "use_relvars" can only be False when "max_relvar" is 1.
+            if config.max_relvar < 1.:
+                config.use_relvars = True
+            else:
+                set_attribute("use_relvars", trial=trial, config=config)
             # Due to performance issues, the max value of "num_particles" is lower with the "pyramid" topology
             values = hyperparams_bounds["num_particles"]['values']
             high = {2: 200, 6: 500}[self.num_dams] if config.topology == "pyramid" else values['high']
@@ -380,11 +385,13 @@ class Baseline:
             """Objective function to maximize in the tuning process"""
             # Trial: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html
             config = deepcopy(self.config)
+            attributes_to_handle_later = {
+                "num_particles", "use_relvars", "random_biased_flows", "random_biased_sorting",
+                "prob_below_half", "common_ratio"
+            }
             for attribute in hyperparams_bounds:
                 # The suggestion of these attributes will be done later
-                if attribute not in {
-                    "num_particles", "random_biased_flows", "random_biased_sorting", "prob_below_half", "common_ratio"
-                }:
+                if attribute not in attributes_to_handle_later:
                     set_attribute(attribute, trial=trial, config=config)
             if isinstance(config, PSOConfiguration):
                 handle_pso_config(trial=trial, config=config)
@@ -398,6 +405,9 @@ class Baseline:
         def copy_implicit_values(config: Configuration):
             """Copy the values hard-coded in the functions above
             (for example, `random_biased_sorting` in `handle_heuristic_config`)"""
+            if isinstance(config, PSOConfiguration):
+                if config.max_relvar < 1.:
+                    config.use_relvars = True
             if isinstance(config, HeuristicConfiguration):
                 if "random_biased_flows" in hyperparams_bounds and "random_biased_sorting" in hyperparams_bounds:
                     if not config.random_biased_flows:

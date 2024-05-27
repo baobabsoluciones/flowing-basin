@@ -9,11 +9,11 @@ from flowing_basin.solvers import Baseline
 # for config in configs:
 #     Baseline(general_config=config, solver='PSO').solve(num_replications=5)
 
-Baseline(solver="Heuristic", general_config='G0').solve()
-Baseline(solver="Heuristic", general_config='G1').solve()
-Baseline(solver="Heuristic", general_config='G2').solve()
-Baseline(solver="Heuristic", general_config='G3').solve()
-# Baseline(solver="rl-greedy", general_config='G8').solve()
+# Baseline(solver="Heuristic", general_config='G0').solve()
+# Baseline(solver="Heuristic", general_config='G1').solve()
+# Baseline(solver="Heuristic", general_config='G2').solve()
+# Baseline(solver="Heuristic", general_config='G3').solve()
+Baseline(solver="rl-greedy", general_config='G01').solve(instance_names=['Percentile50'])
 
 # Baseline(general_config='G2', solver='PSO').tune(num_trials=100, num_replications=1)
 # Baseline(general_config='G3', solver='PSO').tune(num_trials=100, num_replications=1)

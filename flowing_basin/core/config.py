@@ -65,3 +65,6 @@ class Configuration(BaseConfiguration):
     # Number of periods during which the flow through the channel may not vary
     # in order to change the sense of the flow's change
     flow_smoothing: int = 0
+
+    # Maximum variation between the outflow of one period to the next, as a fraction of the channel's max flow
+    max_relvar: float = 1.

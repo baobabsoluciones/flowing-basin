@@ -98,6 +98,7 @@ class HeuristicSingleDam:
             instance=self.instance,
             paths_power_models=paths_power_models,
             flow_smoothing=self.config.flow_smoothing,
+            max_relvar=self.config.max_relvar,
             num_scenarios=1,
             mode=self.config.mode,
         )

@@ -10,12 +10,14 @@ class Dam:
         instance: Instance,
         paths_power_models: dict[str, str],
         flow_smoothing: int,
+        max_relvar: float,
         num_scenarios: int,
         mode: str,
     ):
 
         self.num_scenarios = num_scenarios
         self.flow_smoothing = flow_smoothing
+        self.max_relvar = max_relvar
 
         self.idx = idx
         self.order = instance.get_order_of_dam(self.idx)
@@ -37,6 +39,7 @@ class Dam:
         self.unregulated_flow = None
         self.flow_out_assigned = None
         self.flow_out_smoothed = None
+        self.flow_out_clipped0 = None
         self.flow_out_clipped1 = None
         self.flow_out_clipped2 = None
         self.current_actual_variation = None
@@ -86,6 +89,7 @@ class Dam:
         self.unregulated_flow = None
         self.flow_out_assigned = None
         self.flow_out_smoothed = None
+        self.flow_out_clipped0 = None
         self.flow_out_clipped1 = None
         self.flow_out_clipped2 = None
         self.current_actual_variation = None
@@ -176,9 +180,14 @@ class Dam:
 
         # print(time, self.flow_out_assigned, self.flow_out_smoothed, current_assigned_variation, previous_variations, sign_changes_each_period)
 
+        # Flow clipped due to water hammer constraint
+        current_actual_relvar = (self.flow_out_smoothed - self.previous_flow_out) / self.channel.flow_max
+        current_actual_relvar = np.clip(current_actual_relvar, -self.max_relvar, self.max_relvar)
+        self.flow_out_clipped0 = self.previous_flow_out + current_actual_relvar * self.channel.flow_max
+
         # Flow clipped according to the flow limit of the channel
         self.flow_out_clipped1 = np.clip(
-            self.flow_out_smoothed, 0, self.channel.flow_limit
+            self.flow_out_clipped0, 0, self.channel.flow_limit
         )
 
         # Volume ---- #
@@ -199,6 +208,8 @@ class Dam:
         self.flow_out_clipped2 = (
             old_volume + volume_increase - self.volume
         ) / self.time_step
+        if self.idx == 'dam1':
+            print(self.flow_out_assigned, self.flow_out_smoothed, self.flow_out_clipped0, self.flow_out_clipped1, self.flow_out_clipped2)
 
         # Volume clipped to max value
         self.volume = np.clip(self.volume, None, self.max_volume)

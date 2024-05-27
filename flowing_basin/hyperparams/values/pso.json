@@ -1,6 +1,5 @@
 {
     "use_relvars": true,
-    "max_relvar": 1.0,
     "num_particles": 200,
     "cognitive_coefficient": 2.905405139888455,
     "social_coefficient": 0.4232260541405988,

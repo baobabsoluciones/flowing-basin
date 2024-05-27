@@ -74,6 +74,7 @@ class RLEnvironment(gym.Env):
             instance=self.instance,
             mode=self.config.mode,
             flow_smoothing=self.config.flow_smoothing if self.config.flow_smoothing_clip else 0,
+            max_relvar=self.config.max_relvar,
             paths_power_models=paths_power_models,
             do_history_updates=self.config.do_history_updates,
             update_to_decisions=update_to_decisions,

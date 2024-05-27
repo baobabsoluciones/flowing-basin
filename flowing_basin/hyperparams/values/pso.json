@@ -9,6 +9,7 @@
     "max_time": 900,
     "mode": null,
     "flow_smoothing": null,
+    "max_relvar": null,
     "limit_zones_penalty": null,
     "startups_penalty": null,
     "volume_exceedance_bonus": null,

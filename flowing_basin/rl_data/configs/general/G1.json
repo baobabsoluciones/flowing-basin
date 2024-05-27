@@ -7,5 +7,6 @@
     "startups_penalty": 0.0,
     "volume_exceedance_bonus": 0.0,
     "volume_objectives": {},
-    "volume_shortage_penalty": 0.0
+    "volume_shortage_penalty": 0.0,
+    "max_relvar": 1.0
 }

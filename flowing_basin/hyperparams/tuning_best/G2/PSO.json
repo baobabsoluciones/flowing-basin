@@ -4,6 +4,7 @@
     "convergence_time": 150,
     "convergence_tolarance": 0.005,
     "flow_smoothing": 2,
+    "max_relvar": 1.0,
     "inertia_weight": 0.3889095305605835,
     "limit_zones_penalty": 50,
     "max_iterations": null,

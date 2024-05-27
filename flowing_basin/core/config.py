@@ -55,16 +55,16 @@ class Configuration(BaseConfiguration):
     startups_penalty: float
     limit_zones_penalty: float
 
+    # Maximum variation between the outflow of one period to the next, as a fraction of the channel's max flow
+    max_relvar: float
+
+    # Number of periods during which the flow through the channel may not vary
+    # in order to change the sense of the flow's change
+    flow_smoothing: int
+
     # Objective final volumes
     volume_objectives: dict[str, float] = field(default_factory=lambda: dict())
 
     # Penalty for unfulfilling the objective volumes, and the bonus for exceeding them (in €/m3)
     volume_shortage_penalty: float = 0.
     volume_exceedance_bonus: float = 0.
-
-    # Number of periods during which the flow through the channel may not vary
-    # in order to change the sense of the flow's change
-    flow_smoothing: int = 0
-
-    # Maximum variation between the outflow of one period to the next, as a fraction of the channel's max flow
-    max_relvar: float = 1.

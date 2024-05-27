@@ -5,6 +5,7 @@
     "prob_below_half": 0.15,
     "common_ratio": 0.6,
     "flow_smoothing": null,
+    "max_relvar": null,
     "mode": null,
     "limit_zones_penalty": null,
     "startups_penalty": null,

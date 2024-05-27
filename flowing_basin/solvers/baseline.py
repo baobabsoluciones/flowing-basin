@@ -490,9 +490,14 @@ class Baselines:
     Utility class to analyze multiple solvers at the same time
     """
 
+    # The hyperparameters that work best in each scenario, according to previous experimentation
+    BEST_PARAMS = {
+        'PSO': {'G0': '', 'G1': 'tuned', 'G2': 'tuned', 'G3': 'tuned'}
+    }
+
     def __init__(
-            self, general_config: str, solvers: list[str],
-            include_folders: list[str] = None, include_solutions: list[Solution] = None
+            self, general_config: str, solvers: list[str], solvers_best: list[str] = None,
+            include_folders: list[str] = None, include_solutions: list[Solution] = None,
     ):
 
         """
@@ -502,36 +507,70 @@ class Baselines:
         :param solvers: Solvers whose solutions will be read in the folders (e.g., ['MILP', 'PSO', ...])
         :param include_folders: Additional folders in which to look for solutions (e.g. ['old', 'tuned'])
         :param include_solutions: Additional solutions to include in the calculations (not present in the folders)
+        :param solvers_best: Solvers with which to use the best hyperparameters
+        (which are the default or tuned, depending on the general config)
         """
 
-        self.general_config = general_config
-        self.solvers = solvers
+        if solvers_best is None:
+            solvers_best = []
+        if include_folders is None:
+            include_folders = []
+        if include_solutions is None:
+            include_solutions = []
 
-        # Get all solutions of the given solvers
+        if not set(solvers_best).issubset(set(solvers)):
+            raise ValueError(
+                f"The solvers specified as 'best', {solvers_best}, must be a subset of the solvers, {solvers}"
+            )
+        solvers_normal = [solver for solver in solvers if solver not in solvers_best]
+
+        self.general_config = general_config
+        self.solvers = solvers_normal
+
         self.solutions = []
+        self._add_normal_solutions(solvers=solvers_normal)
+        for solver in solvers_best:
+            self._add_single_folder_solutions(
+                Baselines.BEST_PARAMS[solver][self.general_config], solvers=solvers_best, solver_name='best'
+            )
+        self._add_folders_solutions(include_folders, solvers=solvers)
+        self._add_extra_solutions(include_solutions)
+
+        # Keep the original order of the parameter so, for example,
+        # 'PSO (best)' in `self.solvers` is at the same place as 'PSO' in `solvers`
+        self.solvers.sort(key=lambda solver: solvers.index(solver.split(' ')[0]))
+
+    def _add_normal_solutions(self, solvers: list[str]):
+        """Add solutions of the parent folder for the given solvers"""
         for baseline in get_all_baselines(self.general_config):
-            if baseline.get_solver() in self.solvers:
+            if baseline.get_solver() in solvers:
                 self.solutions.append(baseline)
 
-        # Add old solutions
-        if include_folders is not None:
-            for folder_name in include_folders:
-                for baseline in get_all_baselines_folder(folder_name=folder_name, general_config=self.general_config):
-                    solver = baseline.get_solver()
-                    if solver in self.solvers:
-                        solver += f' ({folder_name})'
-                        baseline.set_solver(solver)
-                        if solver not in self.solvers:
-                            self.solvers.append(solver)
-                        self.solutions.append(baseline)
+    def _add_folders_solutions(self, folder_names: list[str], solvers: list[str]):
+        """Add solutions of the given subfolders for the given solvers"""
+        for folder_name in folder_names:
+            self._add_single_folder_solutions(folder_name, solvers=solvers)
 
-        # Add extra solutions
-        if include_solutions is not None:
-            for sol in include_solutions:
-                self.solutions.append(sol)
-                solver = sol.get_solver()
+    def _add_single_folder_solutions(self, folder_name: str, solvers: list[str], solver_name: str = None):
+        """Add solutions of the given subfolder for the given solvers"""
+        if solver_name is None:
+            solver_name = folder_name
+        for baseline in get_all_baselines_folder(folder_name=folder_name, general_config=self.general_config):
+            solver = baseline.get_solver()
+            if solver in solvers:
+                solver += f' ({solver_name})'
+                baseline.set_solver(solver)
                 if solver not in self.solvers:
                     self.solvers.append(solver)
+                self.solutions.append(baseline)
+
+    def _add_extra_solutions(self, sols: list[Solution]):
+        """Add the given solutions"""
+        for sol in sols:
+            self.solutions.append(sol)
+            solver = sol.get_solver()
+            if solver not in self.solvers:
+                self.solvers.append(solver)
 
     def get_solver_instance_history_values(
             self, num_timestamps: int = 300

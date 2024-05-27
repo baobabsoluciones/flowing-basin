@@ -12,7 +12,7 @@ GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
 
 
 def barchart_instances(
-        solvers: list[str], include_folders: list[str] = None, general_configs: list[str] = None, save_fig: bool = False
+        solvers: list[str], general_configs: list[str] = None, save_fig: bool = False, **kwargs
 ):
 
     if general_configs is None:
@@ -23,11 +23,16 @@ def barchart_instances(
     fig, axes = plt.subplots(layout[0], layout[1], figsize=(6 * layout[1], 6 * layout[0]))
 
     axes = axes.flatten()
+    baseline_solvers = []
     for i, ax in enumerate(axes[:num_configs]):
-        Baselines(solvers=solvers, include_folders=include_folders, general_config=f'G{i}').barchart_instances_ax(ax)
+        baselines = Baselines(solvers=solvers, general_config=f'G{i}', **kwargs)
+        for solver in baselines.solvers:
+            if solver not in baseline_solvers:
+                baseline_solvers.append(solver)
+        baselines.barchart_instances_ax(ax)
     plt.tight_layout()
 
-    solvers_title = "_".join(solvers)
+    solvers_title = "_".join(baseline_solvers)
     configs_title = ("_" + "_".join(general_configs)) if general_configs != GENERAL_CONFIGS else ""
     if save_fig:
         plt.savefig(f"reports/barchart_instances_{solvers_title}{configs_title}.png")
@@ -50,15 +55,19 @@ def csv_instance_final_values(
         general_configs = GENERAL_CONFIGS
 
     rows_total = []
+    baseline_solvers = []
     for i, general_config in enumerate(general_configs):
         baselines = Baselines(solvers=solvers, general_config=general_config, **kwargs)
+        for solver in baselines.solvers:
+            if solver not in baseline_solvers:
+                baseline_solvers.append(solver)
         rows = baselines.get_csv_instance_final_values(reference)
         for row in rows:
             row.insert(0, general_config)
         rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
     rows_total[0][0] = 'Configuration'
 
-    solvers_title = "_".join(solvers)
+    solvers_title = "_".join(baseline_solvers)
     configs_title = ("_" + "_".join(general_configs)) if general_configs != GENERAL_CONFIGS else ""
     reference_title = f"_ref_{reference}" if reference is not None else ""
     csv_filename = f"reports/final_values_{solvers_title}{configs_title}{reference_title}.csv" if save_csv else None
@@ -121,17 +130,18 @@ def csv_final_milp_gap(save_csv: bool = False):
 if __name__ == "__main__":
 
     # barchart_instances(['PSO'], include_folders=['tuned'], save_fig=True)
+    barchart_instances(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], save_fig=True)
     # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)
-    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], reference='rl-greedy', save_csv=True)
+    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], reference='rl-greedy', save_csv=True)
     # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=False, save_csv=True)
     # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=True, save_csv=True)
     # csv_final_milp_gap(save_csv=True)
 
     # Compare rl-greedy with stored Heuristic solutions
-    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
+    #csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
 
     # Compare new and old Heuristics
     # csv_instance_final_values(['Heuristic'], reference='Heuristic (old)', include_folders=['old'], save_csv=True)

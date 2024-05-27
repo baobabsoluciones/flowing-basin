@@ -14,8 +14,14 @@ from flowing_basin.solvers import Baseline
 # Baseline(solver="Heuristic", general_config='G2').solve()
 # Baseline(solver="Heuristic", general_config='G3').solve()
 
-Baseline(solver="PSO", general_config='G01').solve(num_replications=5)
-Baseline(solver="PSO", general_config='G21').solve(num_replications=5)
+Baseline(solver="rl-random", general_config='G01').solve()
+Baseline(solver="rl-random", general_config='G21').solve()
+
+# Baseline(solver="Heuristic", general_config='G01').solve()
+# Baseline(solver="Heuristic", general_config='G21').solve()
+
+# Baseline(solver="PSO", general_config='G01').solve(num_replications=5)
+# Baseline(solver="PSO", general_config='G21').solve(num_replications=5)
 
 # Baseline(general_config='G2', solver='PSO').tune(num_trials=100, num_replications=1)
 # Baseline(general_config='G3', solver='PSO').tune(num_trials=100, num_replications=1)

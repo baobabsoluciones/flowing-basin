@@ -208,13 +208,9 @@ class Dam:
         self.flow_out_clipped2 = (
             old_volume + volume_increase - self.volume
         ) / self.time_step
-        if self.idx == 'dam1':
-            print(self.flow_out_assigned, self.flow_out_smoothed, self.flow_out_clipped0, self.flow_out_clipped1, self.flow_out_clipped2)
 
         # Volume clipped to max value
         self.volume = np.clip(self.volume, None, self.max_volume)
-
-        # print("dams", time, volume_increase.item(), volume_decrease.item(), self.flow_out_clipped2.item(), self.volume.item())
 
         # Volume at the end of the decision horizon ---- #
 

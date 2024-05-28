@@ -103,6 +103,8 @@ def scan_baselines(folder_path: str) -> list[Solution]:
     :param folder_path: Path to the folder in which to scan the baselines
     """
     sols = []
+    if not os.path.exists(folder_path):
+        return sols
     for file in os.listdir(folder_path):
         if file.endswith('.json'):
             full_path = os.path.join(folder_path, file)
@@ -212,7 +214,7 @@ def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], lis
 
 def barchart_instances_ax(
         ax: plt.Axes, values: dict[str, dict[str, float | list[float]]],
-        value_type: str, title: str, general_config: str
+        value_type: str, title: str, general_config: str, solver_colors: dict[str, str | tuple[float]] = None
 ):
 
     """
@@ -225,6 +227,7 @@ def barchart_instances_ax(
     :param value_type: Indicate which value is being plotted (income, reward...)
     :param title: String that will appear on the title
     :param general_config: General configuration (e.g. "G1")
+    :param solver_colors: Color with which each solver should be drawn
     """
 
     solvers, instances = preprocess_values(values)
@@ -255,7 +258,10 @@ def barchart_instances_ax(
         print(f"Histogram values for {solver}: {values_mean=}, {values_lower=}, {values_upper=}")
 
         # Plot mean values as a barchart
-        ax.bar(x_values + offset, values_mean, width=bar_width, label=solver)
+        bar_kwargs = dict(width=bar_width, label=solver)
+        if solver_colors is not None and solver in solver_colors:
+            bar_kwargs.update(color=solver_colors[solver])
+        ax.bar(x_values + offset, values_mean, **bar_kwargs)
 
         # Plot lower and upper bounds, if they exist
         if values_lower and values_upper:

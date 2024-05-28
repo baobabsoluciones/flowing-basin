@@ -501,8 +501,23 @@ class Baselines:
     """
 
     # The hyperparameters that work best in each scenario, according to previous experimentation
+    # TODO: get the 'tuned' hyperparams for GO1 and G21 and analyze if they perform better
     BEST_PARAMS = {
-        'PSO': {'G0': '', 'G1': 'tuned', 'G2': 'tuned', 'G3': 'tuned'}
+        'PSO': {'G0': '', 'G01': '', 'G1': 'tuned', 'G2': 'tuned', 'G21': '', 'G3': 'tuned'}
+    }
+
+    # Draw the colors using the 'paired' color map
+    # Reference: https://matplotlib.org/stable/users/explain/colors/colormaps.html#qualitative
+    paired_cmap = plt.get_cmap('Paired')
+    blue, dark_blue = paired_cmap(0), paired_cmap(1)
+    green, dark_green = paired_cmap(2), paired_cmap(3)
+    red, dark_red = paired_cmap(4), paired_cmap(5)
+    orange, dark_orange = paired_cmap(6), paired_cmap(7)
+    purple, dark_purple = paired_cmap(8), paired_cmap(9)
+    SOLVER_COLORS = {
+        'MILP': dark_blue, 'PSO': green, 'PSO (tuned)': dark_green, 'PSO (best)': dark_green,
+        'PSO-RBO': purple, 'PSO-RBO (tuned)': dark_purple, 'PSO-RBO (best)': dark_purple,
+        'Heuristic': dark_red, 'rl-random': orange, 'rl-greedy': dark_orange
     }
 
     def __init__(
@@ -720,7 +735,8 @@ class Baselines:
         """
         values = self.get_solver_instance_final_values()
         barchart_instances_ax(
-            ax, values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
+            ax, values=values, value_type="Income (€)", title=', '.join(self.solvers),
+            general_config=self.general_config, solver_colors=Baselines.SOLVER_COLORS
         )
 
     def barchart_instances(self):
@@ -729,7 +745,8 @@ class Baselines:
         """
         values = self.get_solver_instance_final_values()
         barchart_instances(
-            values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config
+            values=values, value_type="Income (€)", title=', '.join(self.solvers),
+            general_config=self.general_config, solver_colors=Baselines.SOLVER_COLORS
         )
 
     def get_csv_milp_final_gaps(self) -> list[list[str | float]]:

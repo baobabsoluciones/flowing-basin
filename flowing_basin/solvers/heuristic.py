@@ -716,7 +716,9 @@ class Heuristic(Experiment):
 
         self.paths_power_models = paths_power_models
         self.greedy = greedy
-        self.do_tests = do_tests
+
+        # When max_relvar < 1., the heuristic's predictions will not match the simulator
+        self.do_tests = do_tests if self.config.max_relvar == 1. else False
 
         # Calculate the bias weight in the random biased number generator
         if self.config.prob_below_half > 1e-5:

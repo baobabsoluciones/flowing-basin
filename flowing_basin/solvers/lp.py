@@ -113,6 +113,10 @@ class LPModel(Experiment):
             for dam_id in self.instance.get_ids_of_dams()
         }
         """
+        Parámetro porcentaje máximo relativo de flujo que se puede cambiar  de un periodo a otro
+        """
+        R = self.config.max_relvar
+        """
         Parámetro caudal turbinado en los breakpoints
         de la curva Potencia - Caudal turbinado (m3/s): QtBP
         """
@@ -311,6 +315,7 @@ class LPModel(Experiment):
         print(f"{VMin=}")
         # print(f"{TMin=}")
         print(f"{K=}")
+        print(f"{R=}")
         print(f"{Price=}")
         print(f"{IniLags=}")
         print(f"{VolFinal=}")
@@ -459,6 +464,10 @@ class LPModel(Experiment):
             for dam_id in self.instance.get_ids_of_dams()
         }
         """
+        Parámetro porcentaje máximo relativo de flujo que se puede cambiar  de un periodo a otro
+        """
+        R = self.config.max_relvar
+        """
         Parámetro potencia en los breakpoints
         de la curva Potencia - Caudal turbinado (MWh): PotBP
         """
@@ -525,8 +534,6 @@ class LPModel(Experiment):
         Parámetro franjas sin cambio en el caudal de salida: K
         """
         K = self.config.flow_smoothing
-
-
         """
         Parámetro precio en cada franja (€/MWh): Price
         """
@@ -993,6 +1000,17 @@ class LPModel(Experiment):
                     lpproblem += qch[(i, t)] == qs[(i, t)] - IniLags[i][0]
                 else:
                     lpproblem += qch[(i, t)] == qs[(i, t)] - qs[(i, t - 1)]
+        """
+        Restricción para limitar la variación relativa del caudal
+        """
+        for i in I:
+            for t in T:
+                if t == T[0]:
+                    lpproblem += qs[(i, t)] <= (1 + R) * IniLags[i][0]
+                    lpproblem += qs[(i, t)] >= (1 - R) * IniLags[i][0]
+                else:
+                    lpproblem += qs[(i, t)] <= (1 + R) * qs[(i, t - 1)]
+                    lpproblem += qs[(i, t)] >= (1 - R) * qs[(i, t - 1)]
 
         #CON TMIN
         """

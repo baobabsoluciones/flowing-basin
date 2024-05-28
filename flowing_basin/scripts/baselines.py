@@ -8,7 +8,8 @@ from flowing_basin.solvers.common import print_save_csv
 import matplotlib.pyplot as plt
 
 
-GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
+# General configs we want to plot
+GENERAL_CONFIGS = ['G0', 'G01', 'G1', 'G2', 'G21', 'G3']
 
 
 def barchart_instances(
@@ -19,13 +20,13 @@ def barchart_instances(
         general_configs = GENERAL_CONFIGS
 
     num_configs = len(general_configs)
-    layout = [(1, 1), (1, 2), (2, 2), (2, 2)][num_configs - 1]
+    layout = [(1, 1), (1, 2), (2, 2), (2, 2), (2, 3), (2, 3)][num_configs - 1]
     fig, axes = plt.subplots(layout[0], layout[1], figsize=(6 * layout[1], 6 * layout[0]))
 
     axes = axes.flatten()
     baseline_solvers = []
-    for i, ax in enumerate(axes[:num_configs]):
-        baselines = Baselines(solvers=solvers, general_config=f'G{i}', **kwargs)
+    for config, ax in zip(general_configs, axes[:num_configs]):
+        baselines = Baselines(solvers=solvers, general_config=config, **kwargs)
         for solver in baselines.solvers:
             if solver not in baseline_solvers:
                 baseline_solvers.append(solver)
@@ -129,9 +130,8 @@ def csv_final_milp_gap(save_csv: bool = False):
 
 if __name__ == "__main__":
 
-    all_gen_configs = ['G0', 'G01', 'G1', 'G2', 'G21', 'G3']
-    # barchart_instances(['PSO'], include_folders=['tuned'], save_fig=True)
-    # barchart_instances(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], save_fig=True)
+    # barchart_instances(['PSO', 'rl-greedy'], include_folders=['tuned'], save_fig=True)
+    barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)
     # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
@@ -142,10 +142,10 @@ if __name__ == "__main__":
     # csv_final_milp_gap(save_csv=True)
 
     # Compare rl-greedy with stored Heuristic solutions
-    csv_instance_final_values(['rl-greedy', 'rl-random', 'Heuristic'], general_configs=all_gen_configs, reference='rl-greedy', save_csv=True)
+    # csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
 
     # Compare new and old Heuristics
-    # csv_instance_final_values(['Heuristic'], reference='Heuristic (old)', include_folders=['old'], save_csv=True)
+    # csv_instance_final_values(['Heuristic'], reference='Heuristic (old)', general_configs=['G0', 'G1', 'G2', 'G3'], include_folders=['old'], save_csv=True)
 
     # Run multiple replications of RBO
     # sols = Baseline(solver="RBO", general_config='G1').solve(save_sol=False, num_replications=2)

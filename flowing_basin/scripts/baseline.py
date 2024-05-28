@@ -9,22 +9,10 @@ from flowing_basin.solvers import Baseline
 # for config in configs:
 #     Baseline(general_config=config, solver='PSO').solve(num_replications=5)
 
-# Baseline(solver="Heuristic", general_config='G0').solve()
-# Baseline(solver="Heuristic", general_config='G1').solve()
-# Baseline(solver="Heuristic", general_config='G2').solve()
-# Baseline(solver="Heuristic", general_config='G3').solve()
-
-Baseline(solver="rl-random", general_config='G01').solve()
-Baseline(solver="rl-random", general_config='G21').solve()
-
-# Baseline(solver="Heuristic", general_config='G01').solve()
-# Baseline(solver="Heuristic", general_config='G21').solve()
-
-# Baseline(solver="PSO", general_config='G01').solve(num_replications=5)
-# Baseline(solver="PSO", general_config='G21').solve(num_replications=5)
-
-# Baseline(general_config='G2', solver='PSO').tune(num_trials=100, num_replications=1)
-# Baseline(general_config='G3', solver='PSO').tune(num_trials=100, num_replications=1)
+Baseline(general_config='G01', solver='PSO').tune(num_trials=100, num_replications=1)
+Baseline(general_config='G21', solver='PSO').tune(num_trials=100, num_replications=1)
+# Baseline(general_config='G01', solver='PSO', max_time=5).tune(num_trials=2, num_replications=1)
+# Baseline(general_config='G21', solver='PSO', max_time=5).tune(num_trials=2, num_replications=1)
 
 # Baseline(general_config='G2', solver='PSO', tuned_hyperparams=True).solve(num_replications=1)
 # Baseline(general_config='G3', solver='PSO', tuned_hyperparams=True).solve(num_replications=1)

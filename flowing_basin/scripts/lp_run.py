@@ -1,8 +1,14 @@
+"""
+lp_run.py
+This script runs the MILP solver for a single instance and saves the solution in the current folder.
+It is useful for debugging the MILP model.
+"""
+
 from flowing_basin.core import Instance
 from flowing_basin.solvers import LPModel, LPConfiguration
 from datetime import datetime
 
-TIME_LIMIT_SECONDS = 30
+TIME_LIMIT_SECONDS = 15
 INSTANCE_NAME = "Percentile25"
 NUM_DAMS = 2
 PATH_SOLUTION = f"lp_run_{INSTANCE_NAME}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"

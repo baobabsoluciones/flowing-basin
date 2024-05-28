@@ -1005,12 +1005,8 @@ class LPModel(Experiment):
         """
         for i in I:
             for t in T:
-                if t == T[0]:
-                    lpproblem += qs[(i, t)] <= (1 + R) * IniLags[i][0]
-                    lpproblem += qs[(i, t)] >= (1 - R) * IniLags[i][0]
-                else:
-                    lpproblem += qs[(i, t)] <= (1 + R) * qs[(i, t - 1)]
-                    lpproblem += qs[(i, t)] >= (1 - R) * qs[(i, t - 1)]
+                lpproblem += qch[(i, t)] <= R * QMax[i]
+                lpproblem += qch[(i, t)] >= - R * QMax[i]
 
         #CON TMIN
         """

@@ -7,7 +7,7 @@ import random
 
 
 # General configurations to test
-GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3', 'G9']
+GENERAL_CONFIGS = ['G0', 'G01', 'G1', 'G2', 'G21', 'G3', 'G9']
 
 
 class TestConsistency(TestCase):

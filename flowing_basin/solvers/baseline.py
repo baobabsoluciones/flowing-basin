@@ -501,9 +501,8 @@ class Baselines:
     """
 
     # The hyperparameters that work best in each scenario, according to previous experimentation
-    # TODO: get the 'tuned' hyperparams for GO1 and G21 and analyze if they perform better
     BEST_PARAMS = {
-        'PSO': {'G0': '', 'G01': '', 'G1': 'tuned', 'G2': 'tuned', 'G21': '', 'G3': 'tuned'}
+        'PSO': {'G0': '', 'G01': 'tuned', 'G1': 'tuned', 'G2': 'tuned', 'G21': 'tuned', 'G3': 'tuned'}
     }
 
     # Draw the colors using the 'paired' color map

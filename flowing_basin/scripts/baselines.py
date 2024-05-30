@@ -130,13 +130,14 @@ def csv_final_milp_gap(save_csv: bool = False):
 
 if __name__ == "__main__":
 
-    # barchart_instances(['PSO', 'rl-greedy'], include_folders=['tuned'], save_fig=True)
-    barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)
+    # barchart_instances(['PSO'], include_folders=['tuned'], save_fig=True)
+    barchart_instances(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], save_fig=True)
+    # barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)
     # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
-    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], save_csv=True)
-    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], reference='rl-greedy', save_csv=True)
+    # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
+    csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], reference='rl-greedy', save_csv=True)
     # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=False, save_csv=True)
     # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=True, save_csv=True)
     # csv_final_milp_gap(save_csv=True)

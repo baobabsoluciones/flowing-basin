@@ -98,20 +98,20 @@ def csv_instance_final_timestamps(
     print_save_csv(rows_total, csv_filepath=csv_filename)
 
 
-def csv_instance_smoothing_violations(solvers: list[str], in_percentage: bool = True, save_csv: bool = False):
+def csv_instance_violations(solvers: list[str], concept: str, in_percentage: bool = True, save_csv: bool = False):
 
     rows_total = []
     for i, general_config in enumerate(GENERAL_CONFIGS):
         rows = Baselines(
             solvers=solvers, general_config=general_config
-        ).get_csv_instance_smoothing_violations(in_percentage)
+        ).get_csv_instance_violations(concept, in_percentage=in_percentage)
         for row in rows:
             row.insert(0, general_config)
         rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
     rows_total[0][0] = 'Configuration'
     solvers_title = "_".join(solvers)
     pct_title = "_pct" if in_percentage else ""
-    csv_filename = f"reports/smoothing_violations_{solvers_title}{pct_title}.csv" if save_csv else None
+    csv_filename = f"reports/violations_{concept}_{solvers_title}{pct_title}.csv" if save_csv else None
     print_save_csv(rows_total, csv_filepath=csv_filename)
 
 
@@ -131,15 +131,16 @@ def csv_final_milp_gap(save_csv: bool = False):
 if __name__ == "__main__":
 
     # barchart_instances(['PSO'], include_folders=['tuned'], save_fig=True)
-    barchart_instances(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], save_fig=True)
+    # barchart_instances(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], save_fig=True)
     # barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)
     # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
-    csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], reference='rl-greedy', save_csv=True)
-    # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=False, save_csv=True)
-    # csv_instance_smoothing_violations(['MILP', 'PSO', 'rl-greedy'], in_percentage=True, save_csv=True)
+    # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], reference='rl-greedy', save_csv=True)
+    # csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="flow_smoothing", in_percentage=False, save_csv=True)
+    csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="flow_smoothing", in_percentage=True, save_csv=True)
+    csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="max_relvar", in_percentage=True, save_csv=True)
     # csv_final_milp_gap(save_csv=True)
 
     # Compare rl-greedy with stored Heuristic solutions

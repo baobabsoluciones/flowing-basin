@@ -653,11 +653,12 @@ class Baselines:
                 final_timestamps[solver][instance_name].append(solution.get_last_time_stamp())
         return final_timestamps
 
-    def get_solver_instance_smoothing_violations(self, in_percentage: bool = True) -> dict[str, dict[str, list[float]]]:
+    def get_solver_instance_violations(self, concept: str, in_percentage: bool = True) -> dict[str, dict[str, list[float]]]:
         """
-        Get the list of the number of flow smoothing violations (one per replication)
+        Get the list of the number of "flow_smoothing" or "max_relvar" violations (one per replication)
         for every solver and every instance.
 
+        :param concept: Either "flow_smoothing" or "max_relvar"
         :param in_percentage: Whether to give the violation count as a % of the total number of periods
         :return: dict[solver, dict[instance, num_violations]]
         """
@@ -681,11 +682,21 @@ class Baselines:
                 dam_id: instance.get_max_flow_of_channel(dam_id) for dam_id in instance.get_ids_of_dams()
             }
 
-            num_violations = solution.get_num_flow_smoothing_violations(
-                flow_smoothing=config.flow_smoothing,
-                initial_flows=initial_flows,
-                max_flows=max_flows
-            )
+            if concept == "flow_smoothing":
+                num_violations = solution.get_num_flow_smoothing_violations(
+                    flow_smoothing=config.flow_smoothing,
+                    initial_flows=initial_flows,
+                    max_flows=max_flows
+                )
+            elif concept == "max_relvar":
+                num_violations = solution.get_num_max_relvar_violations(
+                    max_relvar=config.max_relvar,
+                    initial_flows=initial_flows,
+                    max_flows=max_flows
+                )
+            else:
+                raise ValueError(f"Invalid concept: {concept}")
+
             if in_percentage:
                 num_violations = num_violations / (len(solution.get_decisions_time_steps()) * solution.get_num_dams())
             if instance_name not in violation_values[solver]:
@@ -776,15 +787,16 @@ class Baselines:
 
         return rows
 
-    def get_csv_instance_smoothing_violations(self, in_percentage: bool = True) -> list[list[str | float]]:
+    def get_csv_instance_violations(self, concept: str, in_percentage: bool = True) -> list[list[str | float]]:
         """
         Create a list of lists representing a CSV file
         with the final objective function value of each solver in every instance.
 
+        :param concept: Either "flow_smoothing" or "max_relvar"
         :param in_percentage: Whether to give the violation count as a % of the total number of periods
         """
 
-        values = self.get_solver_instance_smoothing_violations(in_percentage)
+        values = self.get_solver_instance_violations(concept, in_percentage=in_percentage)
         solvers, instances = preprocess_values(values)
         rows = []
 

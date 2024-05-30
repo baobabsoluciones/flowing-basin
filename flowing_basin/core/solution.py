@@ -256,6 +256,34 @@ class Solution(SolutionCore):
 
         return num_violations
 
+    def get_num_max_relvar_violations(
+            self, max_relvar: float, initial_flows: dict[str, float], max_flows: dict[str, float], epsilon: float = 1e-6
+    ):
+
+        """
+        Indicates the number of times in which the given max relvar parameter is violated
+
+        :param max_relvar:
+        :param initial_flows: First lag of each dam
+        :param max_flows: Maximum flow of each dam
+        :param epsilon: Small tolerance for rounding errors
+        :return:
+        """
+
+        if max_relvar == 1.:
+            return 0
+
+        num_violations = 0
+        for dam_id in self.get_ids_of_dams():
+            flows = self.get_exiting_flows_of_dam(dam_id)
+            previous_flow = initial_flows[dam_id]
+            for flow in flows:
+                current_variation = flow - previous_flow
+                if abs(current_variation) > max_relvar * max_flows[dam_id] + epsilon:
+                    num_violations += 1
+                previous_flow = flow
+        return num_violations
+
     def complies_with_flow_smoothing(self, **kwargs) -> bool:
 
         """

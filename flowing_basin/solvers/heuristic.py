@@ -123,18 +123,10 @@ class HeuristicSingleDam:
         """
 
         # Calculate the weights with which we will order the groups
-        prices = self.instance.get_all_prices()
-        verification_lags = self.instance.get_verification_lags_of_dam(self.dam_id)
+        # The weight of a group is the avg of period values in the group
+        period_values = self.get_all_period_values()
         weights = [
-            # Calculate the avg of lagged prices in the group
-            sum(
-                # Calculate the lagged price in the time step (i.e., the avg price in the lags)
-                sum(
-                    prices[time_step + lag] for lag in verification_lags if time_step + lag < len(prices)
-                ) / len(verification_lags)
-                for time_step in group
-            ) / len(group)
-            for group in groups
+            sum(period_values[time_step] for time_step in group) / len(group) for group in groups
         ]
 
         # Sort the groups according to the weights
@@ -143,6 +135,73 @@ class HeuristicSingleDam:
         sorted_grouped_time_steps, _ = zip(*sorted_pairs)
 
         return list(sorted_grouped_time_steps)
+
+    def get_period_delay_values(
+            self, period: int, dam_index: int, value: float = 1.0, periods_value: dict[int, float] = None
+    ) -> dict[int, float]:
+
+        """
+        Recursively calculate the future periods impacted by assigning an outflow in the given period,
+        as well as the fraction of flow that could be turbined in each of these future periods.
+
+        :param period: Period in which the outflow is assigned
+        :param dam_index: Dam in which the outflow is assigned
+        :param value: Initial flow. Future turbined flows are given as a fraction of this value
+        :param periods_value: The dictionary that will be returned
+        :return:
+            Dictionary with the fraction of turbined flow for each of the impacted future periods,
+            dict[future_period, fraction_turbine_flow]
+        """
+
+        if periods_value is None:
+            periods_value = dict()
+
+        dam_id = self.instance.get_ids_of_dams()[dam_index]
+        verification_lags = self.instance.get_verification_lags_of_dam(dam_id)
+
+        for lag in verification_lags:
+
+            new_period = period + lag
+            new_value = value / len(verification_lags)
+            if new_period < self.instance.get_largest_impact_horizon():
+                if new_period not in periods_value:
+                    periods_value[new_period] = new_value
+                else:
+                    periods_value[new_period] += new_value
+
+            new_dam_index = dam_index + 1
+            if new_dam_index < self.instance.get_num_dams():
+                self.get_period_delay_values(
+                    dam_index=new_dam_index, period=new_period, value=new_value, periods_value=periods_value
+                )
+
+        return periods_value
+
+    def get_period_value(self, period: int) -> float:
+
+        """
+        Get the full value of the given period.
+        This is calculated from the potential turbine flow obtained by assigning an outflow to the given period.
+        Each of these potential turbine flows are multiplied by the price in the period,
+        and all of these values are added to give the full value of the given period.
+
+        :param period:
+        :return:
+        """
+
+        full_value = 0.
+        delay_values = self.get_period_delay_values(period, dam_index=self.instance.get_order_of_dam(self.dam_id) - 1)
+        for delay_period, delay_value in delay_values.items():
+            full_value += delay_value * self.instance.get_price(delay_period)
+        return full_value
+
+    def get_all_period_values(self) -> list[float]:
+
+        """
+        Get the full value of each period
+        """
+
+        return [self.get_period_value(period) for period in range(self.instance.get_largest_impact_horizon())]
 
     def generate_random_biased_probabilities(self, num_groups: int) -> list[float]:
 
@@ -725,65 +784,6 @@ class Heuristic(Experiment):
             self.bias_weight = log(self.config.prob_below_half) / log(0.5)
         else:
             self.bias_weight = float('inf')
-
-    def get_period_delay_values(
-            self, period: int, dam_index: int = 0, value: float = 1.0, periods_value: dict[int, float] = None
-    ) -> dict[int, float]:
-
-        """
-        Recursively calculate the future periods impacted by assigning an outflow in the given period,
-        as well as the fraction of flow that could be turbined in each of these future periods.
-
-        :param period: Period in which the outflow is assigned
-        :param dam_index: Dam in which the outflow is assigned
-        :param value: Initial flow. Future turbined flows are given as a fraction of this value
-        :param periods_value: The dictionary that will be returned
-        :return:
-            Dictionary with the fraction of turbined flow for each of the impacted future periods,
-            dict[future_period, fraction_turbine_flow]
-        """
-
-        if periods_value is None:
-            periods_value = dict()
-
-        dam_id = self.instance.get_ids_of_dams()[dam_index]
-        verification_lags = self.instance.get_verification_lags_of_dam(dam_id)
-
-        for lag in verification_lags:
-
-            new_period = period + lag
-            new_value = value / len(verification_lags)
-            if new_period < self.instance.get_largest_impact_horizon():
-                if new_period not in periods_value:
-                    periods_value[new_period] = new_value
-                else:
-                    periods_value[new_period] += new_value
-
-            new_dam_index = dam_index + 1
-            if new_dam_index < self.instance.get_num_dams():
-                self.get_period_delay_values(
-                    dam_index=new_dam_index, period=new_period, value=new_value, periods_value=periods_value
-                )
-
-        return periods_value
-
-    def get_period_value(self, period: int) -> float:
-
-        """
-        Get the full value of the given period.
-        This is calculated from the potential turbine flow obtained by assigning an outflow to the given period.
-        Each of these potential turbine flows are multiplied by the price in the period,
-        and all of these values are added to give the full value of the given period.
-
-        :param period:
-        :return:
-        """
-
-        full_value = 0.
-        delay_values = self.get_period_delay_values(period)
-        for delay_period, delay_value in delay_values.items():
-            full_value += delay_value * self.instance.get_price(delay_period)
-        return full_value
 
     @staticmethod
     def compare_flows_and_volumes(

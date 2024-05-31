@@ -139,12 +139,12 @@ if __name__ == "__main__":
     # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
     # csv_instance_final_values(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], reference='rl-greedy', save_csv=True)
     # csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="flow_smoothing", in_percentage=False, save_csv=True)
-    csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="flow_smoothing", in_percentage=True, save_csv=True)
-    csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="max_relvar", in_percentage=True, save_csv=True)
+    # csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="flow_smoothing", in_percentage=True, save_csv=True)
+    # csv_instance_violations(['MILP', 'PSO', 'rl-greedy'], concept="max_relvar", in_percentage=True, save_csv=True)
     # csv_final_milp_gap(save_csv=True)
 
     # Compare rl-greedy with stored Heuristic solutions
-    # csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
+    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
 
     # Compare new and old Heuristics
     # csv_instance_final_values(['Heuristic'], reference='Heuristic (old)', general_configs=['G0', 'G1', 'G2', 'G3'], include_folders=['old'], save_csv=True)

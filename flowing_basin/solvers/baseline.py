@@ -591,10 +591,11 @@ class Baselines:
     def _add_extra_solutions(self, sols: list[Solution]):
         """Add the given solutions"""
         for sol in sols:
-            self.solutions.append(sol)
-            solver = sol.get_solver()
+            solver = sol.get_solver() + ' (extra)'
+            sol.set_solver(solver)
             if solver not in self.solvers:
                 self.solvers.append(solver)
+            self.solutions.append(sol)
 
     def get_solver_instance_history_values(
             self, num_timestamps: int = 300

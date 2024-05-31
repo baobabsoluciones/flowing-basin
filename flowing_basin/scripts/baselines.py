@@ -49,16 +49,22 @@ def plot_history_values_instances(solvers: list[str], save_fig: bool = False):
 
 
 def csv_instance_final_values(
-        solvers: list[str], reference: str = None, general_configs: list[str] = None, save_csv: bool = False, **kwargs
+        solvers: list[str], reference: str = None, general_configs: list[str] = None,
+        save_csv: bool = False, solvers_extra: list[str] = None, **kwargs
 ):
 
     if general_configs is None:
         general_configs = GENERAL_CONFIGS
+    if solvers_extra is None:
+        solvers_extra = []
 
     rows_total = []
     baseline_solvers = []
     for i, general_config in enumerate(general_configs):
-        baselines = Baselines(solvers=solvers, general_config=general_config, **kwargs)
+        sols_extra = []
+        for solver_extra in solvers_extra:
+            sols_extra.extend(Baseline(solver=solver_extra, general_config=general_config).solve(save_sol=False))
+        baselines = Baselines(solvers=solvers, general_config=general_config, include_solutions=sols_extra, **kwargs)
         for solver in baselines.solvers:
             if solver not in baseline_solvers:
                 baseline_solvers.append(solver)
@@ -144,10 +150,13 @@ if __name__ == "__main__":
     # csv_final_milp_gap(save_csv=True)
 
     # Compare rl-greedy with stored Heuristic solutions
-    csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
+    # csv_instance_final_values(['rl-greedy', 'Heuristic'], reference='rl-greedy', save_csv=True)
 
     # Compare new and old Heuristics
     # csv_instance_final_values(['Heuristic'], reference='Heuristic (old)', general_configs=['G0', 'G1', 'G2', 'G3'], include_folders=['old'], save_csv=True)
+
+    # Get fresh Heuristic sols and compare with stored Heuristic sols
+    csv_instance_final_values(["Heuristic"], reference="Heuristic", solvers_extra=["Heuristic"], save_csv=True)
 
     # Run multiple replications of RBO
     # sols = Baseline(solver="RBO", general_config='G1').solve(save_sol=False, num_replications=2)

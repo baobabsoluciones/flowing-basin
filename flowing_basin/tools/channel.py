@@ -45,8 +45,9 @@ class Channel:
 
         # Past flows (m3/s)
         # We save them as an array of shape num_scenarios x num_lags
+        # Explicitly cast the type 'float' to avoid creating an array of 'ints' and clipping future values
         self.past_flows = np.repeat(
-            [instance.get_initial_lags_of_channel(self.idx)],
+            [[float(initial_lag) for initial_lag in instance.get_initial_lags_of_channel(self.idx)]],
             repeats=self.num_scenarios,
             axis=0,
         )

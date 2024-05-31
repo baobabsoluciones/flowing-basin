@@ -38,6 +38,7 @@ if __name__ == "__main__":
     print(river_basin.history.to_string())
 
     # Extract the exiting flows of each and save them as CSV
-    history_subset = river_basin.history[[f"{dam_id}_flow_clipped2" for dam_id in instance.get_ids_of_dams()]]
-    print(history_subset.to_string())
-    history_subset.to_csv('river_basin_delays/river_basin_delays.csv')
+    for value in ["flow_clipped2", "turbined"]:
+        history_subset = river_basin.history[[f"{dam_id}_{value}" for dam_id in instance.get_ids_of_dams()]]
+        print(history_subset.to_string())
+        history_subset.to_csv(f'river_basin_delays/river_basin_delays_{value}.csv')

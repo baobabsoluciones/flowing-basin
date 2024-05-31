@@ -26,9 +26,6 @@ class HeuristicConfiguration(Configuration):
     random_biased_sorting: bool = False
     common_ratio: float = 0.6
 
-    # Post-process outflows to avoid limit zones
-    avoid_limit_zones: bool = False
-
     def __post_init__(self):
 
         super(HeuristicConfiguration, self).__post_init__()
@@ -643,10 +640,6 @@ class HeuristicSingleDam:
         # For some alternative solutions, this assert is not satisfied
         # I don't know why, but it only matters with objective volumes, so it can be ignored
 
-    def remove_limit_zones(self, sorted_groups: list[list[int]]):
-
-        pass
-
     def solve(self) -> tuple[list[float], list[float]]:
 
         """
@@ -680,8 +673,6 @@ class HeuristicSingleDam:
 
         self.clean_flows_and_volumes()
         self.adapt_flows_to_obj_vol(sorted_groups)
-        if self.config.avoid_limit_zones:
-            self.remove_limit_zones(sorted_groups)
         predicted_volumes = [available_vol + self.min_vol for available_vol in self.available_volumes]
 
         return self.assigned_flows, predicted_volumes
@@ -837,8 +828,8 @@ class Heuristic(Experiment):
         :return: A dictionary with status codes
         """
 
-        flows = dict()
-        volumes = dict()
+        actual_flows = dict()
+        actual_vols = dict()
         powers = dict()
         obj_fun_details = dict()
 
@@ -861,19 +852,17 @@ class Heuristic(Experiment):
                 do_tests=self.do_tests,
             )
             assigned_flows, predicted_vols = single_dam_solver.solve()
-            flows[dam_id] = assigned_flows
-            volumes[dam_id] = predicted_vols
 
             # Simulate to get turbined flows, powers and income
             (
-                turbined_flows, powers[dam_id], actual_vols, actual_flows, obj_fun_details[dam_id]
+                turbined_flows, powers[dam_id], actual_vols[dam_id], actual_flows[dam_id], obj_fun_details[dam_id]
             ) = single_dam_solver.simulate()
 
             # Check flows and volumes from heuristic are the same as those from the simulator
             if self.do_tests:
                 assert self.compare_flows_and_volumes(
-                    assigned_flows=assigned_flows, actual_flows=actual_flows,
-                    predicted_vols=predicted_vols, actual_vols=actual_vols
+                    assigned_flows=assigned_flows, actual_flows=actual_flows[dam_id],
+                    predicted_vols=predicted_vols, actual_vols=actual_vols[dam_id]
                 ), f"For {dam_id}, volume and flows from heuristic do not match those from the simulator."
 
             # Flow contribution to the next dam
@@ -899,9 +888,9 @@ class Heuristic(Experiment):
             dams=[
                 dict(
                     id=dam_id,
-                    flows=flows[dam_id],
+                    flows=actual_flows[dam_id],
                     power=powers[dam_id],
-                    volume=volumes[dam_id],
+                    volume=actual_vols[dam_id],
                     objective_function_details=obj_fun_details[dam_id]
                 )
                 for dam_id in self.instance.get_ids_of_dams()

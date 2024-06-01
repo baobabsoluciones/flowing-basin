@@ -64,11 +64,6 @@ class PsoRbo(Experiment):
             the variation of flow (as a fraction of flow max) through each channel in every time step
         """
 
-        # Initialize relvars as an empty array of shape
-        relvars = np.array([]).reshape(
-            (0, self.instance.get_num_dams(), self.config.num_particles)
-        )
-
         # Max flow through each channel, as an array of shape num_dams x num_scenarios
         max_flows = np.repeat(
             [
@@ -88,13 +83,17 @@ class PsoRbo(Experiment):
             self.config.num_particles,
         ).reshape((self.instance.get_num_dams(), self.config.num_particles))
 
-        # Get array num_time_steps x num_dams x num_time_steps with the relvars
-        for flow in clipped_flows:
-            relvar = (flow - old_flow) / max_flows
-            relvars = np.vstack((relvars, [relvar]))
-            old_flow = flow
+        # Get array num_time_steps x num_dams x num_particles with the relvars
+        relvars = np.zeros(clipped_flows.shape)
+        for period, flow in enumerate(clipped_flows):
 
-        # assert (relvars >= -1.).all() and (relvars <= 1.).all()
+            relvar = (flow - old_flow) / max_flows
+            relvar = np.clip(relvar, - self.config.max_relvar, self.config.max_relvar)
+            relvars[period, :, :] = relvar
+
+            # Use the actual flow (after clipping the relvar)
+            # This makes the reconstructed flows as close as possible to the original flows
+            old_flow = old_flow + relvar * max_flows
 
         return relvars
 

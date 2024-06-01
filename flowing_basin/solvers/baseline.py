@@ -345,9 +345,13 @@ class Baseline:
                 config.use_relvars = True
             else:
                 set_attribute("use_relvars", trial=trial, config=config)
-            # Due to performance issues, the max value of "num_particles" is lower with the "pyramid" topology
+            # Due to performance issues, the max value of "num_particles" is lower in some cases
             values = hyperparams_bounds["num_particles"]['values']
-            high = {2: 200, 6: 500}[self.num_dams] if config.topology == "pyramid" else values['high']
+            if config.topology == "pyramid":
+                # The "pyramid" topology is too slow when the number of particles is bigger than...
+                high = (self.num_dams - 1) * 100 if self.num_dams > 2 else self.num_dams * 100
+            else:
+                high = values['high']
             config.num_particles = trial.suggest_int(
                 "num_particles", low=values['low'], high=high, step=values['step']
             )
@@ -381,13 +385,22 @@ class Baseline:
             if config.random_biased_sorting:
                 set_attribute("common_ratio", trial=trial, config=config)
 
+        def handle_pso_rbo_config(trial: Trial, config: PsoRboConfiguration):
+            """Set the missing required attributes for the PSO-RBO"""
+            # The initial fraction of RBO solutions cannot take longer than the maximum time to be calculated
+            # Note that each heuristic/RBO solution takes approximately 1s per dam to be computed, so...
+            values = hyperparams_bounds["fraction_rbo_init"]['values']
+            high = config.max_time / (config.num_particles * self.num_dams)
+            high = min(high, values['high'])
+            config.fraction_rbo_init = trial.suggest_float("fraction_rbo_init", low=values['low'], high=high)
+
         def objective(trial: Trial):
             """Objective function to maximize in the tuning process"""
             # Trial: https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html
             config = deepcopy(self.config)
             attributes_to_handle_later = {
                 "num_particles", "use_relvars", "random_biased_flows", "random_biased_sorting",
-                "prob_below_half", "common_ratio"
+                "prob_below_half", "common_ratio", "fraction_rbo_init"
             }
             for attribute in hyperparams_bounds:
                 # The suggestion of these attributes will be done later
@@ -397,6 +410,8 @@ class Baseline:
                 handle_pso_config(trial=trial, config=config)
             if isinstance(config, HeuristicConfiguration):
                 handle_heuristic_config(trial=trial, config=config)
+            if isinstance(config, PsoRboConfiguration):
+                handle_pso_rbo_config(trial=trial, config=config)
             config.__post_init__()
             trial_num = trial.number
             self.log(f"[Trial {trial_num}] Configuration: {config}")

@@ -150,6 +150,7 @@ class HeuristicSingleDam:
             dict[future_period, fraction_turbine_flow]
         """
 
+        # Using a 'dict' instead of a 'list' proved to be much faster
         if periods_value is None:
             periods_value = dict()
 

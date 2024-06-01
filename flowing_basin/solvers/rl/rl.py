@@ -513,7 +513,9 @@ class ReinforcementLearning:
         evaluation_critic1 = model.policy.critic.q_networks[0](obs_action_pair)
         print(evaluation_critic1)
 
-    def plot_histogram(self, obs: np.ndarray, projected: bool, title: str, show_lookback: bool = True):
+    def plot_histogram(
+            self, obs: np.ndarray, projected: bool, title: str, show_lookback: bool = True, filename: str = None
+    ):
 
         """
 
@@ -521,6 +523,7 @@ class ReinforcementLearning:
         :param projected: Indicates if the observations are projected observations or raw/normalized observations
         :param title: Title of the histogram
         :param show_lookback: Whether to show all the lagged versions of the variable or not
+        :param filename: Filename in which to save the histogram
         """
 
         # Method 'auto' raises an error for giving almost 0 width bins
@@ -599,6 +602,9 @@ class ReinforcementLearning:
                 if show_lookback:
                     # Plot dam by dam
                     plt.tight_layout()
+                    if filename is not None:
+                        filename, extension = filename.split('.')
+                        plt.savefig(f"{filename}_{dam_id}.{extension}")
                     plt.show()
                 else:
                     # Hide the first column, which should be left free for the dam label
@@ -607,7 +613,8 @@ class ReinforcementLearning:
             # Plot all dams at the same time
             if not show_lookback:
                 plt.tight_layout()
-                plt.savefig(f"reports/histograms_{self.config_names['O']}.eps", format="eps")
+                if filename is not None:
+                    plt.savefig(filename)
                 plt.show()
 
         # Projected observation
@@ -632,7 +639,7 @@ class ReinforcementLearning:
             plt.tight_layout()
             plt.show()
 
-    def plot_histograms_projector_obs(self, show_lookback: bool = True, show_projected: bool = True):
+    def plot_histograms_projector_obs(self, show_projected: bool = True, **kwargs):
 
         """
         Plot the histograms of the observations used to train the projector,
@@ -643,13 +650,12 @@ class ReinforcementLearning:
         obs_type = self.config_names['O'][:ReinforcementLearning.obs_type_length]
 
         self.plot_histogram(
-            projector.observations, projected=False,
-            title=f"Original observations {obs_type}", show_lookback=show_lookback
+            projector.observations, projected=False, title=f"Original observations {obs_type}", **kwargs
         )
         if show_projected:
             self.plot_histograms_projected(projector.observations, projector, title=str(obs_type))
 
-    def plot_histograms_agent_obs(self, apply_projections: bool = True):
+    def plot_histograms_agent_obs(self, apply_projections: bool = True, **kwargs):
 
         """
         Plot the histogram of the record of raw, normalized and projected observations experienced by the agent
@@ -668,14 +674,14 @@ class ReinforcementLearning:
                 continue
 
             if obs_record != "record_projected_obs":
-                self.plot_histogram(obs, projected=False, title=obs_record)
+                self.plot_histogram(obs, projected=False, title=obs_record, **kwargs)
 
             # Get the projected observations from the folder
             if obs_record == "record_projected_obs" and not apply_projections:
                 proj_type = self.config.projector_type
                 proj_type = proj_type if not isinstance(proj_type, list) else ', '.join(proj_type)
                 projected = proj_type not in ReinforcementLearning.static_projectors
-                self.plot_histogram(obs, projected=projected, title=f"{obs_record} ({proj_type})")
+                self.plot_histogram(obs, projected=projected, title=f"{obs_record} ({proj_type})", **kwargs)
 
             if obs_record == "record_normalized_obs":
                 obs_normalized = obs

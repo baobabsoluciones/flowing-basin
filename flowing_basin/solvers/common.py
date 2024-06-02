@@ -10,6 +10,7 @@ from datetime import timedelta
 
 
 CONSTANTS_PATH = os.path.join(os.path.dirname(__file__), "../data/constants/constants_{num_dams}dams.json")
+HISTORICAL_DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/history/historical_data_clean.pickle")
 BASELINES_FOLDER = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
 GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
 
@@ -187,9 +188,12 @@ def print_save_csv(rows: list[list[Any]], csv_filepath: str = None):
         print(','.join(row))
 
 
-def extract_percentile(instance_name: str) -> int:
-    """Extract the percentile number from the instance name: 'Percentile70' -> 70"""
-    return int(instance_name.split('Percentile')[1])
+def extract_number(instance_name: str) -> int:
+    """
+    Extract the number from the given string.
+    Examples: 'Percentile70' -> 70; '200 solutions' -> 200
+    """
+    return int(''.join([char for char in instance_name if char.isdigit()]))
 
 
 def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:
@@ -202,7 +206,7 @@ def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], lis
 
     solvers = list(values.keys())
     for solver in solvers:
-        values[solver] = dict(sorted(values[solver].items(), key=lambda x: extract_percentile(x[0])))  # noqa
+        values[solver] = dict(sorted(values[solver].items(), key=lambda x: extract_number(x[0])))  # noqa
     instances = list(values[solvers[0]].keys())
 
     if any(instances != list(values[solver].keys()) for solver in solvers[1:]):
@@ -214,7 +218,8 @@ def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], lis
 
 def barchart_instances_ax(
         ax: plt.Axes, values: dict[str, dict[str, float | list[float]]],
-        value_type: str, title: str, general_config: str, solver_colors: dict[str, str | tuple[float]] = None
+        y_label: str, x_label: str = None, full_title: str = None, title: str = None, general_config: str = None,
+        solver_colors: dict[str, str | tuple[float]] = None, vertical_x_labels: bool = True
 ):
 
     """
@@ -224,11 +229,21 @@ def barchart_instances_ax(
 
     :param ax: matplotlib.pyplot Axes object
     :param values: dict[solver, dict[instance, value/s]]
-    :param value_type: Indicate which value is being plotted (income, reward...)
+    :param y_label: Y label ('Income', 'Reward', ...)
+    :param x_label: X label (default 'Instances')
+    :param full_title: Full title of the bar chart. If omitted, `title` and  `general_config` must be given.
     :param title: String that will appear on the title
     :param general_config: General configuration (e.g. "G1")
     :param solver_colors: Color with which each solver should be drawn
+    :param vertical_x_labels: If True, represent the X labels vertically
     """
+
+    if x_label is None:
+        x_label = 'Instances'
+    if full_title is None:
+        if title is None or general_config is None:
+            raise ValueError(f"If {full_title=}, then both {title=} and {general_config=} must have a value.")
+        full_title = f'Bar chart of {title} for all instances in {general_config}'
 
     solvers, instances = preprocess_values(values)
     bar_width = 0.4 * 2. / len(solvers)
@@ -255,7 +270,7 @@ def barchart_instances_ax(
                 values_mean.append(instance_values)
             else:
                 raise ValueError(f"Invalid type {type(instance_values)} for {instance_values=}")
-        print(f"Histogram values for {solver}: {values_mean=}, {values_lower=}, {values_upper=}")
+        print(f"Bar chart values for {solver}: {values_mean=}, {values_lower=}, {values_upper=}")
 
         # Plot mean values as a barchart
         bar_kwargs = dict(width=bar_width, label=solver)
@@ -272,27 +287,33 @@ def barchart_instances_ax(
             )
 
     ax.set_xticks(x_values + bar_width / 2)
-    ax.set_xticklabels(instances, rotation='vertical')
+    set_xticklabels_kwargs = dict()
+    if vertical_x_labels:
+        set_xticklabels_kwargs.update(rotation='vertical')
+    ax.set_xticklabels(instances, **set_xticklabels_kwargs)
 
-    ax.set_xlabel('Instances')
-    ax.set_ylabel(value_type)
-    ax.set_title(f'Bar chart of {title} for all instances in {general_config}')
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(full_title)
     ax.legend()
 
 
-def barchart_instances(**kwargs):
+def barchart_instances(filename: str = None, **kwargs):
 
     """
     Plot a barchart with the value of each solver at every instance.
     The values may be incomes, rewards, or anything else.
     The 'solvers' may actually be something else, e.g. different reward configurations.
 
+    :param filename: If given, saves the figure in the specified path
     :param kwargs: Parameters given to the `barchart_instances_ax` function.
     """
 
     _, ax = plt.subplots()
     barchart_instances_ax(ax, **kwargs)
     plt.tight_layout()
+    if filename is not None:
+        plt.savefig(filename)
     plt.show()
 
 

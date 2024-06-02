@@ -1,17 +1,14 @@
 import numpy as np
-
 from flowing_basin.core import Instance, Solution, Experiment
-from flowing_basin.solvers.common import CONSTANTS_PATH
+from flowing_basin.solvers.common import CONSTANTS_PATH, HISTORICAL_DATA_PATH
 from flowing_basin.solvers.rl import RLConfiguration, RLEnvironment
 from flowing_basin.solvers.rl.feature_extractors import Projector
 from stable_baselines3.common.policies import BasePolicy
-import os
 
 
 class RLRun(Experiment):
 
     named_policies = ["random", "greedy"]
-    historical_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean.pickle")
 
     def __init__(
             self,
@@ -47,7 +44,7 @@ class RLRun(Experiment):
             config=self.config,
             paths_power_models=paths_power_models,
             path_constants=CONSTANTS_PATH.format(num_dams=self.config.num_dams),
-            path_historical_data=RLRun.historical_data_path,
+            path_historical_data=HISTORICAL_DATA_PATH,
             update_to_decisions=update_to_decisions,
         )
         self.env = self.env.get_vec_env(is_eval_env=True, path_normalization=path_normalization)

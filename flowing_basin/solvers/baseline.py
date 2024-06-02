@@ -12,7 +12,7 @@ from flowing_basin.solvers import (
 )
 from flowing_basin.solvers.common import (
     BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances_ax, barchart_instances,
-    confidence_interval, lighten_color, preprocess_values, extract_percentile
+    confidence_interval, lighten_color, preprocess_values, extract_number
 )
 import optuna
 from optuna.trial import Trial
@@ -761,7 +761,7 @@ class Baselines:
         """
         values = self.get_solver_instance_final_values()
         barchart_instances_ax(
-            ax, values=values, value_type="Income (€)", title=', '.join(self.solvers),
+            ax, values=values, y_label="Income (€)", title=', '.join(self.solvers),
             general_config=self.general_config, solver_colors=Baselines.SOLVER_COLORS
         )
 
@@ -786,7 +786,7 @@ class Baselines:
         for solution in self.solutions:
             if solution.get_solver() == 'MILP':
                 final_gaps[solution.get_instance_name()] = solution.get_final_gap_value()
-        final_gaps = dict(sorted(final_gaps.items(), key=lambda x: extract_percentile(x[0])))  # noqa
+        final_gaps = dict(sorted(final_gaps.items(), key=lambda x: extract_number(x[0])))  # noqa
 
         rows = []
         first_row = []

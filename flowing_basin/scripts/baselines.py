@@ -136,10 +136,10 @@ def csv_final_milp_gap(save_csv: bool = False):
 
 if __name__ == "__main__":
 
-    # barchart_instances(['PSO'], include_folders=['tuned'], save_fig=True)
+    barchart_instances(['PSO', 'PSO-RBO'], save_fig=True)
     # barchart_instances(['MILP', 'PSO', 'rl-greedy'], solvers_best=['PSO'], save_fig=True)
     # barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)
-    # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
+    csv_instance_final_values(['PSO', 'PSO-RBO'], reference='PSO', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)
     # plot_history_values_instances(['MILP', 'PSO', 'rl-greedy'], save_fig=True)
     # csv_instance_final_values(['PSO'], include_folders=['tuned'], reference='PSO', save_csv=True)
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     # csv_instance_final_values(['Heuristic'], reference='Heuristic (old)', general_configs=['G0', 'G1', 'G2', 'G3'], include_folders=['old'], save_csv=True)
 
     # Get fresh Heuristic sols and compare with stored Heuristic sols
-    csv_instance_final_values(["Heuristic"], reference="Heuristic", solvers_extra=["Heuristic"], save_csv=True)
+    # csv_instance_final_values(["Heuristic"], reference="Heuristic", solvers_extra=["Heuristic"], save_csv=True)
 
     # Run multiple replications of RBO
     # sols = Baseline(solver="RBO", general_config='G1').solve(save_sol=False, num_replications=2)

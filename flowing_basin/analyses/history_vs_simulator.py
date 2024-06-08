@@ -11,11 +11,12 @@ from matplotlib.ticker import FuncFormatter
 
 NUM_DAMS = 2
 NUM_REPLICATIONS = 500
-MAIN_COLOR = 'red'
+COLOR_MPE = 'red'
+COLOR_MAPE = 'blue'
 SECOND_COLOR = 'black'
 SHOW_INDIVIDUAL_INSTANCES = False
 VERBOSE = 0
-LOAD_DATA = True
+LOAD_DATA = False
 DATA_PATH = 'simulation_vs_history/all_relative_differences.npy'
 FIG_PATH = 'simulation_vs_history/relative_differences.eps'
 
@@ -114,13 +115,17 @@ def main():
     else:
         all_relative_diffs = np.load(DATA_PATH)
 
-    means = np.mean(all_relative_diffs, axis=0)
-    lower_bounds, upper_bounds = confidence_interval(np.transpose(all_relative_diffs))
+    mpe_means = np.mean(all_relative_diffs, axis=0)
+    mpe_lower, mpe_higher = confidence_interval(np.transpose(all_relative_diffs))
+
+    all_abs_relative_diffs = np.abs(all_relative_diffs)
+    mape_means = np.mean(all_abs_relative_diffs, axis=0)
+    mape_lower, mape_higher = confidence_interval(np.transpose(all_abs_relative_diffs))
 
     print("Starting plots...")
     plt.figure(figsize=(10, 6))
     plt.axhline(y=0, color='black', linewidth=0.75)
-    time_steps = np.arange(len(means))
+    time_steps = np.arange(len(mpe_means))
 
     if SHOW_INDIVIDUAL_INSTANCES:
         label_added = False
@@ -133,10 +138,16 @@ def main():
                 time_steps, relative_diff, color=lighten_color(SECOND_COLOR), **plot_kwagrs
             )
 
-    plt.plot(time_steps, means, label='Mean Relative Difference', color=MAIN_COLOR, linewidth=2.5)
+    plt.plot(time_steps, mpe_means, label='Mean Percentage Error (MPE)', color=COLOR_MPE, linewidth=2.5)
     plt.fill_between(
-        time_steps, lower_bounds, upper_bounds, color=lighten_color(MAIN_COLOR, amount=0.25),
-        label='95% Confidence Interval'
+        time_steps, mpe_lower, mpe_higher, color=lighten_color(COLOR_MPE, amount=0.25),
+        label='95% Confidence Interval of MPE'
+    )
+
+    plt.plot(time_steps, mape_means, label='Mean Absolute Percentage Error (MAPE)', color=COLOR_MAPE, linewidth=2.5)
+    plt.fill_between(
+        time_steps, mape_lower, mape_higher, color=lighten_color(COLOR_MAPE, amount=0.25),
+        label='95% Confidence Interval of MAPE'
     )
 
     plt.xlabel('Day Periods (0 to 99)')

@@ -517,7 +517,8 @@ class Baselines:
 
     # The hyperparameters that work best in each scenario, according to previous experimentation
     BEST_PARAMS = {
-        'PSO': {'G0': '', 'G01': 'tuned', 'G1': 'tuned', 'G2': 'tuned', 'G21': 'tuned', 'G3': 'tuned'}
+        'PSO': {'G0': '', 'G01': 'tuned', 'G1': 'tuned', 'G2': 'tuned', 'G21': 'tuned', 'G3': 'tuned'},
+        'PSO-RBO': {'G0': 'tuned', 'G01': '', 'G1': 'tuned', 'G2': 'tuned', 'G21': 'tuned', 'G3': ''}
     }
 
     # Draw the colors using the 'paired' color map
@@ -630,7 +631,9 @@ class Baselines:
         for solution in self.solutions:
             solver = solution.get_solver()
             instance_name = solution.get_instance_name()
+            first_timestamp = solution.get_history_time_stamps()[0]
             interp_values = solution.get_history_objective_function_value(common_timestamps)
+            interp_values[common_timestamps < first_timestamp] = 0.
             if instance_name not in history_values[solver]:
                 history_values[solver].update({instance_name: interp_values.reshape(-1, 1)})
             else:
@@ -722,6 +725,40 @@ class Baselines:
 
         return violation_values
 
+    def plot_history_values_instance_ax(
+            self, ax: plt.Axes, instance_name: str, values: dict[str, dict[str, np.ndarray]],
+            timestamps: np.ndarray, solvers: list[str], set_ylabel: bool = True, title: str = None
+    ):
+
+        """
+        Plot the historic objective function values of the given solvers in the given instance
+        """
+
+        if title is None:
+            title = instance_name
+
+        for i, solver in enumerate(solvers):
+            plot_kwargs = dict()
+            fill_kwargs = dict()
+            if solver in Baselines.SOLVER_COLORS:
+                color = Baselines.SOLVER_COLORS[solver]
+                plot_kwargs.update(color=color)
+                fill_kwargs.update(color=lighten_color(color, amount=0.3))
+            if solver == 'rl-greedy':
+                plot_kwargs.update(linestyle='--')
+            values_solver = values[solver][instance_name]
+            values_mean = np.mean(values_solver, axis=1)
+            ax.plot(timestamps, values_mean, label=solver, linewidth=2, **plot_kwargs)
+            if values_solver.shape[1] > 1:
+                lower, upper = confidence_interval(values_solver)
+                ax.fill_between(x=timestamps, y1=lower, y2=upper, **fill_kwargs)
+        if set_ylabel:
+            ax.set_ylabel("Income (€)")
+        ax.set_xlabel("Time (s)")
+        ax.set_xticks([timestamps[0], timestamps[-1]])
+        ax.set_title(title)
+        ax.legend()
+
     def plot_history_values_instances(self, filename: str = None):
 
         """
@@ -731,22 +768,14 @@ class Baselines:
         timestamps, values = self.get_solver_instance_history_values()
         solvers, instances = preprocess_values(values)
 
-        default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color'][:len(solvers)]
         _, axes = plt.subplots(1, len(instances), figsize=(20, 4), sharey='all')
         axes[0].set_ylabel("Income (€)")
-
         for instance_name, ax in zip(instances, axes):
-            for solver, color in zip(solvers, default_colors):
-                values_solver = values[solver][instance_name]
-                values_mean = np.mean(values_solver, axis=1)
-                ax.plot(timestamps, values_mean, label=solver, color=color)
-                if values_solver.shape[1] > 1:
-                    lower, upper = confidence_interval(values_solver)
-                    ax.fill_between(x=timestamps, y1=lower, y2=upper, color=lighten_color(color))
-            ax.set_xlabel("Time (s)")
-            ax.set_xticks([timestamps[0], timestamps[-1]])
-            ax.set_title(instance_name)
-            ax.legend()
+            self.plot_history_values_instance_ax(
+                ax=ax, instance_name=instance_name, values=values,
+                timestamps=timestamps, solvers=solvers, set_ylabel=False
+            )
+
         solvers_title = ', '.join(solvers)
         plt.suptitle(f"Evolution of {solvers_title} in {self.general_config}")
         plt.tight_layout()
@@ -754,14 +783,16 @@ class Baselines:
             plt.savefig(filename)
         plt.show()
 
-    def barchart_instances_ax(self, ax: plt.Axes):
+    def barchart_instances_ax(self, ax: plt.Axes, verbose_title: bool = False):
         """
         Plot a barchart in the given Axes with the objective function value of each solver at every instance.
         :param ax: matplotlib.pyplot Axes object
+        :param verbose_title:
         """
         values = self.get_solver_instance_final_values()
+        title = ', '.join(self.solvers) if verbose_title else "the solvers"
         barchart_instances_ax(
-            ax, values=values, y_label="Income (€)", title=', '.join(self.solvers),
+            ax, values=values, y_label="Income (€)", title=title,
             general_config=self.general_config, solver_colors=Baselines.SOLVER_COLORS
         )
 
@@ -803,13 +834,14 @@ class Baselines:
 
         return rows
 
-    def get_csv_instance_violations(self, concept: str, in_percentage: bool = True) -> list[list[str | float]]:
+    def get_csv_instance_violations(self, concept: str, in_percentage: bool = True, num_decimals: int = 1) -> list[list[str | float]]:
         """
         Create a list of lists representing a CSV file
         with the final objective function value of each solver in every instance.
 
         :param concept: Either "flow_smoothing" or "max_relvar"
         :param in_percentage: Whether to give the violation count as a % of the total number of periods
+        :param num_decimals:
         """
 
         values = self.get_solver_instance_violations(concept, in_percentage=in_percentage)
@@ -828,10 +860,12 @@ class Baselines:
             for instance in instances:
                 # Use the mean across all replications
                 instance_mean = np.mean(values[solver][instance])
-                solver_row.append(f"{instance_mean:.2%}" if in_percentage else f"{instance_mean:.2f}")
+                solver_row.append(
+                    f"{instance_mean:.{num_decimals}%}" if in_percentage else f"{instance_mean:.{num_decimals}f}"
+                )
             # Mean across all instances
             solver_mean = np.mean(list(values[solver].values()))
-            solver_row.append(f"{solver_mean:.2%}" if in_percentage else f"{solver_mean:.2f}")
+            solver_row.append(f"{solver_mean:.{num_decimals}%}" if in_percentage else f"{solver_mean:.{num_decimals}f}")
             rows.append(solver_row)
         return rows
 
@@ -863,12 +897,13 @@ class Baselines:
             rows.append(solver_row)
         return rows
 
-    def get_csv_instance_final_values(self, reference: str = None) -> list[list[str | float]]:
+    def get_csv_instance_final_values(self, reference: str = None, num_pct_decimals: int = 1) -> list[list[str | float]]:
         """
         Create a list of lists representing a CSV file
         with the final objective function value of each solver in every instance.
 
         :param reference: Solver to use as the reference
+        :param num_pct_decimals: Number of decimals to use with the percentage values when there is a reference
         """
 
         values = self.get_solver_instance_final_values()
@@ -898,7 +933,7 @@ class Baselines:
                     ref_value = np.mean(values[reference][instance])
                     if ref_value > 0:
                         improvement = (instance_mean - ref_value) / ref_value
-                        solver_row.append(f"{'+'if improvement > 0 else ''}{improvement:.2%}")
+                        solver_row.append(f"{'+'if improvement > 0 else ''}{improvement:.{num_pct_decimals}%}")
                     else:
                         solver_row.append(f"+inf%")
 
@@ -910,7 +945,7 @@ class Baselines:
                 ref_mean = np.mean(list(values[reference].values()))
                 if ref_mean > 0:
                     improvement = (solver_mean - ref_mean) / ref_mean
-                    solver_row.append(f"{'+' if improvement > 0 else ''}{improvement:.2%}")
+                    solver_row.append(f"{'+' if improvement > 0 else ''}{improvement:.{num_pct_decimals}%}")
                 else:
                     solver_row.append(f"+inf%")
 

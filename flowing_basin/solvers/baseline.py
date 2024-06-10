@@ -522,6 +522,12 @@ class Baselines:
         'PSO-RBO': {'G0': 'tuned', 'G01': '', 'G1': 'tuned', 'G2': 'tuned', 'G21': 'tuned', 'G3': ''}
     }
 
+    # Solver names that correspond to different folders depending on the configuration
+    META_SOLVERS = {
+        'PSO (general)': {'G0': '', 'G01': '', 'G1': '', 'G2': '', 'G21': '', 'G3': ''},
+        'RL': {}
+    }
+
     # Draw the colors using the 'paired' color map
     # Reference: https://matplotlib.org/stable/users/explain/colors/colormaps.html#qualitative
     paired_cmap = plt.get_cmap('Paired')
@@ -563,7 +569,10 @@ class Baselines:
             raise ValueError(
                 f"The solvers specified as 'best', {solvers_best}, must be a subset of the solvers, {solvers}"
             )
-        solvers_normal = [solver for solver in solvers if solver not in solvers_best]
+        solvers_normal = [
+            solver for solver in solvers if solver not in solvers_best and solver not in Baselines.META_SOLVERS
+        ]
+        solvers_meta = [solver for solver in solvers if solver in Baselines.META_SOLVERS]
 
         self.general_config = general_config
         self.solvers = solvers_normal
@@ -571,10 +580,14 @@ class Baselines:
         self.solutions = []
         self._add_normal_solutions(solvers=solvers_normal)
         for solver in solvers_best:
-            self._add_single_folder_solutions(
-                Baselines.BEST_PARAMS[solver][self.general_config], solvers=solvers_best, solver_name='best'
+            self._add_single_folder_single_solver_solutions(
+                Baselines.BEST_PARAMS[solver][self.general_config], solver=solver, solver_name=f'{solver} (best)'
             )
-        self._add_folders_solutions(include_folders, solvers=solvers)
+        for meta_solver in solvers_meta:
+            solver = Baselines.META_SOLVERS[self.general_config]
+            folder = Baselines.BEST_PARAMS[solver][self.general_config] if solver in Baselines.BEST_PARAMS else ''
+            self._add_single_folder_single_solver_solutions(folder, solver=solver, solver_name=meta_solver)
+        self._add_folders_solvers_solutions(include_folders, solvers=solvers)
         self._add_extra_solutions(include_solutions)
 
         # Keep the original order of the parameter so, for example,
@@ -587,22 +600,30 @@ class Baselines:
             if baseline.get_solver() in solvers:
                 self.solutions.append(baseline)
 
-    def _add_folders_solutions(self, folder_names: list[str], solvers: list[str]):
-        """Add solutions of the given subfolders for the given solvers"""
+    def _add_folders_solvers_solutions(self, folder_names: list[str], solvers: list[str]):
+        """Add solutions of the given subfolderS for the given solverS"""
         for folder_name in folder_names:
-            self._add_single_folder_solutions(folder_name, solvers=solvers)
+            self._add_single_folder_solvers_solutions(folder_name, solvers=solvers)
 
-    def _add_single_folder_solutions(self, folder_name: str, solvers: list[str], solver_name: str = None):
-        """Add solutions of the given subfolder for the given solvers"""
-        if solver_name is None:
-            solver_name = folder_name
+    def _add_single_folder_solvers_solutions(self, folder_name: str, solvers: list[str]):
+        """Add solutions of the given subfolder for the given solverS"""
         for baseline in get_all_baselines_folder(folder_name=folder_name, general_config=self.general_config):
             solver = baseline.get_solver()
             if solver in solvers:
-                solver += f' ({solver_name})'
+                solver = f"{solver} ({folder_name})"
                 baseline.set_solver(solver)
                 if solver not in self.solvers:
                     self.solvers.append(solver)
+                self.solutions.append(baseline)
+
+    def _add_single_folder_single_solver_solutions(self, folder_name: str, solver: str, solver_name: str):
+        """Add solutions of the given subfolder for the given solver"""
+        for baseline in get_all_baselines_folder(folder_name=folder_name, general_config=self.general_config):
+            baseline_solver = baseline.get_solver()
+            if baseline_solver == solver:
+                baseline.set_solver(solver_name)
+                if solver_name not in self.solvers:
+                    self.solvers.append(solver_name)
                 self.solutions.append(baseline)
 
     def _add_extra_solutions(self, sols: list[Solution]):

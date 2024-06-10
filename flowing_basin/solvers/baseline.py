@@ -540,7 +540,7 @@ class Baselines:
     purple, dark_purple = paired_cmap(8), paired_cmap(9)
     SOLVER_COLORS = {
         'MILP': dark_blue, 'PSO': green, 'PSO (tuned)': dark_green, 'PSO (best)': dark_green,
-        'PSO-RBO': purple, 'PSO-RBO (tuned)': dark_purple, 'PSO-RBO (best)': dark_purple,
+        'PSO-RBO': purple, 'PSO-RBO (tuned)': dark_purple, 'PSO-RBO (best)': dark_purple, 'PSO (general)': dark_purple,
         'Heuristic': dark_red, 'rl-random': orange, 'rl-greedy': dark_orange
     }
 

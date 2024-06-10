@@ -49,25 +49,12 @@ class Experiment(ExperimentCore):
     def get_instance_solution_datetimes(
             self, format_datetime: str = "%Y-%m-%d %H:%M", instance: Instance = None
     ) -> tuple[str, str, str, str, str, str]:
-
         """
         Get the decision and information start end datetimes of the solved instance,
         as well as the datetime of when it was solved
         """
-
         if instance is None:
             instance = self.instance
-
-        start_decisions = instance.get_start_decisions_datetime().strftime(format_datetime)
-        end_decisions = instance.get_end_decisions_datetime().strftime(format_datetime)
-
-        end_impact = instance.get_end_impact_datetime().strftime(format_datetime)
-
-        start_information = instance.get_start_information_datetime().strftime(format_datetime)
-        end_information = instance.get_end_information_datetime().strftime(format_datetime)
-
-        solution_datetime = datetime.now().strftime(format_datetime)
-
-        return start_decisions, end_decisions, end_impact, start_information, end_information, solution_datetime
+        return instance.get_instance_current_datetimes(format_datetime=format_datetime)
 
 

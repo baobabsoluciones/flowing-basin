@@ -5,6 +5,7 @@ from dataclasses import fields
 import numpy as np
 from cornflow_client.core.tools import load_json
 from flowing_basin.core import Instance, Solution, Configuration, Experiment
+from flowing_basin.core.utils import lighten_color
 from flowing_basin.solvers.rl import GeneralConfiguration, ReinforcementLearning, RLRun
 from flowing_basin.solvers import (
     Heuristic, HeuristicConfiguration, LPModel, LPConfiguration, PSO, PSOConfiguration,
@@ -12,7 +13,7 @@ from flowing_basin.solvers import (
 )
 from flowing_basin.solvers.common import (
     BASELINES_FOLDER, get_all_baselines, get_all_baselines_folder, barchart_instances_ax, barchart_instances,
-    confidence_interval, lighten_color, preprocess_values, extract_number
+    confidence_interval, preprocess_values, extract_number
 )
 import optuna
 from optuna.trial import Trial

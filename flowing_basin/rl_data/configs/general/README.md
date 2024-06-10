@@ -8,4 +8,5 @@ flow smoothing, startup or limit zone penalty.
 - `G21`: same as G2 but with a maximum flow variation of 20%
 instead of the flow smoothing constraint.
 - `G3`: same as G1 but with 6 dams instead of just 2.
+- `G8`: same as G0 but with 1 dam instead of 2.
 - `G9`: same as G1 but with 1 dam instead of 2.

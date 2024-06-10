@@ -1,6 +1,7 @@
 from cornflow_client import SolutionCore
 from cornflow_client.core.tools import load_json
-from flowing_basin.core import Configuration
+from flowing_basin.core import Configuration, Instance
+from flowing_basin.core.utils import lighten_color
 import os
 import pickle
 from datetime import datetime
@@ -14,6 +15,12 @@ class Solution(SolutionCore):
     schema = load_json(
         os.path.join(os.path.dirname(__file__), "../schemas/solution.json")
     )
+
+    def __init__(self, data: dict):
+
+        super().__init__(data)
+
+        self.instance = None
 
     @classmethod
     def from_dict(cls, data) -> "Solution":
@@ -301,6 +308,14 @@ class Solution(SolutionCore):
             instance_name = 'instance' + self.data["datetime"]["start"]
 
         return instance_name
+
+    def get_instance(self) -> Instance:
+
+        if self.instance is None:
+            instance_name = self.get_instance_name()
+            instance = Instance.from_name(instance_name, num_dams=self.get_num_dams())
+            self.instance = instance
+        return self.instance
 
     def get_time_step_seconds(self) -> float | None:
 
@@ -688,7 +703,7 @@ class Solution(SolutionCore):
 
         return flows
 
-    def plot_solution_for_dam(self, dam_id: str, ax: plt.Axes):
+    def plot_solution_for_dam(self, dam_id: str, ax: plt.Axes, use_twinax: bool = False):
 
         """
         Plot the exiting flow and volume of the dam at each time step,
@@ -700,18 +715,42 @@ class Solution(SolutionCore):
 
         flows = self.get_exiting_flows_of_dam(dam_id)
         volumes = self.get_volumes_of_dam(dam_id)
+        prices = self.get_all_prices()
 
-        ax.plot(decision_time_steps, volumes, color='b', label="Predicted volume")
-        ax.set_xlabel("Time (15min)")
-        ax.set_ylabel("Volume (m3)")
-        ax.set_title(f"Solution for {dam_id}")
-        ax.legend()
+        if use_twinax:
 
-        twinax = ax.twinx()
-        twinax.plot(info_time_steps, self.get_all_prices(), color='r', label="Price")
-        twinax.plot(decision_time_steps, flows, color='g', linestyle='-', label="Flow")
-        twinax.set_ylabel("Flow (m3/s), Price (€)")
-        twinax.legend()
+            ax.plot(decision_time_steps, volumes, color='b', label="Volume")
+            ax.set_xlabel("Time (15min)")
+            ax.set_ylabel("Volume (m3)")
+            ax.set_title(f"Solution for {dam_id}")
+            ax.legend()
+
+            twinax = ax.twinx()
+            twinax.plot(info_time_steps, prices, color='r', label="Price")
+            twinax.plot(decision_time_steps, flows, color='g', linewidth=2, label="Flow")
+            twinax.set_ylabel("Flow (m3/s), Price (€)")
+            twinax.legend()
+
+        else:
+
+            # Normalize according to maximum and minimum values
+            instance = self.get_instance()
+            flows = [flow / instance.get_max_flow_of_channel(dam_id) for flow in flows]
+            min_vol = instance.get_min_vol_of_dam(dam_id)
+            max_vol = instance.get_max_vol_of_dam(dam_id)
+            volumes = [(vol - min_vol) / (max_vol - min_vol) for vol in volumes]
+            min_price = min(prices)
+            max_price = max(prices)
+            prices = [(price - min_price) / (max_price - min_price) for price in prices]
+
+            # ax.plot(decision_time_steps, volumes, color='b', label="Volume")
+            ax.fill_between(x=decision_time_steps, y1=volumes, color=lighten_color('b', amount=0.15), label="Volume")
+            ax.plot(info_time_steps, prices, color='r', label="Price")
+            ax.plot(decision_time_steps, flows, color='g', linewidth=2.5, label="Flow")
+            ax.set_xlabel("Day period (15min)")
+            ax.set_title(f"Solution for {dam_id}")
+            ax.legend()
+            ax.set_ylim(-0.1, 1.1)
 
     def plot_objective_values(self, ax: plt.Axes, **kwargs):
 

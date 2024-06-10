@@ -46,7 +46,8 @@ class HeuristicSingleDam:
             flow_contribution: list[float],
             paths_power_models: dict[str, str] = None,
             greedy: bool = False,
-            do_tests: bool = True
+            do_tests: bool = True,
+            record_solutions: bool = False
     ):
 
         self.dam_id = dam_id
@@ -56,6 +57,9 @@ class HeuristicSingleDam:
         self.flow_contribution = flow_contribution
         self.greedy = greedy
         self.do_tests = do_tests
+        self.solutions = None
+        if record_solutions:
+            self.solutions = []
 
         # Volume objectives
         # If no objective final volume is given, we assume it is equal to the minimum volume (always satisfied)
@@ -668,6 +672,9 @@ class HeuristicSingleDam:
             self.available_volumes = self.calculate_available_volumes()
             self.adapt_flows_to_volume_limits(groups)
 
+            if self.solutions is not None:
+                self.solutions.append(self.get_parcial_solution())
+
         # Recalculate available volumes one last time (to adapt to the new flows after volume limits)
         self.added_volumes = self.calculate_added_volumes()
         self.available_volumes = self.calculate_available_volumes()
@@ -739,6 +746,46 @@ class HeuristicSingleDam:
         )
 
         return turbined_flows, powers, actual_volumes, actual_exiting_flows, obj_fun_details
+
+    def get_parcial_solution(self):
+
+        """
+        Get a Solution object for a single dam.
+        """
+
+        # Simulate to get turbined flows, powers and income
+        (
+            turbined_flows, powers, actual_vols, actual_flows, obj_fun_details
+        ) = self.simulate()
+
+        # Add dam incomes to get total income
+        total_income = obj_fun_details["total_income_eur"]
+
+        # Get datetimes
+        start_datetime, end_datetime, _, _, _, solution_datetime = self.instance.get_instance_current_datetimes()
+
+        sol_dict = dict(
+            instance_datetimes=dict(
+                start=start_datetime,
+                end_decisions=end_datetime
+            ),
+            instance_name=self.instance.get_instance_name(),
+            solution_datetime=solution_datetime,
+            solver="Heuristic",
+            configuration=asdict(self.config),
+            objective_function=total_income,
+            dams=[
+                dict(
+                    id=self.dam_id,
+                    flows=actual_flows,
+                    power=powers,
+                    volume=actual_vols,
+                    objective_function_details=obj_fun_details
+                )
+            ],
+            price=self.instance.get_all_prices(),
+        )
+        return Solution.from_dict(sol_dict)
 
 
 class Heuristic(Experiment):
@@ -882,6 +929,7 @@ class Heuristic(Experiment):
                 start=start_datetime,
                 end_decisions=end_datetime
             ),
+            instance_name=self.instance.get_instance_name(),
             solution_datetime=solution_datetime,
             solver="Heuristic",
             configuration=asdict(self.config),

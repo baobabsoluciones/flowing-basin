@@ -7,8 +7,9 @@ optionally adding a histogram of the outflows of a solver
 from cornflow_client.core.tools import load_json
 from flowing_basin.tools import PowerGroup
 from flowing_basin.core import Instance
+from flowing_basin.core.utils import lighten_color
 from flowing_basin.solvers.rl import ReinforcementLearning
-from flowing_basin.solvers.common import lighten_color, CONSTANTS_PATH
+from flowing_basin.solvers.common import CONSTANTS_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 

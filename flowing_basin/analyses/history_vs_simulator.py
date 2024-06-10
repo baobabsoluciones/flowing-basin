@@ -1,6 +1,7 @@
 from flowing_basin.core import Instance
+from flowing_basin.core.utils import lighten_color
 from flowing_basin.tools import RiverBasin
-from flowing_basin.solvers.common import CONSTANTS_PATH, get_episode_length, confidence_interval, lighten_color
+from flowing_basin.solvers.common import CONSTANTS_PATH, get_episode_length, confidence_interval
 from flowing_basin.solvers.rl import RLEnvironment
 from cornflow_client.core.tools import load_json
 import pandas as pd

@@ -882,3 +882,24 @@ class Instance(InstanceCore):
         # print("Total avg inflow:", total_avg_inflow)
 
         return total_avg_inflow
+
+    def get_instance_current_datetimes(
+            self, format_datetime: str = "%Y-%m-%d %H:%M"
+    ) -> tuple[str, str, str, str, str, str]:
+
+        """
+        Get the decision and information start end datetimes of the instance,
+        as well as the current datetime
+        """
+
+        start_decisions = self.get_start_decisions_datetime().strftime(format_datetime)
+        end_decisions = self.get_end_decisions_datetime().strftime(format_datetime)
+
+        end_impact = self.get_end_impact_datetime().strftime(format_datetime)
+
+        start_information = self.get_start_information_datetime().strftime(format_datetime)
+        end_information = self.get_end_information_datetime().strftime(format_datetime)
+
+        current_datetime = datetime.now().strftime(format_datetime)
+
+        return start_decisions, end_decisions, end_impact, start_information, end_information, current_datetime

@@ -523,9 +523,11 @@ class Baselines:
     }
 
     # Solver names that correspond to different folders depending on the configuration
+    # 'PSO (general)' is either 'PSO' or 'PSO-RBO', depending on which performs best
+    # 'RL' is the best agent in each configuration
     META_SOLVERS = {
-        'PSO (general)': {'G0': '', 'G01': '', 'G1': '', 'G2': '', 'G21': '', 'G3': ''},
-        'RL': {}
+        'PSO (general)': {'G0': 'PSO-RBO', 'G01': 'PSO', 'G1': 'PSO-RBO', 'G2': 'PSO-RBO', 'G21': 'PSO', 'G3': 'PSO'},
+        'RL': {'G0': 'rl-A31G0O231R1T1002', 'G1': 'rl-A113G1O2R22T302'}
     }
 
     # Draw the colors using the 'paired' color map
@@ -584,7 +586,7 @@ class Baselines:
                 Baselines.BEST_PARAMS[solver][self.general_config], solver=solver, solver_name=f'{solver} (best)'
             )
         for meta_solver in solvers_meta:
-            solver = Baselines.META_SOLVERS[self.general_config]
+            solver = Baselines.META_SOLVERS[meta_solver][self.general_config]
             folder = Baselines.BEST_PARAMS[solver][self.general_config] if solver in Baselines.BEST_PARAMS else ''
             self._add_single_folder_single_solver_solutions(folder, solver=solver, solver_name=meta_solver)
         self._add_folders_solvers_solutions(include_folders, solvers=solvers)
@@ -592,7 +594,9 @@ class Baselines:
 
         # Keep the original order of the parameter so, for example,
         # 'PSO (best)' in `self.solvers` is at the same place as 'PSO' in `solvers`
-        self.solvers.sort(key=lambda solver: solvers.index(solver.split(' ')[0]))
+        self.solvers.sort(
+            key=lambda solver: solvers.index(solver.split(' ')[0]) if solver not in solvers else solvers.index(solver)
+        )
 
     def _add_normal_solutions(self, solvers: list[str]):
         """Add solutions of the parent folder for the given solvers"""

@@ -703,12 +703,15 @@ class Solution(SolutionCore):
 
         return flows
 
-    def plot_solution_for_dam(self, dam_id: str, ax: plt.Axes, use_twinax: bool = False):
+    def plot_solution_for_dam(self, dam_id: str, ax: plt.Axes, use_twinax: bool = False, dam_name: str = None):
 
         """
         Plot the exiting flow and volume of the dam at each time step,
         on top of the graph of the price of energy
         """
+
+        if dam_name is None:
+            dam_name = dam_id
 
         decision_time_steps = self.get_decisions_time_steps()
         info_time_steps = self.get_information_time_steps()
@@ -722,7 +725,7 @@ class Solution(SolutionCore):
             ax.plot(decision_time_steps, volumes, color='b', label="Volume")
             ax.set_xlabel("Time (15min)")
             ax.set_ylabel("Volume (m3)")
-            ax.set_title(f"Solution for {dam_id}")
+            ax.set_title(f"Solution for {dam_name}")
             ax.legend()
 
             twinax = ax.twinx()
@@ -748,7 +751,7 @@ class Solution(SolutionCore):
             ax.plot(info_time_steps, prices, color='r', label="Price")
             ax.plot(decision_time_steps, flows, color='g', linewidth=2.5, label="Flow")
             ax.set_xlabel("Day period (15min)")
-            ax.set_title(f"Solution for {dam_id}")
+            ax.set_title(f"Solution for {dam_name}")
             ax.legend()
             ax.set_ylim(-0.1, 1.1)
 

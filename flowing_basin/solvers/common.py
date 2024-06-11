@@ -13,6 +13,7 @@ CONSTANTS_PATH = os.path.join(os.path.dirname(__file__), "../data/constants/cons
 HISTORICAL_DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/history/historical_data_clean.pickle")
 BASELINES_FOLDER = os.path.join(os.path.dirname(__file__), "../rl_data/baselines")
 GENERAL_CONFIGS = ['G0', 'G1', 'G2', 'G3']
+SAVED_NAMES = {'rl-greedy': 'RLgreedy', 'rl-random': 'RLrandom'}  # rl-greedy may be saved as 'rl-greedy' or 'RLgreedy'
 
 
 def get_episode_length(constants: Instance, num_days: int = 1) -> int:
@@ -84,6 +85,35 @@ def get_all_baselines(general_config: str) -> list[Solution]:
     """
     parent_dir = os.path.join(BASELINES_FOLDER, general_config)
     return scan_baselines(parent_dir)
+
+
+def get_baseline(general_config: str, solver: str, instance: str, replication: int = 0) -> Solution:
+    """
+    Get the baseline of the given solver, instance and replication.
+    :param general_config: General configuration (e.g. "G1")
+    :param solver: Solver (e.g. "MILP")
+    :param replication: Replication number
+    :return:
+    """
+
+    parent_dir = os.path.join(BASELINES_FOLDER, general_config)
+    possible_filenames = [
+        f"instance{instance}_{solver}.json", f"instance{instance}_{solver}_replication{replication}.json"
+    ]
+    if solver in SAVED_NAMES:
+        saved_name = SAVED_NAMES[solver]
+        possible_filenames += [
+            f"instance{instance}_{saved_name}.json", f"instance{instance}_{saved_name}_replication{replication}.json"
+        ]
+
+    for filename in possible_filenames:
+        path = os.path.join(parent_dir, filename)
+        if os.path.exists(path):
+            return Solution.from_json(path)
+
+    raise FileNotFoundError(
+        f"None of the possible solution files exist in {parent_dir}: {', '.join(possible_filenames)}"
+    )
 
 
 def get_all_baselines_folder(folder_name: str, general_config: str) -> list[Solution]:

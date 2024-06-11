@@ -15,9 +15,10 @@ import numpy as np
 
 
 PLOT_SOLVER_FLOWS = False
-DAM_IDS = None  # Put None to plot all dams, or ["dam2"] for a single dam
+DAM_IDS = ["dam2"]  # Put None to plot all dams, or [dam_id] for a single dam
 SOLVER = "rl-A113G1O232R22T3"  # an agent or "MILP"
 GENERAL = 'G0'  # only matters if PLOT_SOLVER_FLOWS = True and SOLVER = "MILP"
+FILENAME = f'plot_power_group/fig_power_vs_turbine_flow'
 
 if PLOT_SOLVER_FLOWS:
     filename_solver = f'_vs_{SOLVER}_flows'
@@ -35,7 +36,7 @@ if DAM_IDS is None:
 else:
     assert isinstance(DAM_IDS, list)
     filename_dams = '_' + '_'.join(DAM_IDS)
-filename = f'plot_power_group/power_vs_turbine_flow{filename_solver}{filename_dams}'
+filename = FILENAME + filename_solver + filename_dams
 
 if PLOT_SOLVER_FLOWS and SOLVER == "MILP":
     solver_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}
@@ -70,7 +71,8 @@ for i, dam_id in enumerate(DAM_IDS):
 
     ax = axs[i] if len(DAM_IDS) > 1 else axs
     ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
-    ax.set_title(f'Power group dynamics of {dam_id}{plot_title}')
+    if len(DAM_IDS) > 1:
+        ax.set_title(f'Power group dynamics of {dam_id}{plot_title}')
     ax.set_xlabel('Turbine flow (m3/s)')
     ax.set_ylabel('Power (MW)')
     ax.grid(True)

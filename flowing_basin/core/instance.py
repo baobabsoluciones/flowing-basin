@@ -790,7 +790,7 @@ class Instance(InstanceCore):
 
         return incoming_flows
     
-    def get_all_incoming_flows(self):
+    def get_all_incoming_flows(self) -> list[float]:
         
         """
         

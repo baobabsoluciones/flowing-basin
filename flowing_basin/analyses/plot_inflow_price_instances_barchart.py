@@ -1,5 +1,5 @@
 """
-plot_instance_inflow_price.py
+plot_inflow_price_instances_barchart.py
 This script plots the inflow and price level of every instance Percentile00, ..., Percentile100
 """
 
@@ -36,5 +36,5 @@ if __name__ == "__main__":
     twin_ax.legend()
 
     plt.tight_layout()
-    plt.savefig(f"instance_charts/instance_inflow_price.png")
+    plt.savefig(f"plot_inflow_price_instances_barchart/instance_inflow_price.png")
     plt.show()

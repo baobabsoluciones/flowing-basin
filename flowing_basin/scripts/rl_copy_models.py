@@ -77,8 +77,20 @@ def get_experiment12_model_paths() -> list[str]:
     return paths
 
 
+def get_experiment12cont_model_paths() -> list[str]:
+    agents = [
+        "rl-A21G2O3R1T74",
+        "rl-A21G2O3R1T748",
+        "rl-A21G3O3R1T74",
+        "rl-A21G3O3R1T748",
+    ]
+    paths = [os.path.join(ReinforcementLearning.models_folder, agent) for agent in agents]
+    print(f"Returning {len(paths)} paths:", paths)
+    return paths
+
+
 if __name__ == "__main__":
 
-    model_paths = get_experiment12_model_paths()
-    new_folder = "C:/Users/rodrigo/Documents/experiment12"
+    model_paths = get_experiment12cont_model_paths()
+    new_folder = "C:/Users/rodrigo/Documents/experiment12cont"
     copy_folders(model_paths, new_folder)

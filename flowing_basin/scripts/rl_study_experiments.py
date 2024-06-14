@@ -51,19 +51,32 @@ def get_experiment12_agents(general_configs: list[str]) -> list[str]:
     return experiment_agents
 
 
+def get_experiment12cont_agents(general_configs: list[str]) -> list[str]:
+    experiment_agents = [
+        "rl-A21G2O3R1T74",
+        "rl-A21G2O3R1T748",
+        "rl-A21G3O3R1T74",
+        "rl-A21G3O3R1T748",
+    ]
+    experiment_agents = [
+        agent for agent in experiment_agents if any(agent.find(gen_config) != -1 for gen_config in general_configs)
+    ]
+    return experiment_agents
+
+
 if __name__ == "__main__":
 
     general = 'G3'
     # regex = f"rl-A3.{general}"
     # agents = ReinforcementLearning.get_all_agents(regex)
-    agents = get_experiment12_agents([general])
+    agents = get_experiment12cont_agents([general])
     print(f"Found {len(agents)} agents in folder:", agents)
     regex = agents
     # ReinforcementLearning.barchart_training_times(regex, hours=True)
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
     # ReinforcementLearning.print_max_avg_incomes(
     #     regex, permutation='GOART', baselines=["MILP", "rl-greedy"],
-    #     csv_filepath=f"reports/results_{general}_experiment12.csv"
+    #     csv_filepath=f"reports/results_{general}_experiment12cont.csv"
     # )
     ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
 

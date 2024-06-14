@@ -527,7 +527,7 @@ class Baselines:
     # 'RL' is the best agent in each configuration
     META_SOLVERS = {
         'PSO (general)': {'G0': 'PSO-RBO', 'G01': 'PSO', 'G1': 'PSO-RBO', 'G2': 'PSO-RBO', 'G21': 'PSO', 'G3': 'PSO'},
-        'RL': {'G0': 'rl-A31G0O231R1T1002', 'G1': 'rl-A113G1O2R22T302'}
+        'RL': {'G0': 'rl-A31G0O231R1T1002', 'G1': 'rl-A113G1O2R22T302', 'G2': 'rl-A21G2O3R1T748', 'G3': 'rl-A21G3O3R1T74'}
     }
 
     # Draw the colors using the 'paired' color map

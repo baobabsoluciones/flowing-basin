@@ -170,11 +170,11 @@ def csv_final_milp_gap(save_csv: bool = False):
 if __name__ == "__main__":
 
     # barchart_instances(['PSO', 'PSO-RBO'], solvers_best=['PSO', 'PSO-RBO'], save_fig=True)
-    barchart_instances(['MILP', 'PSO (general)', 'rl-greedy'], save_fig=True)
+    # barchart_instances(['MILP', 'PSO (general)', 'rl-greedy'], save_fig=True)
     # barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)
     # csv_instance_final_values(['PSO-RBO'], include_folders=['tuned'], reference='PSO-RBO', save_csv=True)
     # csv_instance_final_values(['PSO', 'PSO-RBO'], solvers_best=['PSO', 'PSO-RBO'], reference='PSO (best)', save_csv=True)
-    # csv_instance_final_values(['MILP', 'PSO (general)', 'rl-greedy'], save_csv=True)
+    csv_instance_final_values(['MILP', 'PSO (general)', 'rl-greedy', 'rl-random'], save_csv=True)
     # csv_instance_final_values(['RL', 'rl-greedy'], general_configs=['G0', 'G1'], reference='rl-greedy', save_csv=True)
     # csv_instance_final_values(['MILP', 'PSO (general)', 'rl-greedy'], reference='rl-greedy', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)

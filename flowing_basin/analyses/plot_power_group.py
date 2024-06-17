@@ -14,17 +14,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-PLOT_SOLVER_FLOWS = False
-DAM_IDS = ["dam2"]  # Put None to plot all dams, or [dam_id] for a single dam
-SOLVER = "rl-A113G1O232R22T3"  # an agent or "MILP"
+PLOT_SOLVER_FLOWS = True
+DAM_IDS = None  # Put None to plot all dams, or [dam_id] for a single dam
+SOLVER = "MILP"  # an agent, e.g. "rl-A113G1O232R22T3", or "MILP"
 GENERAL = 'G0'  # only matters if PLOT_SOLVER_FLOWS = True and SOLVER = "MILP"
 FILENAME = f'plot_power_group/fig_power_vs_turbine_flow'
+DAM_NAMES = {'dam1': 'first subsystem', 'dam2': 'second subsystem'}
 
 if PLOT_SOLVER_FLOWS:
-    filename_solver = f'_vs_{SOLVER}_flows'
-    plot_title = f' with {SOLVER} flows'
-    if SOLVER == "MILP":
-        plot_title += f' in {GENERAL}'
+    filename_solver = f'_vs_{SOLVER}_outflows'
+    plot_title = f' with {SOLVER} outflows'
+    # if SOLVER == "MILP":
+    #     plot_title += f' in {GENERAL}'
 else:
     filename_solver = ''
     plot_title = ''
@@ -72,7 +73,7 @@ for i, dam_id in enumerate(DAM_IDS):
     ax = axs[i] if len(DAM_IDS) > 1 else axs
     ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
     if len(DAM_IDS) > 1:
-        ax.set_title(f'Power group dynamics of {dam_id}{plot_title}')
+        ax.set_title(f'Power group dynamics of {DAM_NAMES[dam_id]}{plot_title}')
     ax.set_xlabel('Turbine flow (m3/s)')
     ax.set_ylabel('Power (MW)')
     ax.grid(True)
@@ -107,8 +108,9 @@ for i, dam_id in enumerate(DAM_IDS):
         bins.append(flows_limits[-1])
         print(dam_id, "bins:", bins)
         twin_ax = ax.twinx()
-        twin_ax.hist(solver_flows[dam_id], color='orange', alpha=0.5, bins=bins)
-        twin_ax.set_ylabel(f'{SOLVER} flows frequency')
+        twin_ax.hist(solver_flows[dam_id], color='orange', alpha=0.5, bins=bins, label=f"{SOLVER} outflows")
+        twin_ax.set_ylabel(f'{SOLVER} outflows frequency')
+        twin_ax.legend()
 
 # Trabs
 plt.tight_layout()

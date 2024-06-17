@@ -544,6 +544,9 @@ class Baselines:
         'Heuristic': dark_red, 'rl-random': orange, 'rl-greedy': dark_orange
     }
 
+    # 'rl-greedy' should be represented as 'Greedy'; 'PSO (general)' as 'PSO'
+    SOLVER_NAMES = {'rl-greedy': 'Greedy', 'PSO (general)': 'PSO'}
+
     def __init__(
             self, general_config: str, solvers: list[str], solvers_best: list[str] = None,
             include_folders: list[str] = None, include_solutions: list[Solution] = None,
@@ -818,8 +821,8 @@ class Baselines:
         values = self.get_solver_instance_final_values()
         title = ', '.join(self.solvers) if verbose_title else "the solvers"
         barchart_instances_ax(
-            ax, values=values, y_label="Income (€)", title=title,
-            general_config=self.general_config, solver_colors=Baselines.SOLVER_COLORS
+            ax, values=values, y_label="Income (€)", title=title, general_config=self.general_config,
+            solver_colors=Baselines.SOLVER_COLORS, solver_names=Baselines.SOLVER_NAMES
         )
 
     def barchart_instances(self):
@@ -828,8 +831,8 @@ class Baselines:
         """
         values = self.get_solver_instance_final_values()
         barchart_instances(
-            values=values, value_type="Income (€)", title=', '.join(self.solvers),
-            general_config=self.general_config, solver_colors=Baselines.SOLVER_COLORS
+            values=values, value_type="Income (€)", title=', '.join(self.solvers), general_config=self.general_config,
+            solver_colors=Baselines.SOLVER_COLORS, solver_names=Baselines.SOLVER_NAMES
         )
 
     def get_csv_milp_final_gaps(self) -> list[list[str | float]]:

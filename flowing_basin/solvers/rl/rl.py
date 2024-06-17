@@ -1025,11 +1025,7 @@ class ReinforcementLearning:
                 values[agent] = dict()
                 runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances(rl.config.num_dams))
                 for run in runs:
-                    if rl.config.action_type == "adjustments":
-                        # Get the best solution achieved, not the latest one
-                        sol = max(run.solutions, key=lambda s: s.get_objective_function())
-                    else:
-                        sol = run.solution
+                    sol = run.solution
                     income = sol.get_objective_function()
                     values[agent][run.instance.get_instance_name()] = income
 

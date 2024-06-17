@@ -147,10 +147,14 @@ class RLRun(Experiment):
             if done:
                 final_env = info['final_env']
 
-        self.solution = self.get_solution(final_env)
+        solution = self.get_solution(final_env)
         if self.config.action_type == "adjustments":
-            self.solutions.append(self.solution)
+            # Get the best solution achieved, not the latest one
+            self.solutions.append(solution)
             self.total_rewards = self.env.get_attr("total_rewards")[0]
+            self.solution = max(self.solutions, key=lambda s: s.get_objective_function())
+        else:
+            self.solution = solution
 
         return dict()
 

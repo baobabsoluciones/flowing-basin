@@ -26,7 +26,8 @@ def barchart_instances(
     axes = axes.flatten()
     baseline_solvers = []
     for config, ax in zip(general_configs, axes[:num_configs]):
-        baselines = Baselines(solvers=solvers, general_config=config, **kwargs)
+        solvers_used = solvers if config not in {'G01', 'G21'} else [solver for solver in solvers if solver != 'RL']
+        baselines = Baselines(solvers=solvers_used, general_config=config, **kwargs)
         for solver in baselines.solvers:
             if solver not in baseline_solvers:
                 baseline_solvers.append(solver)
@@ -90,17 +91,18 @@ def csv_instance_final_values(
 
     rows_total = []
     baseline_solvers = []
-    for i, general_config in enumerate(general_configs):
+    for i, config in enumerate(general_configs):
         sols_extra = []
         for solver_extra in solvers_extra:
-            sols_extra.extend(Baseline(solver=solver_extra, general_config=general_config).solve(save_sol=False))
-        baselines = Baselines(solvers=solvers, general_config=general_config, include_solutions=sols_extra, **kwargs)
+            sols_extra.extend(Baseline(solver=solver_extra, general_config=config).solve(save_sol=False))
+        solvers_used = solvers if config not in {'G01', 'G21'} else [solver for solver in solvers if solver != 'RL']
+        baselines = Baselines(solvers=solvers_used, general_config=config, include_solutions=sols_extra, **kwargs)
         for solver in baselines.solvers:
             if solver not in baseline_solvers:
                 baseline_solvers.append(solver)
         rows = baselines.get_csv_instance_final_values(reference)
         for row in rows:
-            row.insert(0, general_config)
+            row.insert(0, config)
         rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
     rows_total[0][0] = 'Configuration'
 
@@ -120,11 +122,12 @@ def csv_instance_final_timestamps(
         general_configs = GENERAL_CONFIGS
 
     rows_total = []
-    for i, general_config in enumerate(general_configs):
-        baselines = Baselines(solvers=solvers, include_folders=include_folders, general_config=general_config)
+    for i, config in enumerate(general_configs):
+        solvers_used = solvers if config not in {'G01', 'G21'} else [solver for solver in solvers if solver != 'RL']
+        baselines = Baselines(solvers=solvers_used, include_folders=include_folders, general_config=config)
         rows = baselines.get_csv_instance_final_timestamps()
         for row in rows:
-            row.insert(0, general_config)
+            row.insert(0, config)
         rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
     rows_total[0][0] = 'Configuration'
 
@@ -140,12 +143,13 @@ def csv_instance_violations(
 ):
 
     rows_total = []
-    for i, general_config in enumerate(GENERAL_CONFIGS):
+    for i, config in enumerate(GENERAL_CONFIGS):
+        solvers_used = solvers if config not in {'G01', 'G21'} else [solver for solver in solvers if solver != 'RL']
         rows = Baselines(
-            solvers=solvers, general_config=general_config, **kwargs
+            solvers=solvers_used, general_config=config, **kwargs
         ).get_csv_instance_violations(concept, in_percentage=in_percentage, num_decimals=num_decimals)
         for row in rows:
-            row.insert(0, general_config)
+            row.insert(0, config)
         rows_total.extend(rows if i == 0 else rows[1:])  # Exclude header of subsequent rows
     rows_total[0][0] = 'Configuration'
     solvers_title = "_".join(solvers)
@@ -169,12 +173,15 @@ def csv_final_milp_gap(save_csv: bool = False):
 
 if __name__ == "__main__":
 
+    # csv_instance_final_values(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_csv=True)
+    # barchart_instances(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_fig=True)
+    csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="max_relvar", in_percentage=True, save_csv=True)
+    csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="flow_smoothing", in_percentage=True, save_csv=True)
+
     # barchart_instances(['PSO', 'PSO-RBO'], solvers_best=['PSO', 'PSO-RBO'], save_fig=True)
-    # barchart_instances(['MILP', 'PSO (general)', 'rl-greedy'], save_fig=True)
     # barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)
     # csv_instance_final_values(['PSO-RBO'], include_folders=['tuned'], reference='PSO-RBO', save_csv=True)
     # csv_instance_final_values(['PSO', 'PSO-RBO'], solvers_best=['PSO', 'PSO-RBO'], reference='PSO (best)', save_csv=True)
-    csv_instance_final_values(['MILP', 'PSO (general)', 'rl-greedy', 'rl-random'], save_csv=True)
     # csv_instance_final_values(['RL', 'rl-greedy'], general_configs=['G0', 'G1'], reference='rl-greedy', save_csv=True)
     # csv_instance_final_values(['MILP', 'PSO (general)', 'rl-greedy'], reference='rl-greedy', save_csv=True)
     # csv_instance_final_timestamps(['MILP', 'PSO'], save_csv=True)

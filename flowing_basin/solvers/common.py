@@ -227,9 +227,9 @@ def preprocess_values(values: dict[str, dict[str, Any]]) -> tuple[list[str], lis
 
 
 def barchart_instances_ax(
-        ax: plt.Axes, values: dict[str, dict[str, float | list[float]]],
-        y_label: str, x_label: str = None, full_title: str = None, title: str = None, general_config: str = None,
-        solver_colors: dict[str, str | tuple[float]] = None, vertical_x_labels: bool = True
+        ax: plt.Axes, values: dict[str, dict[str, float | list[float]]], y_label: str, x_label: str = None,
+        full_title: str = None, title: str = None, general_config: str = None, vertical_x_labels: bool = True,
+        solver_colors: dict[str, str | tuple[float]] = None, solver_names: dict[str, str] = None,
 ):
 
     """
@@ -245,6 +245,7 @@ def barchart_instances_ax(
     :param title: String that will appear on the title
     :param general_config: General configuration (e.g. "G1")
     :param solver_colors: Color with which each solver should be drawn
+    :param solver_names: Name with which each solver will be presented
     :param vertical_x_labels: If True, represent the X labels vertically
     """
 
@@ -283,7 +284,11 @@ def barchart_instances_ax(
         print(f"Bar chart values for {solver}: {values_mean=}, {values_lower=}, {values_upper=}")
 
         # Plot mean values as a barchart
-        bar_kwargs = dict(width=bar_width, label=solver)
+        if solver_names is None:
+            solver_name = solver
+        else:
+            solver_name = solver_names[solver] if solver in solver_names else solver
+        bar_kwargs = dict(width=bar_width, label=solver_name)
         if solver_colors is not None and solver in solver_colors:
             bar_kwargs.update(color=solver_colors[solver])
         ax.bar(x_values + offset, values_mean, **bar_kwargs)

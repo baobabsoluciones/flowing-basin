@@ -36,5 +36,7 @@ if __name__ == "__main__":
     twin_ax.legend()
 
     plt.tight_layout()
-    plt.savefig(f"plot_inflow_price_instances_barchart/instance_inflow_price.png")
+    filename = "plot_inflow_price_instances_barchart/instance_inflow_price"
+    plt.savefig(filename + ".png")
+    plt.savefig(filename + ".eps")
     plt.show()

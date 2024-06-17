@@ -9,22 +9,27 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 import numpy as np
 import matplotlib.pyplot as plt
 
-general_config = 'G0'
-baseline_colors = {
+GENERAL_CONFIG = 'G0'
+BASELINE_COLORS = {
     'MILP': 'blue',
     'rl-random': 'red',
     'rl-greedy': 'grey'
 }
-study_incomes = False  # Study incomes instead of rewards
-agent = f"rl-A1{general_config}O232R232T1"  # Agent used to calculate rewards
+REWARD_NAMES = {'R1': 'unadjusted reward', 'R22': 'Greedy-adjusted reward', 'R23': 'MILP-adjusted reward'}
+STUDY_INCOMES = False  # Study incomes instead of rewards
+PUT_CONFIG_TITLE = False
+REWARD = 'R23'
+AGENT = f"rl-A1{GENERAL_CONFIG}O232{REWARD}T1"  # Agent used to calculate rewards
+FILENAME = f"rl_reward_structure/reward_{REWARD}"
+MIN_BOTTOM = -10
 
-if study_incomes:
+if STUDY_INCOMES:
 
     # Get dict[baseline, dict[instance, income]] using TrainingData class
     y_axis = "Income"
     x_axis = "Income"
     training_data_baselines = TrainingData.create_empty()
-    for baseline in ReinforcementLearning.get_all_baselines(general_config):
+    for baseline in ReinforcementLearning.get_all_baselines(GENERAL_CONFIG):
         training_data_baselines += baseline
     baseline_instances_values = training_data_baselines.get_baseline_instances_values()
     greedy_instances_values = baseline_instances_values['rl-greedy']
@@ -34,11 +39,13 @@ else:
     # Get dict[baseline, dict[instance, avg_reward]] using imitator agent
     # The imitator agent for the solvers will use the reward of the agent defined above,
     # while the imitator agent for rl-greedy will always use the R1 reward
-    rl_for_solver = ReinforcementLearning(agent)
-    y_axis = f"Average reward {rl_for_solver.config_names['R']}"
+    rl_for_solver = ReinforcementLearning(AGENT)
+    reward_name = rl_for_solver.config_names['R']
+    reward_name = REWARD_NAMES[reward_name] if reward_name in REWARD_NAMES else f"reward {reward_name}"
+    y_axis = f"Average {reward_name}"
     baseline_instances_values = dict()
 
-    for baseline in ReinforcementLearning.get_all_baselines(general_config):
+    for baseline in ReinforcementLearning.get_all_baselines(GENERAL_CONFIG):
 
         # Get the reward per timestep
         run = rl_for_solver.run_imitator(
@@ -58,9 +65,9 @@ else:
     greedy_config_names = rl_for_solver.config_names
     greedy_config_names['R'] = 'R1'
     rl_for_greedy = ReinforcementLearning(''.join(greedy_config_names.values()))
-    x_axis = f"Average reward R1"
+    x_axis = f"Average {REWARD_NAMES['R1']}"
     greedy_instances_values = dict()
-    for baseline in ReinforcementLearning.get_all_baselines(general_config):
+    for baseline in ReinforcementLearning.get_all_baselines(GENERAL_CONFIG):
         if baseline.get_solver() == 'rl-greedy':
             run = rl_for_greedy.run_imitator(
                 solution=baseline,
@@ -75,18 +82,26 @@ print("X values:", greedy_instances_values)
 x_sorted_values = dict(sorted(greedy_instances_values.items()))
 x = np.array(list(x_sorted_values.values()))
 fig, ax = plt.subplots()
-for solver, color in baseline_colors.items():
+for solver, color in BASELINE_COLORS.items():
     y_sorted_values = dict(sorted(baseline_instances_values[solver].items()))
     y = np.array(list(y_sorted_values.values()))
     slope, intercept = np.polyfit(x, y, 1)
-    print(f"Fitted line in {general_config} for {solver}: {slope} * x + {intercept} | R = {np.corrcoef(x, y)[0, 1]}")
+    print(f"Fitted line in {GENERAL_CONFIG} for {solver}: {slope} * x + {intercept} | R = {np.corrcoef(x, y)[0, 1]}")
     ax.scatter(x, y, color=color, label=solver)
     ax.plot(x, slope * x + intercept, color=color, linestyle='--')
     for i, instance_name in enumerate(y_sorted_values.keys()):
         ax.annotate(instance_name, (x[i], y[i]), color=color, xytext=(5, -5), textcoords='offset points')
-ax.set_xlabel(f'{x_axis} of rl-greedy')
+current_bottom, current_top = ax.get_ylim()
+if current_bottom < MIN_BOTTOM:
+    ax.set_ylim(bottom=MIN_BOTTOM, top=current_top)
+ax.set_xlabel(f'{x_axis} of Greedy')
 ax.set_ylabel(f'{y_axis} of solver')
-ax.set_title(f'{y_axis} structure in {general_config}')
+title = f'{y_axis} structure'
+if PUT_CONFIG_TITLE:
+    title += f" in {GENERAL_CONFIG}"
+ax.set_title(title)
 ax.legend()
 ax.grid(True)
+plt.savefig(FILENAME + '.eps')
+plt.savefig(FILENAME + '.png')
 plt.show()

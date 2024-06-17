@@ -11,7 +11,7 @@ import numpy as np
 INSTANCE = "Percentile50"
 NUM_DAMS = 2
 RESERVOIR_NAMES = {'dam1': 'first reservoir', 'dam2': 'second reservoir'}
-FILENAME = f"plot_inflow_price_instance/inflow_price_{INSTANCE}"
+FILENAME = f"plot_inflow_price_instance/inflow_price_{INSTANCE}_step"
 
 if __name__ == "__main__":
 
@@ -35,8 +35,9 @@ if __name__ == "__main__":
             linestyle = '-'
         else:
             linestyle = '--'
-        ax_inflows.plot(
-            inflows, linewidth=2, color="blue", linestyle=linestyle, label=f"Inflow of the {RESERVOIR_NAMES[dam_id]}"
+        label = f"Inflow of the {RESERVOIR_NAMES[dam_id]}"
+        ax_inflows.step(
+            x=range(len(inflows)), y=inflows, where='post', linewidth=2, color="blue", linestyle=linestyle, label=label
         )
     ax_inflows.legend()
     ax_inflows.set_ylabel("Inflow (m3/s)")

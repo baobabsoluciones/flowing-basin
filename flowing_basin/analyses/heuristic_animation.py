@@ -7,13 +7,15 @@ from flowing_basin.core import Instance, Solution
 from flowing_basin.tools import RiverBasin
 from flowing_basin.solvers import Baseline
 from flowing_basin.solvers.heuristic import HeuristicSingleDam
-from math import log
+from math import log, ceil, sqrt
 from matplotlib import pyplot as plt
+from copy import deepcopy
 import os
 import numpy as np
 
 INSTANCE = "Percentile80"
 CONFIG = 'G8'
+FLOW_SMOOTHING = 4  # Only affects the Heuristic image
 FILENAME_HEURISTIC = f"heuristic_animation/heuristic_{INSTANCE}_{CONFIG}"
 FILENAME_RAND = f"heuristic_animation/random_{INSTANCE}_{CONFIG}"
 FPS = 5
@@ -64,9 +66,47 @@ def create_heuristic_animation():
             print(f"Deleted {img}.")
 
 
+def create_heuristic_figure():
+
+    """Create a figure with the solution process of the heuristic."""
+
+    # Solve the given instance with the heuristic, recording every partial solution
+    new_config = deepcopy(config)
+    new_config.flow_smoothing = FLOW_SMOOTHING
+    heuristic = HeuristicSingleDam(
+        instance=instance, config=new_config, dam_id=dam_id, flow_contribution=instance.get_all_incoming_flows(),
+        bias_weight=log(new_config.prob_below_half) / log(0.5), record_solutions=True
+    )
+    heuristic.solve()
+    print(f"Finished solving.")
+
+    num_cols = ceil(sqrt(len(heuristic.solutions)))
+    num_rows = ceil(len(heuristic.solutions) / num_cols)
+    fig, axs = plt.subplots(num_rows, num_cols, figsize=(3 * num_cols, 3 * num_rows))
+
+    i = 0
+    for row in range(num_rows):
+        for col in range(num_cols):
+            if i < len(heuristic.solutions):
+                sol = heuristic.solutions[i]
+                try:
+                    ax = axs[row, col]
+                except IndexError:
+                    ax = axs[col]
+                sol.plot_solution_for_dam(dam_id=dam_id, ax=ax, put_legend=False, put_title=False)
+                if i == 0:
+                    fig.legend(loc='upper right', fontsize='x-large')
+            i += 1
+
+    plt.tight_layout()
+    plt.savefig(FILENAME_HEURISTIC + f'_image_k{FLOW_SMOOTHING}' + '.eps')
+    plt.savefig(FILENAME_HEURISTIC + f'_image_k{FLOW_SMOOTHING}' + '.png')
+    plt.show()
+
+
 def create_random_figure():
 
-    """Crate a .png file with the solution of a random agent"""
+    """Create a .png file with the solution of a random agent."""
 
     flows = np.random.rand(
         instance.get_largest_impact_horizon(), instance.get_num_dams(), 1
@@ -110,4 +150,5 @@ def create_random_figure():
 if __name__ == "__main__":
 
     # create_heuristic_animation()
-    create_random_figure()
+    # create_random_figure()
+    create_heuristic_figure()

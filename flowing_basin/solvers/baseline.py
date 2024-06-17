@@ -541,11 +541,20 @@ class Baselines:
     SOLVER_COLORS = {
         'MILP': dark_blue, 'PSO': green, 'PSO (tuned)': dark_green, 'PSO (best)': dark_green,
         'PSO-RBO': purple, 'PSO-RBO (tuned)': dark_purple, 'PSO-RBO (best)': dark_purple, 'PSO (general)': dark_purple,
-        'Heuristic': dark_red, 'rl-random': orange, 'rl-greedy': dark_orange
+        'RL': dark_red, 'rl-random': orange, 'rl-greedy': dark_orange
     }
 
     # 'rl-greedy' should be represented as 'Greedy'; 'PSO (general)' as 'PSO'
     SOLVER_NAMES = {'rl-greedy': 'Greedy', 'PSO (general)': 'PSO'}
+
+    CONFIG_NAMES = {
+        'G0': '2 dams, gate movements',
+        'G01': '2 dams, water hammer',
+        'G1': '2 dams, no costs',
+        'G2': '6 dams, gate movements',
+        'G21': '6 dams, water hammer',
+        'G3': '6 dams, no costs'
+    }
 
     def __init__(
             self, general_config: str, solvers: list[str], solvers_best: list[str] = None,
@@ -777,7 +786,8 @@ class Baselines:
                 plot_kwargs.update(linestyle='--')
             values_solver = values[solver][instance_name]
             values_mean = np.mean(values_solver, axis=1)
-            ax.plot(timestamps, values_mean, label=solver, linewidth=2, **plot_kwargs)
+            solver_name = Baselines.SOLVER_NAMES[solver] if solver in Baselines.SOLVER_NAMES else solver
+            ax.plot(timestamps, values_mean, label=solver_name, linewidth=2, **plot_kwargs)
             if values_solver.shape[1] > 1:
                 lower, upper = confidence_interval(values_solver)
                 ax.fill_between(x=timestamps, y1=lower, y2=upper, **fill_kwargs)
@@ -822,7 +832,8 @@ class Baselines:
         title = ', '.join(self.solvers) if verbose_title else "the solvers"
         barchart_instances_ax(
             ax, values=values, y_label="Income (€)", title=title, general_config=self.general_config,
-            solver_colors=Baselines.SOLVER_COLORS, solver_names=Baselines.SOLVER_NAMES
+            solver_colors=Baselines.SOLVER_COLORS, solver_names=Baselines.SOLVER_NAMES,
+            config_names=Baselines.CONFIG_NAMES
         )
 
     def barchart_instances(self):

@@ -230,6 +230,7 @@ def barchart_instances_ax(
         ax: plt.Axes, values: dict[str, dict[str, float | list[float]]], y_label: str, x_label: str = None,
         full_title: str = None, title: str = None, general_config: str = None, vertical_x_labels: bool = True,
         solver_colors: dict[str, str | tuple[float]] = None, solver_names: dict[str, str] = None,
+        config_names: dict[str, str] = None
 ):
 
     """
@@ -246,6 +247,7 @@ def barchart_instances_ax(
     :param general_config: General configuration (e.g. "G1")
     :param solver_colors: Color with which each solver should be drawn
     :param solver_names: Name with which each solver will be presented
+    :param config_names: Name with which each general configuration will be presented
     :param vertical_x_labels: If True, represent the X labels vertically
     """
 
@@ -254,7 +256,11 @@ def barchart_instances_ax(
     if full_title is None:
         if title is None or general_config is None:
             raise ValueError(f"If {full_title=}, then both {title=} and {general_config=} must have a value.")
-        full_title = f'Bar chart of {title} for all instances in {general_config}'
+        if config_names is not None:
+            config_name = config_names[general_config] if general_config in config_names else general_config
+        else:
+            config_name = general_config
+        full_title = f'Bar chart of {title} for {config_name}'
 
     solvers, instances = preprocess_values(values)
     bar_width = 0.4 * 2. / len(solvers)

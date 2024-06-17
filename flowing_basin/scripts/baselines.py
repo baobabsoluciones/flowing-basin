@@ -43,7 +43,8 @@ def barchart_instances(
 
 
 def plot_history_values_instances(
-        solvers: list[str], general_configs: list[str] = None, save_fig: bool = False, transpose: bool = True, **kwargs
+        solvers: list[str], general_configs: list[str] = None, instances: list[str] = None, by_pairs: bool = False,
+        save_fig: bool = False, transpose: bool = True, **kwargs
 ):
 
     if general_configs is None:
@@ -51,22 +52,38 @@ def plot_history_values_instances(
 
     if transpose:
         solvers_processed = None
-        num_instances = 11
+        num_instances = len(instances) if instances is not None else 11
         num_configs = len(general_configs)
-        fig, axes = plt.subplots(num_instances, num_configs, figsize=(3 * num_configs, 3 * num_instances))
-        for j, general_config in enumerate(general_configs):
-            baselines = Baselines(solvers=solvers, general_config=general_config, **kwargs)
+        if not by_pairs:
+            num_rows = num_instances
+            num_cols = num_configs
+            fig, axes = plt.subplots(num_rows, num_cols, figsize=(3 * num_cols, 3 * num_rows))
+        else:
+            num_rows = num_instances * 2
+            num_cols = num_configs // 2
+            fig, axes = plt.subplots(num_rows, num_cols, figsize=(6 * num_cols, 6 * num_rows))
+        for j, config in enumerate(general_configs):
+            solvers_used = solvers if config not in {'G01', 'G21'} else [solver for solver in solvers if solver != 'RL']
+            baselines = Baselines(solvers=solvers_used, general_config=config, **kwargs)
             timestamps, values = baselines.get_solver_instance_history_values()
-            solvers_processed, instances = preprocess_values(values)
-            for i, instance_name in enumerate(instances):
+            solvers_processed, instances_processed = preprocess_values(values)
+            instances_used = instances if instances is not None else instances_processed
+            for i, instance_name in enumerate(instances_used):
+                if not by_pairs:
+                    row = i
+                    col = j
+                else:
+                    row = i * 2 if j < num_cols else i * 2 + 1
+                    col = j % num_cols
                 baselines.plot_history_values_instance_ax(
-                    ax=axes[i, j], instance_name=instance_name, values=values, timestamps=timestamps,
-                    solvers=solvers_processed, title=f"Instance {instance_name} in {general_config}"
+                    ax=axes[row, col], instance_name=instance_name, values=values, timestamps=timestamps,
+                    solvers=solvers_processed, title=f"Instance {instance_name} in {Baselines.CONFIG_NAMES[config]}"
                 )
         plt.tight_layout()
         solvers_title = "_".join(solvers_processed)
         configs_title = ("_" + "_".join(general_configs)) if general_configs != GENERAL_CONFIGS else ""
-        filename = f"reports/history_curves_{solvers_title}{configs_title}" if save_fig else None
+        instances_title = ("_" + "_".join(instances)) if instances is not None else ""
+        filename = f"reports/history_curves_{solvers_title}{configs_title}{instances_title}" if save_fig else None
         if filename is not None:
             plt.savefig(filename + ".png")
             plt.savefig(filename + ".eps")
@@ -173,10 +190,12 @@ def csv_final_milp_gap(save_csv: bool = False):
 
 if __name__ == "__main__":
 
+    # Final results
     # csv_instance_final_values(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_csv=True)
-    # barchart_instances(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_fig=True)
-    csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="max_relvar", in_percentage=True, save_csv=True)
-    csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="flow_smoothing", in_percentage=True, save_csv=True)
+    # csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="max_relvar", in_percentage=True, save_csv=True)
+    # csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="flow_smoothing", in_percentage=True, save_csv=True)
+    barchart_instances(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_fig=True)
+    plot_history_values_instances(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], instances=['Percentile50'], by_pairs=True, save_fig=True)
 
     # barchart_instances(['PSO', 'PSO-RBO'], solvers_best=['PSO', 'PSO-RBO'], save_fig=True)
     # barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)

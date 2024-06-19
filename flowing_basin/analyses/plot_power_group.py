@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-PLOT_SOLVER_FLOWS = True
-PUT_TEXT = False
+PLOT_SOLVER_FLOWS = False
+PUT_TEXT = True
 DAM_IDS = None  # Put None to plot all dams, or [dam_id] for a single dam
 SOLVER = "MILP"  # an agent, e.g. "rl-A113G1O232R22T3", or "MILP"
 GENERAL = 'G0'  # only matters if PLOT_SOLVER_FLOWS = True and SOLVER = "MILP"

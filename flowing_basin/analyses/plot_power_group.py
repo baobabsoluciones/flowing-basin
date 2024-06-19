@@ -15,6 +15,7 @@ import numpy as np
 
 
 PLOT_SOLVER_FLOWS = True
+PUT_TEXT = False
 DAM_IDS = None  # Put None to plot all dams, or [dam_id] for a single dam
 SOLVER = "MILP"  # an agent, e.g. "rl-A113G1O232R22T3", or "MILP"
 GENERAL = 'G0'  # only matters if PLOT_SOLVER_FLOWS = True and SOLVER = "MILP"
@@ -71,12 +72,6 @@ for i, dam_id in enumerate(DAM_IDS):
     print(dam_id, "flow bins:", flow_bins)
 
     ax = axs[i] if len(DAM_IDS) > 1 else axs
-    ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
-    if len(DAM_IDS) > 1:
-        ax.set_title(f'Power group dynamics of {DAM_NAMES[dam_id]}{plot_title}')
-    ax.set_xlabel('Turbine flow (m3/s)')
-    ax.set_ylabel('Power (MW)')
-    ax.grid(True)
 
     flows, groups = flow_bins
     i = 0
@@ -90,13 +85,15 @@ for i, dam_id in enumerate(DAM_IDS):
         ax.fill_between(x, y, facecolor=lighten_color(col))
 
         # Text
-        num_groups = groups[i + 1].item()
-        darkened_color = 'maroon' if col == 'lightcoral' else 'darkgreen'
-        ax.text(
-            (limits[0] + limits[1]) / 2, y.mean() / 2,
-            f"{int(num_groups) if num_groups.is_integer() else num_groups} turbines", ha='center', va='bottom',
-            fontsize=12, color=darkened_color
-        )
+        if PUT_TEXT:
+            num_groups = groups[i + 1].item()
+            darkened_color = 'maroon' if col == 'lightcoral' else 'darkgreen'
+            ax.text(
+                (limits[0] + limits[1]) / 2, y.mean() / 2,
+                f"{int(num_groups) if num_groups.is_integer() else num_groups} turbines", ha='center', va='bottom',
+                fontsize=12, color=darkened_color
+            )
+
         i += 1
 
     if PLOT_SOLVER_FLOWS:
@@ -108,9 +105,19 @@ for i, dam_id in enumerate(DAM_IDS):
         bins.append(flows_limits[-1])
         print(dam_id, "bins:", bins)
         twin_ax = ax.twinx()
-        twin_ax.hist(solver_flows[dam_id], color='orange', alpha=0.5, bins=bins, label=f"{SOLVER} outflows")
-        twin_ax.set_ylabel(f'{SOLVER} outflows frequency')
+        twin_ax.hist(
+            solver_flows[dam_id], color=lighten_color('orange'), bins=bins, label=f"{SOLVER} outflows"
+        )
         twin_ax.legend()
+        twin_ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
+        twin_ax.set_ylim(0, 500)
+
+    ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
+    if len(DAM_IDS) > 1:
+        ax.set_title(f'Power group dynamics of {DAM_NAMES[dam_id]}{plot_title}')
+    ax.set_xlabel('Flow (m3/s)')
+    ax.set_ylabel('Power (MW)')
+    ax.grid(True)
 
 # Trabs
 plt.tight_layout()

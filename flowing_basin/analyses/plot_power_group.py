@@ -14,8 +14,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-PLOT_SOLVER_FLOWS = False
+PLOT_POWER_CURVE = False
+PLOT_SOLVER_FLOWS = True
 PUT_TEXT = True
+SET_YLIM = False
 DAM_IDS = None  # Put None to plot all dams, or [dam_id] for a single dam
 SOLVER = "MILP"  # an agent, e.g. "rl-A113G1O232R22T3", or "MILP"
 GENERAL = 'G0'  # only matters if PLOT_SOLVER_FLOWS = True and SOLVER = "MILP"
@@ -57,6 +59,9 @@ elif PLOT_SOLVER_FLOWS:
 else:
     solver_flows = None
 
+if not PLOT_POWER_CURVE:
+    filename += "_no_power_curve"
+
 fig, axs = plt.subplots(1, len(DAM_IDS), figsize=(6 * len(DAM_IDS), 5))
 for i, dam_id in enumerate(DAM_IDS):
 
@@ -77,22 +82,23 @@ for i, dam_id in enumerate(DAM_IDS):
     i = 0
     while i < len(flows):
 
-        # Shaded area
-        limits = (flows[i], flows[i + 1]) if i < len(flows) - 1 else (flows[i], max_flow)
-        x = np.linspace(limits[0], limits[1])
-        y = np.interp(x=x, xp=observed_flows, fp=observed_powers)
-        col = 'lightgreen' if i % 2 == 0 else 'lightcoral'
-        ax.fill_between(x, y, facecolor=lighten_color(col))
+        if PLOT_POWER_CURVE:
+            # Shaded area
+            limits = (flows[i], flows[i + 1]) if i < len(flows) - 1 else (flows[i], max_flow)
+            x = np.linspace(limits[0], limits[1])
+            y = np.interp(x=x, xp=observed_flows, fp=observed_powers)
+            col = 'lightgreen' if i % 2 == 0 else 'lightcoral'
+            ax.fill_between(x, y, facecolor=lighten_color(col))
 
-        # Text
-        if PUT_TEXT:
-            num_groups = groups[i + 1].item()
-            darkened_color = 'maroon' if col == 'lightcoral' else 'darkgreen'
-            ax.text(
-                (limits[0] + limits[1]) / 2, y.mean() / 2,
-                f"{int(num_groups) if num_groups.is_integer() else num_groups} turbines", ha='center', va='bottom',
-                fontsize=12, color=darkened_color
-            )
+            if PUT_TEXT:
+                # Text
+                num_groups = groups[i + 1].item()
+                darkened_color = 'maroon' if col == 'lightcoral' else 'darkgreen'
+                ax.text(
+                    (limits[0] + limits[1]) / 2, y.mean() / 2,
+                    f"{int(num_groups) if num_groups.is_integer() else num_groups} turbines", ha='center', va='bottom',
+                    fontsize=12, color=darkened_color
+                )
 
         i += 1
 
@@ -106,13 +112,15 @@ for i, dam_id in enumerate(DAM_IDS):
         print(dam_id, "bins:", bins)
         twin_ax = ax.twinx()
         twin_ax.hist(
-            solver_flows[dam_id], color=lighten_color('orange'), bins=bins, label=f"{SOLVER} outflows"
+            solver_flows[dam_id], color=lighten_color('green'), bins=bins, label=f"{SOLVER} outflows"
         )
         twin_ax.legend()
         twin_ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
-        twin_ax.set_ylim(0, 500)
+        if SET_YLIM:
+            twin_ax.set_ylim(0, 500)
 
-    ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
+    if PLOT_POWER_CURVE:
+        ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
     if len(DAM_IDS) > 1:
         ax.set_title(f'Power group dynamics of {DAM_NAMES[dam_id]}{plot_title}')
     ax.set_xlabel('Flow (m3/s)')

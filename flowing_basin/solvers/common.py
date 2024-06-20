@@ -311,12 +311,12 @@ def barchart_instances_ax(
     set_xticklabels_kwargs = dict()
     if vertical_x_labels:
         set_xticklabels_kwargs.update(rotation='vertical')
-    ax.set_xticklabels(instances, **set_xticklabels_kwargs)
+    ax.set_xticklabels(instances, **set_xticklabels_kwargs, fontsize=12)
 
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
-    ax.set_title(full_title)
-    ax.legend()
+    ax.set_xlabel(x_label, fontsize=14)
+    ax.set_ylabel(y_label, fontsize=14)
+    ax.set_title(full_title, fontsize=16)
+    ax.legend(fontsize=14)
 
 
 def barchart_instances(filename: str = None, **kwargs):

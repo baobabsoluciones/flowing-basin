@@ -792,11 +792,11 @@ class Baselines:
                 lower, upper = confidence_interval(values_solver)
                 ax.fill_between(x=timestamps, y1=lower, y2=upper, **fill_kwargs)
         if set_ylabel:
-            ax.set_ylabel("Income (€)")
-        ax.set_xlabel("Time (s)")
+            ax.set_ylabel("Income (€)", fontsize=14)
+        ax.set_xlabel("Time (s)", fontsize=14)
         ax.set_xticks([timestamps[0], timestamps[-1]])
-        ax.set_title(title)
-        ax.legend()
+        ax.set_title(title, fontsize=16)
+        ax.legend(fontsize=14)
 
     def plot_history_values_instances(self, filename: str = None):
 
@@ -822,18 +822,16 @@ class Baselines:
             plt.savefig(filename)
         plt.show()
 
-    def barchart_instances_ax(self, ax: plt.Axes, verbose_title: bool = False):
+    def barchart_instances_ax(self, ax: plt.Axes):
         """
         Plot a barchart in the given Axes with the objective function value of each solver at every instance.
         :param ax: matplotlib.pyplot Axes object
-        :param verbose_title:
         """
         values = self.get_solver_instance_final_values()
-        title = ', '.join(self.solvers) if verbose_title else "the solvers"
+        title = f"Income for {Baselines.CONFIG_NAMES[self.general_config]}"
         barchart_instances_ax(
-            ax, values=values, y_label="Income (€)", title=title, general_config=self.general_config,
-            solver_colors=Baselines.SOLVER_COLORS, solver_names=Baselines.SOLVER_NAMES,
-            config_names=Baselines.CONFIG_NAMES
+            ax, values=values, y_label="Income (€)", full_title=title, general_config=self.general_config,
+            solver_colors=Baselines.SOLVER_COLORS, solver_names=Baselines.SOLVER_NAMES
         )
 
     def barchart_instances(self):

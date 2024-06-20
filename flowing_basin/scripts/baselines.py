@@ -194,8 +194,10 @@ if __name__ == "__main__":
     # csv_instance_final_values(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_csv=True)
     # csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="max_relvar", in_percentage=True, save_csv=True)
     # csv_instance_violations(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], concept="flow_smoothing", in_percentage=True, save_csv=True)
-    barchart_instances(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_fig=True)
+    # barchart_instances(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], save_fig=True)
+    barchart_instances(['rl-greedy', 'MILP', 'PSO (general)'], save_fig=True)
     plot_history_values_instances(['rl-greedy', 'MILP', 'PSO (general)', 'RL'], instances=['Percentile50'], by_pairs=True, save_fig=True)
+    plot_history_values_instances(['rl-greedy', 'MILP', 'PSO (general)'], instances=['Percentile50'], by_pairs=True, save_fig=True)
 
     # barchart_instances(['PSO', 'PSO-RBO'], solvers_best=['PSO', 'PSO-RBO'], save_fig=True)
     # barchart_instances(['MILP', 'PSO', 'Heuristic', 'rl-greedy', 'rl-random'], include_folders=['tuned'], general_configs=['G0', 'G1', 'G2', 'G3'], save_fig=True)

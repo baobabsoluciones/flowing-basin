@@ -960,6 +960,33 @@ class ReinforcementLearning:
         plt.show()
 
     @staticmethod
+    def histogram_training_times(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT',
+                                hours: bool = False, filename: str = None, filter_timesteps: int = None):
+
+        """
+        Show the training time of all agents matching the given regex in a barchart
+        """
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
+        training_times = ReinforcementLearning.get_training_times(agents, filter_timesteps=filter_timesteps)
+        unit = 'min'
+        if hours:
+            training_times = [training_time / 60 for training_time in training_times]
+            unit = 'hours'
+
+        fig, ax = plt.subplots()
+        ax.hist(training_times)
+        ax.set_xlabel(f'Training Time ({unit})')
+        ax.grid(True)
+        ax.yaxis.set_visible(False)
+
+        plt.tight_layout()  # Avoid the agent IDs being cut down at the bottom of the figure
+        if filename is not None:
+            plt.savefig(filename + '.eps')
+            plt.savefig(filename + '.png')
+        plt.show()
+
+    @staticmethod
     def print_training_times(
             agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT',
             hours: bool = False, csv_filepath: str = None
@@ -1221,7 +1248,7 @@ class ReinforcementLearning:
         return sum(training_times) / len(training_times)
 
     @staticmethod
-    def get_training_times(agents: list[str]) -> list[float]:
+    def get_training_times(agents: list[str], filter_timesteps: int = None) -> list[float]:
 
         """
         Get the training times of the given agents in minutes
@@ -1230,7 +1257,12 @@ class ReinforcementLearning:
         training_times = []
         for agent in agents:
             training_data = ReinforcementLearning.get_training_data(agent)
-            training_times.append(training_data.get_training_time())
+            if filter_timesteps is None:
+                training_times.append(training_data.get_training_time())
+            else:
+                config = RLConfiguration.from_dict(training_data.get_config_dict())
+                if config.num_timesteps == filter_timesteps:
+                    training_times.append(training_data.get_training_time())
         return training_times
 
     @staticmethod

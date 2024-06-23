@@ -77,6 +77,19 @@ class TrainingData(SolutionCore):
 
         return inconsistencies
 
+    def get_config_dict(self) -> dict:
+
+        """
+        Get the configuration used in training
+        """
+
+        if len(self.get_agent_ids()) > 1:
+            raise ValueError("This method can only be used with a single agent.")
+
+        aget_id = self.get_agent_ids()[0]
+        config_data = self.data[aget_id]['configuration']
+        return config_data
+
     def get_agent_ids(self) -> list[str]:
 
         return [key for key in self.data.keys() if key != "baselines"]

@@ -93,17 +93,14 @@ class ObservationConfiguration(BaseProcessableConfiguration):  # noqa
         return data_json
 
     @classmethod
-    def from_json(cls, path: str):
-
-        with open(path, "r") as f:
-            data_json = json.load(f)
+    def from_dict(cls, data_dict: dict):
 
         # Convert 'num_steps_sight' back into a dictionary
-        num_steps_sight_list = data_json.pop("num_steps_sight")
+        num_steps_sight_list = data_dict.pop("num_steps_sight")
         num_steps_sight_dict = {tuple(item["key"]): item["value"] for item in num_steps_sight_list}
-        data_json["num_steps_sight"] = num_steps_sight_dict
+        data_dict["num_steps_sight"] = num_steps_sight_dict
 
-        return cls(**data_json)
+        return cls(**data_dict)
 
     def post_process(self):
 

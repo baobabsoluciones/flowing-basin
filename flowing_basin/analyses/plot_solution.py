@@ -5,8 +5,8 @@ plot_solution.py
 from flowing_basin.solvers.common import get_baseline
 import matplotlib.pyplot as plt
 
-INSTANCE = "Percentile70"
-SOLVER = "MILP"
+INSTANCE = "Percentile50"
+SOLVER = "rl-random"
 CONFIG = "G0"
 FILENAME = f"plot_solution/solution_{CONFIG}_{INSTANCE}_{SOLVER}"
 DAM_NAMES = {'dam1': 'the first reservoir', 'dam2': 'the second reservoir'}

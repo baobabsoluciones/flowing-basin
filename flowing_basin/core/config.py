@@ -40,7 +40,7 @@ class BaseConfiguration:
 
         with open(path, "r") as f:
             data_json = json.load(f)
-        return cls(**data_json)  # noqa
+        return cls.from_dict(data_json)
 
     def __post_init__(self):
 

@@ -70,7 +70,10 @@ if __name__ == "__main__":
     print(f"Found {len(agents)} agents in folder:", agents)
     regex = agents
 
-    ReinforcementLearning.histogram_training_times(regex, hours=True, filename='reports/rl_hist_training_times', filter_timesteps=99_000)
+    training_times = ReinforcementLearning.get_training_times(agents)
+    total_time = sum(training_times)
+    print("Total time (min):", total_time)
+    # ReinforcementLearning.histogram_training_times(regex, hours=True, filename='reports/rl_hist_training_times', filter_timesteps=99_000)
     # ReinforcementLearning.barchart_training_times(regex, hours=True)
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
     # ReinforcementLearning.print_max_avg_incomes(

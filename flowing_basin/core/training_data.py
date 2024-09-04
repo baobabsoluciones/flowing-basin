@@ -12,6 +12,7 @@ class TrainingData(SolutionCore):
 
     """
     Class to save the training data of an RL agent
+    # TODO: this class needs to be modified to handle multiple training replications
     """
 
     schema = load_json(

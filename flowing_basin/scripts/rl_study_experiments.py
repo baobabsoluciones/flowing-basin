@@ -66,23 +66,23 @@ def get_experiment12cont_agents(general_configs: list[str]) -> list[str]:
 
 if __name__ == "__main__":
 
-    agents = ReinforcementLearning.get_all_agents(".*")
+    agents = ReinforcementLearning.get_all_agents("rl-A1G0O1R1T12")
     print(f"Found {len(agents)} agents in folder:", agents)
     regex = agents
 
-    training_times = ReinforcementLearning.get_training_times(agents)
-    total_time = sum(training_times)
-    print("Total time (min):", total_time)
+    # training_times = ReinforcementLearning.get_training_times(agents)
+    # total_time = sum(training_times)
+    # print("Total time (min):", total_time)
     # ReinforcementLearning.histogram_training_times(regex, hours=True, filename='reports/rl_hist_training_times', filter_timesteps=99_000)
     # ReinforcementLearning.barchart_training_times(regex, hours=True)
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
+    # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
+
     # ReinforcementLearning.print_max_avg_incomes(
     #     regex, permutation='GOART', baselines=["MILP", "rl-greedy"],
     #     csv_filepath=f"reports/results_{general}_experiment12cont.csv"
     # )
-    # ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
-
-    # ReinforcementLearning.print_spaces(regex)
-    # ReinforcementLearning.print_training_times(regex)
-    # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
     # ReinforcementLearning.barchart_instances_incomes(regex, baselines=["Heuristic", "MILP", "rl-greedy", "rl-random"])
+    ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
+    # ReinforcementLearning.print_spaces(regex)
+

@@ -82,13 +82,14 @@ class ReinforcementLearning:
         self.obs_records_path = os.path.join(ReinforcementLearning.observation_records_folder, folder_name)
 
     def train(
-            self, save_agent: bool = True, save_replay_buffer: bool = False, save_obs: bool = False,
-            save_tensorboard: bool = True, num_timesteps: int = None
+            self, training_repl: int = None, save_agent: bool = True, save_replay_buffer: bool = False,
+            save_obs: bool = False, save_tensorboard: bool = True, num_timesteps: int = None
     ) -> RLTrain | None:
 
         """
         Train an agent with the given configuration.
 
+        :param training_repl: Training replication (default is to consider it is the first one).
         :param save_agent: Whether to save the agent or not
             (not saving the agent may be interesting for testing purposes).
         :param save_replay_buffer: Whether to save the replay buffer or not
@@ -110,7 +111,7 @@ class ReinforcementLearning:
             path_constants=self.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
-            path_folder=self.get_agent_folder_path() if save_agent else None,
+            path_folder=self.get_agent_folder_path(training_repl=training_repl) if save_agent else None,
             path_tensorboard=ReinforcementLearning.tensorboard_folder if save_agent and save_tensorboard else None,
             experiment_id=self.agent_name,
             verbose=self.verbose,
@@ -371,33 +372,38 @@ class ReinforcementLearning:
 
         return observations
 
-    def get_agent_folder_path(self, training_iter: int = None):
+    def get_agent_folder_path(self, training_iter: int = None, training_repl: int = None):
 
         """
         Get the path to the folder of the RL agent.
         :param training_iter: Training iteration of the agent; default is to take the last one.
+        :param training_repl: Training replication (version) of the agent; default is to take the first one.
         :return:
         """
 
-        def get_full_agent_path(i: int):
+        def get_full_agent_path(t_iter: int, t_repl: int):
             agent_path = os.path.join(ReinforcementLearning.models_folder, self.agent_name)
-            suffix = f"_{i}" if i > 0 else ""
-            return agent_path + suffix
+            if t_repl > 0:
+                agent_path += f"-{t_repl}"
+            if t_iter > 0:
+                agent_path += f"_{t_iter}"
+            return agent_path
 
-        if training_iter is not None:
-            # Get the folder of the specified training iteration
-            full_agent_path = get_full_agent_path(training_iter)
+        # Default is to take the first replication
+        if training_repl is None:
+            training_repl = 0
 
-        else:
-            # Get the folder of the last training iteration (i.e., of the last folder saved in disk)
-            i = 0
-            full_agent_path = get_full_agent_path(i)
-            i += 1
-            while os.path.exists(get_full_agent_path(i)):
-                full_agent_path = get_full_agent_path(i)
-                i += 1
+        # Default is to take the last iteration that exists
+        # (Note that if the agent already exists, and we want to train it for another iteration,
+        # RLTrain will automatically change the agent folder's name)
+        if training_iter is None:
+            training_iter = 0
+            while os.path.exists(get_full_agent_path(training_iter, training_repl)):
+                training_iter += 1
+            if training_iter > 0:
+                training_iter -= 1
 
-        return full_agent_path
+        return get_full_agent_path(training_iter, training_repl)
 
     def get_model_path(self, model_type: str = "best_model"):
 
@@ -912,6 +918,8 @@ class ReinforcementLearning:
             baselines = ['MILP', 'rl-random', 'rl-greedy']
         if values is None:
             values = ['income']
+        if not agents:
+            raise ValueError("The given list of agents is empty.")
 
         # Ensure all agents have the same General configuration
         general_config = ReinforcementLearning.common_general_config(
@@ -1138,12 +1146,7 @@ class ReinforcementLearning:
                 incomes = []
                 runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances(rl.config.num_dams))
                 for run in runs:
-                    if rl.config.action_type == "adjustments":
-                        # Get the best solution achieved, not the latest one
-                        sol = max(run.solutions, key=lambda s: s.get_objective_function())
-                    else:
-                        sol = run.solution
-                    income = sol.get_objective_function()
+                    income = run.solution.get_objective_function()
                     if take_average:
                         incomes.append(income)
                     else:

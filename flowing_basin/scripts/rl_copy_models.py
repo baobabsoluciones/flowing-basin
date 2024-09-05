@@ -33,7 +33,7 @@ def get_experiment9_model_paths() -> list[str]:
         if observation == "O2" and training == "T3":
             continue
         agent = f"rl-{action}{general}{observation}{reward}{training}"
-        paths.append(os.path.join(ReinforcementLearning.models_folder, agent))
+        paths.append(ReinforcementLearning.get_any_agent_folder_path(agent))
     print(f"Returning {len(paths)} paths:", paths)
     return paths
 
@@ -50,7 +50,7 @@ def get_experiment11_model_paths() -> list[str]:
             # This corresponds to training "T1", which was already done before
             continue
         agent = f"rl-{action}{general}{observation}{reward}{training}"
-        paths.append(os.path.join(ReinforcementLearning.models_folder, agent))
+        paths.append(ReinforcementLearning.get_any_agent_folder_path(agent))
     print(f"Returning {len(paths)} paths:", paths)
     return paths
 
@@ -72,7 +72,7 @@ def get_experiment12_model_paths() -> list[str]:
         "rl-A113G3O232R22T74",
         "rl-A113G3O232R22T748"
     ]
-    paths = [os.path.join(ReinforcementLearning.models_folder, agent) for agent in agents]
+    paths = [ReinforcementLearning.get_any_agent_folder_path(agent) for agent in agents]
     print(f"Returning {len(paths)} paths:", paths)
     return paths
 
@@ -84,7 +84,7 @@ def get_experiment12cont_model_paths() -> list[str]:
         "rl-A21G3O3R1T74",
         "rl-A21G3O3R1T748",
     ]
-    paths = [os.path.join(ReinforcementLearning.models_folder, agent) for agent in agents]
+    paths = [ReinforcementLearning.get_any_agent_folder_path(agent) for agent in agents]
     print(f"Returning {len(paths)} paths:", paths)
     return paths
 

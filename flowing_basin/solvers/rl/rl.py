@@ -42,7 +42,8 @@ class ReinforcementLearning:
     train_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_train.pickle")
     test_data_path = os.path.join(os.path.dirname(__file__), "../../data/history/historical_data_clean_test.pickle")
 
-    models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
+    # `get_any_agent_folder_path` should be used instead of `_models_folder` outside
+    _models_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/models")
     tensorboard_folder = os.path.join(os.path.dirname(__file__), "../../rl_data/tensorboard_logs")
     best_hyperparams_folder = os.path.join(os.path.dirname(__file__), "../../rl_zoo/best_hyperparams")
 
@@ -56,18 +57,26 @@ class ReinforcementLearning:
 
     def __init__(self, config_name: str, verbose: int = 1):
 
-        self.verbose = verbose
-        config_name = config_name
-        self.config_names = self.extract_substrings(config_name)
-        self.config_full_name = ''.join(self.config_names.values())  # Identical to `config_name`, but in alphabetical order
+        # Separate the configuration from the training replication
+        config_name_sections = config_name.split("-")  # Example: "rl-A1G0O1R1T12-3" -> ['rl', 'A1G0O1R1T12', '3']
+        self.config_names = self.extract_substrings(config_name_sections[1])  # Ex.: 'A1G0O1R1T12' -> ['A1', 'GO', ...]
+        self.config_full_name = ''.join(self.config_names.values())  # In alphabetical order
+        training_repl = int(config_name_sections[2]) if len(config_name_sections) > 2 else 0
 
-        self.config = self.get_config(self.config_names)
-        self.constants_path = CONSTANTS_PATH.format(num_dams=self.config.num_dams)
+        # Define agent name
         self.agent_name = f"rl-{self.config_full_name}"
-        self.constants = Instance.from_dict(load_json(self.constants_path))
+        if training_repl > 0:
+            self.agent_name += f"-{training_repl}"
+
+        # Get configuration object
+        self.verbose = verbose
+        self.config = self.get_config(self.config_names)
         if self.verbose >= 2:
             print(f"Agent {self.agent_name}'s configuration (after post-processing):")
             print(json.dumps(self.config.to_dict(prior=False), indent=4, default=custom_serializer))
+
+        self.constants_path = CONSTANTS_PATH.format(num_dams=self.config.num_dams)
+        self.constants = Instance.from_dict(load_json(self.constants_path))
 
         # The first two digits in the observation name (e.g., "O211" -> "O21")
         # indicate the type of observations that should be used for the projector
@@ -82,14 +91,13 @@ class ReinforcementLearning:
         self.obs_records_path = os.path.join(ReinforcementLearning.observation_records_folder, folder_name)
 
     def train(
-            self, training_repl: int = None, save_agent: bool = True, save_replay_buffer: bool = False,
+            self, save_agent: bool = True, save_replay_buffer: bool = False,
             save_obs: bool = False, save_tensorboard: bool = True, num_timesteps: int = None
     ) -> RLTrain | None:
 
         """
         Train an agent with the given configuration.
 
-        :param training_repl: Training replication (default is to consider it is the first one).
         :param save_agent: Whether to save the agent or not
             (not saving the agent may be interesting for testing purposes).
         :param save_replay_buffer: Whether to save the replay buffer or not
@@ -111,7 +119,7 @@ class ReinforcementLearning:
             path_constants=self.constants_path,
             path_train_data=ReinforcementLearning.train_data_path,
             path_test_data=ReinforcementLearning.test_data_path,
-            path_folder=self.get_agent_folder_path(training_repl=training_repl) if save_agent else None,
+            path_folder=self.get_agent_folder_path() if save_agent else None,
             path_tensorboard=ReinforcementLearning.tensorboard_folder if save_agent and save_tensorboard else None,
             experiment_id=self.agent_name,
             verbose=self.verbose,
@@ -183,7 +191,7 @@ class ReinforcementLearning:
         if collection_method == 'training':
             if self.verbose >= 1:
                 print(f"Collecting observations for {reduced_config.num_timesteps} timesteps while training agent...")
-            reduced_agent_path = os.path.join(ReinforcementLearning.models_folder, reduced_agent_name)
+            reduced_agent_path = ReinforcementLearning.get_any_agent_folder_path(reduced_agent_name)
             train = RLTrain(
                 config=reduced_config,
                 projector=Projector.create_projector(reduced_config),
@@ -372,38 +380,15 @@ class ReinforcementLearning:
 
         return observations
 
-    def get_agent_folder_path(self, training_iter: int = None, training_repl: int = None):
+    def get_agent_folder_path(self, training_iter: int = None):
 
         """
         Get the path to the folder of the RL agent.
         :param training_iter: Training iteration of the agent; default is to take the last one.
-        :param training_repl: Training replication (version) of the agent; default is to take the first one.
         :return:
         """
 
-        def get_full_agent_path(t_iter: int, t_repl: int):
-            agent_path = os.path.join(ReinforcementLearning.models_folder, self.agent_name)
-            if t_repl > 0:
-                agent_path += f"-{t_repl}"
-            if t_iter > 0:
-                agent_path += f"_{t_iter}"
-            return agent_path
-
-        # Default is to take the first replication
-        if training_repl is None:
-            training_repl = 0
-
-        # Default is to take the last iteration that exists
-        # (Note that if the agent already exists, and we want to train it for another iteration,
-        # RLTrain will automatically change the agent folder's name)
-        if training_iter is None:
-            training_iter = 0
-            while os.path.exists(get_full_agent_path(training_iter, training_repl)):
-                training_iter += 1
-            if training_iter > 0:
-                training_iter -= 1
-
-        return get_full_agent_path(training_iter, training_repl)
+        return ReinforcementLearning.get_any_agent_folder_path(self.agent_name, training_iter)
 
     def get_model_path(self, model_type: str = "best_model"):
 
@@ -834,6 +819,7 @@ class ReinforcementLearning:
         """
         Show a barchart with the reward across all fixed instances
         of the agent with each of the given reward configuration.
+        # TODO: add option to aggregate multiple replications of the same agent
 
         :param reward_configs:
         :param named_policy: Named policy to run instead of the current agent
@@ -907,6 +893,7 @@ class ReinforcementLearning:
         """
         Plot the training curves of the given agents
         and the values of the given baseline solvers.
+        # TODO: add option to aggregate multiple replications of the same agent
 
         :param agents: List of agent IDs in rl_data/models (e.g., ["rl-A1G0O22R1T0", "rl-A1G0O221R1T0"]).
         :param baselines: List of solvers in the baselines folder (e.g., ["MILP", "rl-random", "rl-greedy"]).
@@ -950,6 +937,7 @@ class ReinforcementLearning:
 
         """
         Show the training time of all agents matching the given regex in a barchart
+        # TODO: add option to aggregate multiple replications of the same agent
         """
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
@@ -972,7 +960,7 @@ class ReinforcementLearning:
                                 hours: bool = False, filename: str = None, filter_timesteps: int = None):
 
         """
-        Show the training time of all agents matching the given regex in a barchart
+        Show the training time of all agents matching the given regex in a histogram
         """
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
@@ -1001,7 +989,8 @@ class ReinforcementLearning:
     ):
 
         """
-        Show the training time of all agents matching the given regex in a barchart
+        Show the training time of all agents matching the given regex in a CSV table
+        # TODO: add option to aggregate multiple replications of the same agent
         """
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
@@ -1029,6 +1018,7 @@ class ReinforcementLearning:
         """
         Show a barchart with the income across all fixed instances
         of the given agents and baselines, as stored in the JSON files.
+        # TODO: add option to aggregate multiple replications of the same agent
 
         :param agents_regex_filter:
         :param permutation:
@@ -1103,6 +1093,7 @@ class ReinforcementLearning:
         """
         Print a CSV table with the maximum average income of each agent
         and the corresponding average income of the baselines
+        # TODO: add option to aggregate multiple replications of the same agent
         """
 
         if baselines is None:
@@ -1269,13 +1260,41 @@ class ReinforcementLearning:
         return training_times
 
     @staticmethod
+    def get_any_agent_folder_path(agent_name: str, training_iter: int = None):
+
+        """
+        Get the path to the folder of the given RL agent.
+        :param agent_name: Name of the RL agent (e.g., 'rl-A1G0O1R1T12-3')
+        :param training_iter: Training iteration of the agent; default is to take the last one.
+        :return:
+        """
+
+        def get_full_agent_path(t_iter: int):
+            agent_path = os.path.join(ReinforcementLearning._models_folder, agent_name)
+            if t_iter > 0:
+                agent_path += f"_{t_iter}"
+            return agent_path
+
+        # Default is to take the last iteration that exists
+        # (Note that if the agent already exists, and we want to train it for another iteration,
+        # RLTrain will automatically change the agent folder's name)
+        if training_iter is None:
+            training_iter = 0
+            while os.path.exists(get_full_agent_path(training_iter)):
+                training_iter += 1
+            if training_iter > 0:
+                training_iter -= 1
+
+        return get_full_agent_path(training_iter)
+
+    @staticmethod
     def get_training_data(agent: str) -> TrainingData:
 
         """
         Get the training data of the given agent.
         """
 
-        agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
+        agent_folder = ReinforcementLearning.get_any_agent_folder_path(agent)
         training_data_path = os.path.join(agent_folder, "training_data.json")
         training_data = TrainingData.from_json(training_data_path)
         return training_data
@@ -1283,7 +1302,7 @@ class ReinforcementLearning:
     @staticmethod
     def get_path_evaluations(agent: str) -> str:
 
-        agent_folder = os.path.join(ReinforcementLearning.models_folder, agent)
+        agent_folder = ReinforcementLearning.get_any_agent_folder_path(agent)
         evaluation_data_path = os.path.join(agent_folder, "evaluations.npz")
         return evaluation_data_path
 
@@ -1315,7 +1334,7 @@ class ReinforcementLearning:
         :return: List of agent IDs in the desired order
         """
 
-        parent_directory = ReinforcementLearning.models_folder
+        parent_directory = ReinforcementLearning._models_folder
         all_items = os.listdir(parent_directory)
 
         if isinstance(regex_filter, list):
@@ -1330,6 +1349,11 @@ class ReinforcementLearning:
         all_models.sort(
             key=lambda model: ReinforcementLearning.multi_level_sorting_key(model, permutation=permutation)
         )
+
+        # Delete the model names referring to the same agent at different training iterations
+        #  (e.g., 'rl-A1G0O1R1T12-2' and 'rl-A1G0O1R1T12-2_1' both refer to 'rl-A1G0O1R1T12-2')
+        # The `get_any_agent_folder_path` method will automatically pick the last training iteration
+        all_models = [model for model in all_models if '_' not in model]
 
         return all_models
 

@@ -244,10 +244,16 @@ class ActionConfiguration(BaseProcessableConfiguration):  # noqa
     optimal_flow_values: dict[str, list[float]] = field(default_factory=lambda: dict())
     discretization_levels: int = None
     num_actions_block: int = 1  # By default, the agent only gives the actions for the current timestep
-    greediness: float = 1.  # Greediness of the baseline greedy agent when action_type == 'adjustments'
+
+    # Configurations when action_type == 'adjustments'
+    greediness: float = 1.  # Greediness of the baseline greedy agent
     noise_std_dev: float = 0.  # Standard deviation of the initial greedy actions
     randomness: bool = False  # If True, use random actions instead of greedy actions
     max_iterations: int = 20  # Maximum number of consecutive adjustments
+    terminate_on_failure: bool = True  # Terminate the episode when the total reward is lower than the previous solution
+    bonus_exceed_initial: float = 0.  # Bonus for exceeding the initial solution (rl-greedy's)
+    penalty_not_exceed_initial: float = 0.  # Penalty for NOT exceeding the initial solution when the episode ends
+    reward_relative_pct: bool = False  # Use the relative improvement (%) of the solution instead of the absolute difference in total reward
 
     def check(self):
 

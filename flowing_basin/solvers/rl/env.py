@@ -802,12 +802,10 @@ class RLEnvironment(gym.Env):
             # Stop when instance finishes
             done = self.simulator_is_done()
         else:
-            # Stop when solution gets worse or the maximum number of iterations is exceeded
             assert len(self.total_rewards) >= 2, "There is no baseline for the current total reward."
-            done = (
-                self.total_rewards[-1] < self.total_rewards[-2] or
-                len(self.total_rewards) - 1 > self.config.max_iterations
-            )
+            done = len(self.total_rewards) - 1 > self.config.max_iterations
+            if self.config.terminate_on_failure:
+                done = done or self.total_rewards[-1] < self.total_rewards[-2]
 
         return bool(done)
 
@@ -916,12 +914,31 @@ class RLEnvironment(gym.Env):
             total_reward = sum(rewards)
         else:
             total_reward = None
-        if self.config.action_type != "adjustments" or update_as_flows or skip_rewards:
+
+        # Final reward; this is different from the total reward when action_type == 'adjustments'
+        not_using_adjustments = self.config.action_type != "adjustments" or update_as_flows or skip_rewards
+        if not_using_adjustments:
             final_reward = total_reward
         else:
-            # Difference with previous total reward
-            final_reward = total_reward - self.total_rewards[-1]
+            if self.config.reward_relative_pct:
+                # Relative difference (%) with previous total reward
+                if total_reward > 1 and self.total_rewards[-1] > 1:
+                    final_reward = (total_reward - self.total_rewards[-1]) / self.total_rewards[-1] * 100
+                else:
+                    # When the current or previous reward are negative or have a low value,
+                    # the relative difference is meaningless. We use the absolute difference instead
+                    final_reward = total_reward - self.total_rewards[-1]
+            else:
+                # Absolute difference with previous total reward
+                final_reward = total_reward - self.total_rewards[-1]
         self.total_rewards.append(total_reward)
+
+        # Bonuses and penalties to the final reward when action_type == 'adjustments'
+        if not not_using_adjustments and self.is_done():
+            if max(self.total_rewards) > self.total_rewards[0]:
+                final_reward += self.config.bonus_exceed_initial
+            else:
+                final_reward -= self.config.penalty_not_exceed_initial
 
         # Unclipped flows equivalent to the given actions
         flows_block = np.array(flows_block).reshape(-1)  # Give it the same shape as the original action array

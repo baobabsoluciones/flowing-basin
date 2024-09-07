@@ -1,0 +1,9 @@
+{
+  "action_type": "adjustments",
+  "num_actions_block": 99,
+  "max_iterations": 10,
+  "terminate_on_failure": false,
+  "bonus_exceed_initial": 100.0,
+  "penalty_not_exceed_initial": 100.0,
+  "reward_relative_pct": true
+}

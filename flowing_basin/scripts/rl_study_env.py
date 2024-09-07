@@ -16,10 +16,10 @@ import time
 
 if __name__ == "__main__":
 
-    rl = ReinforcementLearning("rl-A1G0O1R1T12-3", verbose=3)
+    rl = ReinforcementLearning("rl-A25G0O3R1T3", verbose=3)
     # rl.create_train_env()
     # print("Configuration:", rl.config.to_dict())
-    # rl.check_train_env(obs_types=['raw'], initial_date='2020-08-19 00:00', seed=42)  # instancePercentile50
+    rl.check_train_env(obs_types=['raw'], initial_date='2020-08-19 00:00', seed=42)  # instancePercentile50
     # rl.collect_obs()
     # rl.train(save_agent=SAVE_AGENT)
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # rl.plot_training_curve_agent(instances=["Percentile50"])
     # rl.plot_training_curves_compare(["rl-A1G0O22R1T02", "rl-A1G0O221R1T02"], ["MILP"], values=["income", "acc_reward"])
 
-    print(rl.run_agent("Percentile50").solution.to_dict())
+    # print(rl.run_agent("Percentile50").solution.to_dict())
     # start = time.perf_counter()
     # print(rl.run_agent([f"Percentile{i*10:02}" for i in range(0, 11)]))
     # print("Time:", time.perf_counter() - start)

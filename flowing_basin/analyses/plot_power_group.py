@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-PLOT_POWER_CURVE = False
+PLOT_POWER_CURVE = True
 PLOT_SOLVER_FLOWS = True
+USE_TRANSPARENCY = True  # This does not allow saving in .eps format
 PUT_TEXT = True
 SET_YLIM = False
 DAM_IDS = None  # Put None to plot all dams, or [dam_id] for a single dam
@@ -25,10 +26,12 @@ FILENAME = f'plot_power_group/fig_power_vs_turbine_flow'
 DAM_NAMES = {'dam1': 'first subsystem', 'dam2': 'second subsystem'}
 
 if PLOT_SOLVER_FLOWS:
-    filename_solver = f'_vs_{SOLVER}_outflows'
+    filename_solver = f'_vs_{SOLVER}_outflows_{GENERAL}'
     plot_title = f' with {SOLVER} outflows'
     # if SOLVER == "MILP":
     #     plot_title += f' in {GENERAL}'
+    if not USE_TRANSPARENCY:
+        filename_solver += f"_no_transparent"
 else:
     filename_solver = ''
     plot_title = ''
@@ -111,9 +114,14 @@ for i, dam_id in enumerate(DAM_IDS):
         bins.append(flows_limits[-1])
         print(dam_id, "bins:", bins)
         twin_ax = ax.twinx()
-        twin_ax.hist(
-            solver_flows[dam_id], color=lighten_color('green'), bins=bins, label=f"{SOLVER} outflows"
+        hist_kwargs = dict(
+            x=solver_flows[dam_id], bins=bins, label=f"{SOLVER} outflows"
         )
+        if USE_TRANSPARENCY:
+            hist_kwargs.update(color='orange', alpha=0.5)  # noqa
+        else:
+            hist_kwargs.update(color=lighten_color('green'))
+        twin_ax.hist(**hist_kwargs)
         twin_ax.legend()
         twin_ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
         if SET_YLIM:
@@ -129,7 +137,8 @@ for i, dam_id in enumerate(DAM_IDS):
 
 # Trabs
 plt.tight_layout()
-plt.savefig(filename + '.eps')
+if not USE_TRANSPARENCY:
+    plt.savefig(filename + '.eps')
 plt.savefig(filename + '.png')
 plt.show()
 

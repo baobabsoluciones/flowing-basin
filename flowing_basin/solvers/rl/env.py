@@ -191,6 +191,7 @@ class RLEnvironment(gym.Env):
         self.max_flows = None
         self.total_rewards = None
         self.last_flows_block = None
+        self.bonus_granted = None
 
         # Initialize these variables
         self._reset_variables()
@@ -328,6 +329,7 @@ class RLEnvironment(gym.Env):
         ])
         self.total_rewards = []
         self.last_flows_block = np.empty((self.instance.get_num_dams() * self.config.num_actions_block,))
+        self.bonus_granted = False
 
     def get_greedy_avg_reward(self, greediness: float = 1.) -> float:
 
@@ -934,10 +936,12 @@ class RLEnvironment(gym.Env):
         self.total_rewards.append(total_reward)
 
         # Bonuses and penalties to the final reward when action_type == 'adjustments'
-        if not not_using_adjustments and self.is_done():
-            if max(self.total_rewards) > self.total_rewards[0]:
+        if not not_using_adjustments:
+            exceeded_initial_sol = max(self.total_rewards) > self.total_rewards[0]
+            if exceeded_initial_sol and not self.bonus_granted:
                 final_reward += self.config.bonus_exceed_initial
-            else:
+                self.bonus_granted = True
+            if not exceeded_initial_sol and self.is_done():
                 final_reward -= self.config.penalty_not_exceed_initial
 
         # Unclipped flows equivalent to the given actions

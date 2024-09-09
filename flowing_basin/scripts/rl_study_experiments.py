@@ -66,7 +66,7 @@ def get_experiment12cont_agents(general_configs: list[str]) -> list[str]:
 
 if __name__ == "__main__":
 
-    agents = ReinforcementLearning.get_all_agents("rl-A1G0O1R1T12")
+    agents = ReinforcementLearning.get_all_agents("rl-A21G2O3R1T74")
     print(f"Found {len(agents)} agents in folder:", agents)
     regex = agents
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # total_time = sum(training_times)
     # print("Total time (min):", total_time)
     # ReinforcementLearning.histogram_training_times(regex, hours=True, filename='reports/rl_hist_training_times', filter_timesteps=99_000)
-    # ReinforcementLearning.barchart_training_times(regex, hours=True)
+    ReinforcementLearning.barchart_training_times(regex, hours=True)
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
     # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
 

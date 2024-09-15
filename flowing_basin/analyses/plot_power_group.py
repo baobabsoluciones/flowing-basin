@@ -8,8 +8,10 @@ from cornflow_client.core.tools import load_json
 from flowing_basin.tools import PowerGroup
 from flowing_basin.core import Instance
 from flowing_basin.core.utils import lighten_color
-from flowing_basin.solvers.rl import ReinforcementLearning
+from flowing_basin.solvers.rl import ReinforcementLearning, GeneralConfiguration
 from flowing_basin.solvers.common import CONSTANTS_PATH
+from flowing_basin.solvers import Baseline, Baselines
+from math import ceil, floor, sqrt
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,52 +22,67 @@ USE_TRANSPARENCY = True  # This does not allow saving in .eps format
 PUT_TEXT = True
 SET_YLIM = False
 DAM_IDS = None  # Put None to plot all dams, or [dam_id] for a single dam
-SOLVER = "MILP"  # an agent, e.g. "rl-A113G1O232R22T3", or "MILP"
-GENERAL = 'G0'  # only matters if PLOT_SOLVER_FLOWS = True and SOLVER = "MILP"
+SOLVER = "PSO (general)"  # Any solver (or agent) with solutions in rl_data/baselines, such as "MILP" or "PSO (general)"
+GENERAL = 'G2'  # General configuration from which to get the solutions when PLOT_SOLVER_FLOWS = True
 FILENAME = f'plot_power_group/fig_power_vs_turbine_flow'
-DAM_NAMES = {'dam1': 'first subsystem', 'dam2': 'second subsystem'}
+DAM_NAMES = {}  # DAM_NAMES = {'dam1': 'first subsystem', 'dam2': 'second subsystem'}
 
+# Define the name of the filename and the title of the plot
 if PLOT_SOLVER_FLOWS:
     filename_solver = f'_vs_{SOLVER}_outflows_{GENERAL}'
-    plot_title = f' with {SOLVER} outflows'
-    # if SOLVER == "MILP":
-    #     plot_title += f' in {GENERAL}'
+    plot_title = f' with {SOLVER} outflows in {GENERAL}'
     if not USE_TRANSPARENCY:
         filename_solver += f"_no_transparent"
 else:
     filename_solver = ''
     plot_title = ''
 
-constants = Instance.from_dict(load_json(CONSTANTS_PATH.format(num_dams=2)))
+# Define the IDs of the dams to plot
+general_config_dict = Baseline.get_general_config_dict(GENERAL)
+general_config_obj = GeneralConfiguration.from_dict(general_config_dict)
+num_dams = general_config_obj.num_dams
+constants = Instance.from_dict(load_json(CONSTANTS_PATH.format(num_dams=num_dams)))
 if DAM_IDS is None:
     DAM_IDS = constants.get_ids_of_dams()
     filename_dams = ''
 else:
     assert isinstance(DAM_IDS, list)
     filename_dams = '_' + '_'.join(DAM_IDS)
-filename = FILENAME + filename_solver + filename_dams
+num_dams_plot = len(DAM_IDS)
 
-if PLOT_SOLVER_FLOWS and SOLVER == "MILP":
+# Define the complete filename
+filename = FILENAME + filename_solver + filename_dams
+if not PLOT_POWER_CURVE:
+    filename += "_no_power_curve"
+
+# Get the data for the plot
+if PLOT_SOLVER_FLOWS:
     solver_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}
-    for sol in ReinforcementLearning.get_all_baselines(GENERAL):
-        if sol.get_solver() == "MILP":
-            for dam_id in sol.get_ids_of_dams():
-                solver_flows[dam_id].extend(sol.get_exiting_flows_of_dam(dam_id))
-elif PLOT_SOLVER_FLOWS:
-    solver_flows = {dam_id: [] for dam_id in constants.get_ids_of_dams()}
-    rl = ReinforcementLearning(SOLVER)
-    runs = rl.run_agent(ReinforcementLearning.get_all_fixed_instances(num_dams=rl.config.num_dams))
-    for run in runs:
-        sol = run.solution
+    baselines = Baselines(general_config=GENERAL, solvers=[SOLVER])
+    # If there are multiple replications, get the best solution for each instance
+    instances = {sol.get_instance_name() for sol in baselines.solutions}
+    sols = [
+        max(
+            [sol for sol in baselines.solutions if sol.get_instance_name() == instance],
+            key=lambda s: s.get_objective_function()
+        )
+        for instance in instances
+    ]
+    for sol in sols:
         for dam_id in sol.get_ids_of_dams():
             solver_flows[dam_id].extend(sol.get_exiting_flows_of_dam(dam_id))
 else:
     solver_flows = None
 
-if not PLOT_POWER_CURVE:
-    filename += "_no_power_curve"
+# Define the layout for the graph
+if num_dams_plot < 4:
+    layout = dict(nrows=1, ncols=num_dams_plot, figsize=(6 * num_dams_plot, 5))
+else:
+    num_cols = ceil(sqrt(num_dams_plot))
+    num_rows = ceil(num_dams_plot / num_cols)
+    layout = dict(nrows=num_rows, ncols=num_cols, figsize=(6 * num_cols, 6 * num_rows))
+fig, axs = plt.subplots(**layout)
 
-fig, axs = plt.subplots(1, len(DAM_IDS), figsize=(6 * len(DAM_IDS), 5))
 for i, dam_id in enumerate(DAM_IDS):
 
     data = constants.get_turbined_flow_obs_for_power_group(dam_id)
@@ -79,7 +96,15 @@ for i, dam_id in enumerate(DAM_IDS):
     flow_bins = PowerGroup.get_turbined_bins_and_groups(startup_flows, shutdown_flows)
     print(dam_id, "flow bins:", flow_bins)
 
-    ax = axs[i] if len(DAM_IDS) > 1 else axs
+    # Get the axis
+    if num_dams_plot == 1:
+        ax = axs
+    elif num_dams_plot < 4:
+        ax = axs[i]
+    else:
+        col = i % layout["ncols"]
+        row = floor(i / layout["ncols"])
+        ax = axs[row, col]
 
     flows, groups = flow_bins
     i = 0
@@ -129,8 +154,9 @@ for i, dam_id in enumerate(DAM_IDS):
 
     if PLOT_POWER_CURVE:
         ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
-    if len(DAM_IDS) > 1:
-        ax.set_title(f'Power group dynamics of {DAM_NAMES[dam_id]}{plot_title}')
+    if num_dams_plot > 1:
+        dam_name = DAM_NAMES[dam_id] if dam_id in DAM_NAMES else dam_id
+        ax.set_title(f'{dam_name}{plot_title}')
     ax.set_xlabel('Flow (m3/s)')
     ax.set_ylabel('Power (MW)')
     ax.grid(True)

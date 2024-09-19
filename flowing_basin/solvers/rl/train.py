@@ -223,8 +223,6 @@ class RLTrain(Experiment):
             )
 
         # Whether to use generalized State Dependent Exploration (gSDE)
-        # TODO: adding `use_sde` to `policy_kwargs` was necessary to load an agent, but
-        #  it triggered an error when training another agent... Figure out exactly when this should be done and not
         if policy_kwargs is not None:
             policy_kwargs.update(use_sde=self.config.use_sde)
         else:
@@ -282,7 +280,13 @@ class RLTrain(Experiment):
         if self.from_pretrained:
             self.model = algorithm.load(self.path_old_model, env=self.train_env, **model_kwargs)
         else:
-            self.model = algorithm(policy_type, self.train_env, **model_kwargs)
+            # Note: adding `use_sde` to `policy_kwargs` is necessary to load some agents, but
+            #  it triggers an error when training other agents...
+            try:
+                self.model = algorithm(policy_type, self.train_env, **model_kwargs)
+            except TypeError:
+                del model_kwargs["policy_kwargs"]["use_sde"]
+                self.model = algorithm(policy_type, self.train_env, **model_kwargs)
 
         # Load replay buffer of pre-trained model
         if isinstance(self.model, OffPolicyAlgorithm):

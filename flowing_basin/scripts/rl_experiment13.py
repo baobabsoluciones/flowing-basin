@@ -17,8 +17,11 @@ adjustments_2dams = [f"rl-A21G0O3R1T3-{i}" for i in range(NUM_REPLICATIONS)]
 adjustments_new_2dams = [f"rl-A25G0O3R1T3-{i}" for i in range(NUM_REPLICATIONS)]
 adjustments_6dams = [f"rl-A21G2O3R1T74-{i}" for i in range(NUM_REPLICATIONS)]
 adjustments_new_6dams = [f"rl-A25G2O3R1T74-{i}" for i in range(NUM_REPLICATIONS)]
+discrete_2dams = [f"rl-A31G0O231R1T1002-{i}" for i in range(NUM_REPLICATIONS) if i > 0]
+discrete_6dams = [f"rl-A31G2O231R1T1402-{i}" for i in range(NUM_REPLICATIONS) if i > 0]
 all_agents = [
-    *normal_2dams, *normal_6dams, *adjustments_2dams, *adjustments_new_2dams, *adjustments_6dams, *adjustments_new_6dams
+    # *normal_2dams, *normal_6dams, *adjustments_2dams, *adjustments_new_2dams, *adjustments_6dams, *adjustments_new_6dams,
+    *discrete_2dams, *discrete_6dams
 ]
 print(all_agents)
 for agent in all_agents:

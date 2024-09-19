@@ -16,7 +16,7 @@ import time
 
 if __name__ == "__main__":
 
-    rl = ReinforcementLearning("rl-A25G0O3R1T3", verbose=3)
+    rl = ReinforcementLearning("rl-A31G2O231R1T1402", verbose=3)
     # rl.create_train_env()
     # print("Configuration:", rl.config.to_dict())
     rl.check_train_env(obs_types=['raw'], initial_date='2020-08-19 00:00', seed=42)  # instancePercentile50

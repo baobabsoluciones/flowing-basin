@@ -64,9 +64,32 @@ def get_experiment12cont_agents(general_configs: list[str]) -> list[str]:
     return experiment_agents
 
 
-if __name__ == "__main__":
+def get_experiment13_agents(general_configs: list[str]) -> list[str]:
+    num_replications = 3
+    normal_2dams = [f"rl-A1G0O2R1T1-{i}" for i in range(num_replications)]
+    normal_6dams = [f"rl-A1G2O2R1T14-{i}" for i in range(num_replications) if i > 0]
+    adjustments_2dams = [f"rl-A21G0O3R1T3-{i}" for i in range(num_replications)]
+    adjustments_new_2dams = [f"rl-A25G0O3R1T3-{i}" for i in range(num_replications)]
+    adjustments_6dams = [f"rl-A21G2O3R1T74-{i}" for i in range(num_replications)]
+    adjustments_new_6dams = [f"rl-A25G2O3R1T74-{i}" for i in range(num_replications)]
+    all_agents = [
+        *normal_2dams, *normal_6dams, *adjustments_2dams, *adjustments_new_2dams, *adjustments_6dams,
+        *adjustments_new_6dams
+    ]
+    all_agents = [agent[:-2] if agent.endswith("-0") else agent for agent in all_agents]
+    experiment_agents = [
+        agent for agent in all_agents if any(agent.find(gen_config) != -1 for gen_config in general_configs)
+    ]
+    return experiment_agents
 
-    agents = ReinforcementLearning.get_all_agents("rl-A21G2O3R1T74")
+
+def main():
+
+    # general = "G0"
+    general = "G2"
+    all_agents = get_experiment13_agents([general])
+    print(f"Giving {len(all_agents)} agents for {general}:", all_agents)
+    agents = ReinforcementLearning.get_all_agents(all_agents)
     print(f"Found {len(agents)} agents in folder:", agents)
     regex = agents
 
@@ -74,15 +97,20 @@ if __name__ == "__main__":
     # total_time = sum(training_times)
     # print("Total time (min):", total_time)
     # ReinforcementLearning.histogram_training_times(regex, hours=True, filename='reports/rl_hist_training_times', filter_timesteps=99_000)
-    ReinforcementLearning.barchart_training_times(regex, hours=True)
+    # ReinforcementLearning.barchart_training_times(regex, hours=True)
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
     # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
 
     # ReinforcementLearning.print_max_avg_incomes(
     #     regex, permutation='GOART', baselines=["MILP", "rl-greedy"],
-    #     csv_filepath=f"reports/results_{general}_experiment12cont.csv"
+    #     csv_filepath=f"reports/results_{general}_experiment13.csv"
     # )
     # ReinforcementLearning.barchart_instances_incomes(regex, baselines=["Heuristic", "MILP", "rl-greedy", "rl-random"])
     ReinforcementLearning.plot_all_training_curves(regex, baselines=["MILP", "rl-greedy", "rl-random"])
     # ReinforcementLearning.print_spaces(regex)
+
+
+if __name__ == "__main__":
+
+    main()
 

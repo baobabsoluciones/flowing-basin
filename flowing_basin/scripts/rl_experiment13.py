@@ -9,7 +9,7 @@ from flowing_basin.solvers.rl import ReinforcementLearning
 
 NUM_REPLICATIONS = 3
 
-# In the case of rl-A1G0O2R1T1, rl-A21G0O3R1T3 and rl-A21G2O3R1T74,
+# In the case of rl-A1G0O2R1T1, rl-A1G2O2R1T14, rl-A21G0O3R1T3 and rl-A21G2O3R1T74,
 # we re-train the first iteration because of incorrect training data
 normal_2dams = [f"rl-A1G0O2R1T1-{i}" for i in range(NUM_REPLICATIONS)]
 normal_6dams = [f"rl-A1G2O2R1T14-{i}" for i in range(NUM_REPLICATIONS) if i > 0]

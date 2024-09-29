@@ -530,11 +530,17 @@ class TrainingData(SolutionCore):
             twinax = ax.twinx()
             twinax.set_ylabel("Average accumulated rewards")
 
-        colors = [plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(self.get_agent_ids()), endpoint=False)]
-        agent_colors = [
-            (agent_id, color)
-            for agent_id, color in zip(self.get_agent_ids(), colors)
+        # Assign a color to each agent such that different replications have the same color
+        unique_agent_ids = set("-".join(agent_id.split("-")[:2]) for agent_id in self.get_agent_ids())
+        colors = [
+            plt.get_cmap('hsv')(color) for color in np.linspace(0, 1, len(unique_agent_ids), endpoint=False)
         ]
+        unique_agent_color = {agent_id: color for agent_id, color in zip(unique_agent_ids, colors)}
+        agent_colors = [
+            (agent_id, unique_agent_color["-".join(agent_id.split("-")[:2])])
+            for agent_id in self.get_agent_ids()
+        ]
+
         vals_linestyles_axes = [("income", '-', ax)]
         if plot_twinax:
             vals_linestyles_axes.append(("acc_reward", '--', twinax))  # noqa

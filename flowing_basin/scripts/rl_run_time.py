@@ -19,10 +19,12 @@ if __name__ == "__main__":
 
     data = []
     agents = [
-        "rl-A31G0O231R1T1002",
-        "rl-A113G1O2R22T302",
-        "rl-A21G2O3R1T748",
-        "rl-A21G3O3R1T74"
+        "rl-A1G0O2R1T1-2",
+        "rl-A31G0O231R1T1002-1",
+        "rl-A21G0O3R1T3-2",
+        "rl-A1G2O2R1T14-2",
+        "rl-A31G2O231R1T1402-2",
+        "rl-A21G2O3R1T74-1"
     ]
     for agent in agents:
         rl = ReinforcementLearning(agent, verbose=0)
@@ -32,7 +34,7 @@ if __name__ == "__main__":
         print(agent, "Time:", elapsed_time)
         data.append([agent, elapsed_time])
 
-    for general in ['G0', 'G01', 'G1', 'G2', 'G21', 'G3']:
+    for general in ['G0', 'G2']:
         rl = ReinforcementLearning(f"rl-A1{general}O2R1T1", verbose=0)
         start = time.perf_counter()
         for instance in rl.get_all_fixed_instances(rl.config.num_dams):
@@ -41,7 +43,7 @@ if __name__ == "__main__":
         print(f"Greedy_{general}", "Time:", elapsed_time)
         data.append([f"Greedy_{general}", elapsed_time])
 
-    csv_file = 'reports/rl_agent_times.csv'
+    csv_file = 'reports/rl_agent_times_MDPI.csv'
     with open(csv_file, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Agent", "Average time (s)"])

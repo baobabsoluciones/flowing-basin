@@ -872,7 +872,7 @@ class ReinforcementLearning:
     @staticmethod
     def plot_all_training_curves(
             agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', baselines: list[str] = None,
-            values: list[str] = None, instances: str | list[str] = 'fixed'
+            values: list[str] = None, instances: str | list[str] = 'fixed', **kwargs
     ):
 
         """
@@ -881,13 +881,14 @@ class ReinforcementLearning:
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         ReinforcementLearning.plot_training_curves(
-            agents=agents, baselines=baselines, values=values, instances=instances
+            agents=agents, baselines=baselines, values=values, instances=instances, **kwargs
         )
 
     @staticmethod
     def plot_training_curves(
             agents: list[str], baselines: list[str] = None,
-            values: list[str] = None, instances: str | list[str] = 'fixed'
+            values: list[str] = None, instances: str | list[str] = 'fixed',
+            filename: str = None, **kwargs
     ):
 
         """
@@ -899,6 +900,7 @@ class ReinforcementLearning:
         :param baselines: List of solvers in the baselines folder (e.g., ["MILP", "rl-random", "rl-greedy"]).
         :param values: Can be "income" or "acc_reward".
         :param instances: Can be "fixed", "random", or a list of specific fixed instances.
+        :param filename:
         """
 
         if baselines is None:
@@ -928,17 +930,29 @@ class ReinforcementLearning:
                 if baseline.get_solver() in baselines:
                     training += baseline
 
-        _, ax = plt.subplots()
-        training.plot_training_curves(ax, values=values, instances=instances)  # noqa
+        fig, ax = plt.subplots(figsize=(6, 6))
+        training.plot_training_curves(ax, values=values, instances=instances, **kwargs)  # noqa
+        if filename is not None:
+            plt.savefig(f"{filename}.png", format='png', bbox_inches='tight', dpi=300)
+            plt.savefig(f"{filename}.eps", format='eps', bbox_inches='tight', dpi=300)
         plt.show()
 
     @staticmethod
-    def barchart_training_times(agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', hours: bool = False):
+    def barchart_training_times(
+            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT', hours: bool = False,
+            filename: str = None, names_mapping: dict = None, colors_mapping: dict = None,
+            title: str = 'Training time of agents'
+    ):
 
         """
         Show the training time of all agents matching the given regex in a barchart
         # TODO: add option to aggregate multiple replications of the same agent
         """
+
+        if names_mapping is None:
+            names_mapping = dict()
+        if colors_mapping is None:
+            colors_mapping = dict()
 
         agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
         training_times = ReinforcementLearning.get_training_times(agents)
@@ -947,12 +961,26 @@ class ReinforcementLearning:
             training_times = [training_time / 60 for training_time in training_times]
             unit = 'hours'
 
-        plt.bar(agents, training_times)
-        plt.xticks(rotation='vertical')  # Put the agent IDs vertically
-        plt.xlabel('Agents')
-        plt.ylabel(f'Training time ({unit})')
-        plt.title('Training time of agents')
+        fig, ax = plt.subplots(figsize=(6, 6))
+        agent_names = [names_mapping[agent] if agent in names_mapping else agent for agent in agents]
+        bar_colors = [colors_mapping.get(agent, 'gray') for agent in agents]
+        bars = ax.bar(agent_names, training_times, color=bar_colors)
+        ax.tick_params(axis='x', labelsize=13, rotation=45)  # Put the agent IDs vertically
+        ax.set_xlabel('Agents', fontsize=14)
+        ax.set_ylabel(f'Training time ({unit})', fontsize=14)
+        ax.set_title(title, fontsize=14)
+        for bar, color, value in zip(bars, bar_colors, training_times):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,  # Center the text on the bar
+                bar.get_height(),  # Position text at the top of the bar
+                f'{value:.2f}',  # Format value with 2 decimal places
+                ha='center', va='bottom',  # Center horizontally, position at the bottom of the text
+                color=color, fontsize=12, fontweight='bold'  # Set the text color to match the bar
+            )
         plt.tight_layout()  # Avoid the agent IDs being cut down at the bottom of the figure
+        if filename is not None:
+            plt.savefig(f"{filename}.png", format='png', bbox_inches='tight', dpi=300)
+            plt.savefig(f"{filename}.eps", format='eps', bbox_inches='tight', dpi=300)
         plt.show()
 
     @staticmethod
@@ -1083,6 +1111,42 @@ class ReinforcementLearning:
         """
 
         barchart_instances(values=values, value_type=value_type, title=agent_name, general_config=general_config)
+
+    @staticmethod
+    def print_avg_constraint_violations(
+            agents_regex_filter: str | list[str] = '.*', permutation: str = 'AGORT'
+    ):
+
+        """
+        Print a CSV table with
+        :param permutation:
+        :param csv_filepath:
+        :return:
+        """
+
+        agents = ReinforcementLearning.get_all_agents(agents_regex_filter, permutation)
+        for agent in agents:
+            rl = ReinforcementLearning(agent)
+            instances = ReinforcementLearning.get_all_fixed_instances(rl.config.num_dams)
+            violations = []
+            for instance in instances:
+                run = rl.run_agent(instance)
+                sol = run.solution
+                initial_flows = {
+                    dam_id: instance.get_initial_lags_of_channel(dam_id)[0] for dam_id in instance.get_ids_of_dams()
+                }
+                max_flows = {
+                    dam_id: instance.get_max_flow_of_channel(dam_id) for dam_id in instance.get_ids_of_dams()
+                }
+                num_violations = sol.get_num_flow_smoothing_violations(
+                    flow_smoothing=rl.config.flow_smoothing,
+                    initial_flows=initial_flows,
+                    max_flows=max_flows
+                )
+                violations.append(num_violations / (len(sol.get_decisions_time_steps()) * sol.get_num_dams()))
+            avg_violations = sum(violations) / len(violations)
+            print(f"Agent {agent} violations: {avg_violations:.2%}")
+
 
     @staticmethod
     def print_max_avg_incomes(

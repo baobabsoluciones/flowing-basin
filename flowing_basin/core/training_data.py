@@ -510,18 +510,30 @@ class TrainingData(SolutionCore):
         else:
             return self.__add__(other)
 
-    def plot_training_curves(self, ax: plt.Axes, values: list[str], instances: list[str] | str):
+    def plot_training_curves(
+            self, ax: plt.Axes, values: list[str], instances: list[str] | str, names_mapping: dict = None,
+            colors_mapping: dict = None, title: str = None,
+    ):
 
         """
 
         :param ax:
         :param values: List of values to plot (e.g., ['income', 'acc_reward'])
         :param instances: Can be 'fixed', 'random', or a list of specific fixed instances
+        :param names_mapping:
+        :param colors_mapping:
+        :param title:
         """
 
-        ax.set_xlabel("Timestep")
-        ax.set_ylabel("Average income (€)")
-        ax.set_title(f"Evaluation")
+        if names_mapping is None:
+            names_mapping = dict()
+        if colors_mapping is None:
+            colors_mapping = dict()
+
+        ax.set_xlabel("Timestep", fontsize=14)
+        ax.set_ylabel("Average income (€)", fontsize=14)
+        if title is not None:
+            ax.set_title(title, fontsize=14)
 
         plot_baselines = 'income' in values
         plot_twinax = 'acc_reward' in values
@@ -537,7 +549,12 @@ class TrainingData(SolutionCore):
         ]
         unique_agent_color = {agent_id: color for agent_id, color in zip(unique_agent_ids, colors)}
         agent_colors = [
-            (agent_id, unique_agent_color["-".join(agent_id.split("-")[:2])])
+            (
+                agent_id, (
+                    unique_agent_color["-".join(agent_id.split("-")[:2])] if agent_id not in colors_mapping else
+                    colors_mapping[agent_id]
+                )
+            )
             for agent_id in self.get_agent_ids()
         ]
 
@@ -555,8 +572,9 @@ class TrainingData(SolutionCore):
                 if val not in values or not self.has_agent_instances_values(agent_id, instances, val):
                     continue
                 avg_values = self.get_avg_values(agent_id, instances, val)
+                display_name = names_mapping[name] if name in names_mapping else name
                 axes.plot(
-                    timesteps, avg_values, color=color, linestyle=linestyle, label=f"Average {val} of {name}"
+                    timesteps, avg_values, color=color, linestyle=linestyle, label=display_name
                 )
 
         # Plot baselines as horizontal lines
@@ -567,11 +585,15 @@ class TrainingData(SolutionCore):
                 plt.get_cmap('gray')(color) for color in np.linspace(0, 1, len(baseline_values), endpoint=False)
             ]
             for (solver, value), color in zip(baseline_values.items(), baseline_colors):
-                ax.axhline(y=value, color=color, linestyle='-', label=solver)
+                ax.axhline(y=value, color=color, linestyle='-')
+                display_name = names_mapping[solver] if solver in names_mapping else solver
+                ax.text(
+                    x=ax.get_xlim()[1] * 0.9, y=value * 1.025, s=display_name, color=color, va='center', fontsize=14
+                )
 
         ax_lines, ax_labels = ax.get_legend_handles_labels()
         if plot_twinax:
             twinax_lines, twinax_labels = twinax.get_legend_handles_labels()
-            ax.legend(ax_lines + twinax_lines, ax_labels + twinax_labels, loc=0)
+            ax.legend(ax_lines + twinax_lines, ax_labels + twinax_labels, loc='lower left', fontsize=14)
         else:
-            ax.legend(ax_lines, ax_labels, loc=0)
+            ax.legend(ax_lines, ax_labels, loc='lower left', fontsize=14)

@@ -1,7 +1,7 @@
 """
 RL Run Times
 
-This script allows measuring the time needed to run an agent.
+This script measures the time needed to run an agent.
 """
 
 # Disable `tensorboard` when we do not intend to save the agent,

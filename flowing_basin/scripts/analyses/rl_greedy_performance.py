@@ -1,5 +1,5 @@
 """
-RL Greedy Percentages
+This script gets the income of the Greedy policy with different % of flow (the true Greedy policy always assigns 100%)
 """
 
 from flowing_basin.solvers.rl import ReinforcementLearning
@@ -16,7 +16,7 @@ for general in general_configs:
 
     # Greedy average income
     incomes = []
-    rl = ReinforcementLearning(f"A1{general}O2R1T2", verbose=2)
+    rl = ReinforcementLearning(f"rl-A1{general}O2R1T2", verbose=2)
     for pct in percentages:
         policy = f"greedy_{pct}"
         pct_incomes = []

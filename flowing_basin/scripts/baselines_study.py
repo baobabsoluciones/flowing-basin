@@ -1,5 +1,4 @@
 """
-baselines.py
 Script to analyze existing solutions that act as baselines for RL
 """
 

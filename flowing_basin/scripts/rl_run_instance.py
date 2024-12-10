@@ -1,7 +1,7 @@
 """
-RL Run Times
+RL Run Instance
 
-This script allows measuring the time needed to run an agent.
+This script records the objective function of the given agent in every instance.
 """
 
 # Disable `tensorboard` when we do not intend to save the agent,

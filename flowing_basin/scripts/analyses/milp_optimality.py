@@ -1,7 +1,5 @@
 """
-baseline_milp.py
 This script evaluates the optimality of the "MILP" baseline.
-The solutions themselves are calculated in `flowing_basin/scripts/baseline.py`
 """
 
 from flowing_basin.solvers.rl import ReinforcementLearning

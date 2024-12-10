@@ -1,5 +1,4 @@
 """
-instance.py
 This script checks the methods of the Instance class
 """
 

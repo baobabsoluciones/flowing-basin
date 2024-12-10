@@ -1,5 +1,4 @@
 """
-lp_run.py
 This script runs the MILP solver for a single instance and saves the solution in the current folder.
 It is useful for debugging the MILP model.
 """

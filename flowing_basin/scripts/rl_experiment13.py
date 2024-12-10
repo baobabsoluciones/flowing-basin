@@ -5,7 +5,7 @@ It considers only the real environment with 2 and 6 dams (G0 and G2).
 Every agent is trained for 3 replications.
 """
 
-from flowing_basin.solvers.rl import ReinforcementLearning
+import json
 
 NUM_REPLICATIONS = 3
 
@@ -22,11 +22,22 @@ discrete_6dams = [f"rl-A31G2O231R1T1402-{i}" for i in range(NUM_REPLICATIONS) if
 adjusted_2dams = [f"rl-A1G0O231R22T1-{i}" for i in range(NUM_REPLICATIONS) if i > 0]
 adjusted_6dams = [f"rl-A1G2O231R22T14-{i}" for i in range(NUM_REPLICATIONS) if i > 0]
 all_agents = [
-    # *normal_2dams, *normal_6dams, *adjustments_2dams, *adjustments_new_2dams, *adjustments_6dams, *adjustments_new_6dams,
+    *normal_2dams, *normal_6dams, *adjustments_2dams, *adjustments_new_2dams, *adjustments_6dams, *adjustments_new_6dams,
     *discrete_2dams, *discrete_6dams, *adjusted_2dams, *adjusted_6dams
 ]
 print(all_agents)
-for agent in all_agents:
-    rl = ReinforcementLearning(agent, verbose=3)
-    # rl.train()  # For testing: rl.train(num_timesteps=15, save_agent=False)
-    rl.train(num_timesteps=15, save_agent=False)
+
+experiment = {
+    "description": """RL Experiment 13
+This script trains agents with the adjustments action (A21) and a new version (A25).
+It considers only the real environment with 2 and 6 dams (G0 and G2).
+Every agent is trained for 3 replications.""",
+    "agents": all_agents
+}
+with open('experiments/experiment13.json', 'w') as f:
+    json.dump(experiment, f, indent=4)
+
+# for agent in all_agents:
+#     rl = ReinforcementLearning(agent, verbose=3)
+#     # rl.train()  # For testing: rl.train(num_timesteps=15, save_agent=False)
+#     rl.train(num_timesteps=15, save_agent=False)

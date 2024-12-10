@@ -1,0 +1,12 @@
+{
+    "description": "RL Experiment 4\nThis script trains different versions of the agent having 99 actions per block",
+    "agents": [
+        "rl-A113G0O2R1T3",
+        "rl-A113G0O2R1T4",
+        "rl-A113G0O1R1T3",
+        "rl-A113G0O1R1T4",
+        "rl-A113G1O2R1T4",
+        "rl-A113G1O1R1T3",
+        "rl-A113G1O1R1T4"
+    ]
+}

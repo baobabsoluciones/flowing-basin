@@ -1,0 +1,12 @@
+{
+    "description": "RL Experiment 6\nThis script trains agents with the \"adjustments\" action type (\"A21\", \"A22\", \"A23\", and \"A24\")",
+    "agents": [
+        "rl-A21G1O3R1T3",
+        "rl-A22G0O3R1T3",
+        "rl-A22G1O3R1T3",
+        "rl-A23G0O3R1T3",
+        "rl-A23G1O3R1T3",
+        "rl-A24G0O3R1T3",
+        "rl-A24G1O3R1T3"
+    ]
+}

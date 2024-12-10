@@ -5,6 +5,7 @@ This script trains agents with larger network sizes
 
 from flowing_basin.solvers.rl import ReinforcementLearning
 from itertools import product
+import json
 
 actions = ["A113"]
 generals = ["G0", "G1"]
@@ -14,6 +15,8 @@ trainings = ["T3X", "T3X1", "T3X2", "T3X3"]
 # "T3X4", "T3X5", "T3X6" will not be tested since this experiment would take too long
 # and there is little reason to scale only the actor and not the critic,
 # given that both are affected when the action and observation spaces are bigger
+
+agents = []
 
 for action, general, observation, reward, training in product(actions, generals, observations, rewards, trainings):
 
@@ -29,8 +32,17 @@ for action, general, observation, reward, training in product(actions, generals,
     # Note we WILL "repeat" the training of T34 agents with O2 observation,
     # which are the same agents as those trained with T3 and O2, but with a longer training time
 
-    rl = ReinforcementLearning(f"{action}{general}{observation}{reward}{training}", verbose=2)
-    rl.train()
+    agents.append(f"rl-{action}{general}{observation}{reward}{training}")
+    # rl = ReinforcementLearning(f"{action}{general}{observation}{reward}{training}", verbose=2)
+    # rl.train()
+
+experiment = {
+    "description": """RL Experiment 9
+This script trains agents with larger network sizes""",
+    "agents": agents
+}
+with open('experiments/experiment9.json', 'w') as f:
+    json.dump(experiment, f, indent=4)
 
 # Note we will train 1(A) * 2(G) * 2(O) * 2(R) * 4(T) - 2 = 30 agents
 # Approximate training time: 30 agents * 7.5 hours/agent = 225 hours = 9.375 days

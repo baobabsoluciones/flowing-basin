@@ -1,0 +1,15 @@
+{
+    "description": "RL Experiment 3\nThis script trains agents with differently sized blocks of actions",
+    "agents": [
+        "rl-A1G0O2R1T1",
+        "rl-A1G1O2R1T1",
+        "rl-A110G0O2R1T1",
+        "rl-A110G1O2R1T1",
+        "rl-A111G0O2R1T1",
+        "rl-A111G1O2R1T1",
+        "rl-A112G0O2R1T1",
+        "rl-A112G1O2R1T1",
+        "rl-A113G0O2R1T3",
+        "rl-A113G1O2R1T3"
+    ]
+}

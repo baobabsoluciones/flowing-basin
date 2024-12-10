@@ -1,0 +1,29 @@
+{
+    "description": "RL Experiment 7\nThis script trains agents with a higher observation sight (32, 64 and 96, instead of only 16)",
+    "agents": [
+        "rl-A1G0O231R1T1",
+        "rl-A1G0O231R22T1",
+        "rl-A1G0O232R1T1",
+        "rl-A1G0O232R22T1",
+        "rl-A1G0O233R1T1",
+        "rl-A1G0O233R22T1",
+        "rl-A1G1O231R1T1",
+        "rl-A1G1O231R22T1",
+        "rl-A1G1O232R1T1",
+        "rl-A1G1O232R22T1",
+        "rl-A1G1O233R1T1",
+        "rl-A1G1O233R22T1",
+        "rl-A113G0O231R1T3",
+        "rl-A113G0O231R22T3",
+        "rl-A113G0O232R1T3",
+        "rl-A113G0O232R22T3",
+        "rl-A113G0O233R1T3",
+        "rl-A113G0O233R22T3",
+        "rl-A113G1O231R1T3",
+        "rl-A113G1O231R22T3",
+        "rl-A113G1O232R1T3",
+        "rl-A113G1O232R22T3",
+        "rl-A113G1O233R1T3",
+        "rl-A113G1O233R22T3"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "description": "RL Experiment 2\nThis script trains agents with normal and randomized features to check if the agents make use of the observation",
+    "agents": [
+        "rl-A1G0O2R1T1",
+        "rl-A1G0O20R1T1",
+        "rl-A1G0O201R1T1",
+        "rl-A1G1O2R1T1",
+        "rl-A1G1O20R1T1",
+        "rl-A1G1O201R1T1"
+    ]
+}

@@ -17,15 +17,16 @@ import numpy as np
 
 
 PLOT_POWER_CURVE = True
-PLOT_SOLVER_FLOWS = True
-USE_TRANSPARENCY = True  # This does not allow saving in .eps format
+PLOT_SOLVER_FLOWS = False
+USE_TRANSPARENCY = False  # This does not allow saving in .eps format
 PUT_TEXT = True
 SET_YLIM = False
-DAM_IDS = None  # Put None to plot all dams, or [dam_id] for a single dam
+DAM_IDS = ["dam1", "dam2"]  # Put None to plot all dams, or [dam_id] for a single dam
 SOLVER = "PSO (general)"  # Any solver (or agent) with solutions in rl_data/baselines, such as "MILP" or "PSO (general)"
 GENERAL = 'G2'  # General configuration from which to get the solutions when PLOT_SOLVER_FLOWS = True
 FILENAME = f'plot_power_group/fig_power_vs_turbine_flow'
-DAM_NAMES = {}  # DAM_NAMES = {'dam1': 'first subsystem', 'dam2': 'second subsystem'}
+# DAM_NAMES = {}  # DAM_NAMES = {'dam1': 'first subsystem', 'dam2': 'second subsystem'}
+DAM_NAMES = {'dam1': 'first subsystem', 'dam2': 'second subsystem'}
 
 # Define the name of the filename and the title of the plot
 if PLOT_SOLVER_FLOWS:
@@ -156,8 +157,8 @@ for i, dam_id in enumerate(DAM_IDS):
         ax.plot(observed_flows, observed_powers, marker='o', color='b', linestyle='-')
     if num_dams_plot > 1:
         dam_name = DAM_NAMES[dam_id] if dam_id in DAM_NAMES else dam_id
-        ax.set_title(f'{dam_name}{plot_title}')
-    ax.set_xlabel('Flow (m3/s)')
+        ax.set_title(f'Power Curve function of the {dam_name}{plot_title}')
+    ax.set_xlabel('Turbine Flow (m$^3$/s)')
     ax.set_ylabel('Power (MW)')
     ax.grid(True)
 

@@ -19,10 +19,10 @@ SHOW_INDIVIDUAL_INSTANCES = False
 VERBOSE = 0
 LOAD_DATA = False
 DATA_PATH = 'simulation_vs_history/all_relative_differences.npy'
-FIG_PATH = 'simulation_vs_history/relative_differences.eps'
+FIG_PATH = 'simulation_vs_history/fig_simulation_vs_history_minus.eps'
 
 
-historial_data_path = "../data/history/historical_data_reliable_only.pickle"
+historial_data_path = "../../data/history/historical_data_reliable_only.pickle"
 constants = Instance.from_dict(load_json(CONSTANTS_PATH.format(num_dams=NUM_DAMS)))
 length_episodes = get_episode_length(constants=constants)
 historical_data = pd.read_pickle(historial_data_path)
@@ -105,6 +105,8 @@ def get_all_relative_differences():
 
 
 def percent_format(x, _):
+    if x < 0:
+        return f'−{abs(int(x * 100))}%'
     return f'{int(x * 100)}%'
 
 

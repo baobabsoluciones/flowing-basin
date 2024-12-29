@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 PLOT_MAX_VOL = False
-FILENAME = "plot_channel/channels"
+FILENAME = "plot_channel/fig_channels_superscript3"
 DAM_NAMES = {'dam1': 'the first subsystem', 'dam2': 'the second subsystem'}
 
 if __name__ == "__main__":
@@ -43,10 +43,10 @@ if __name__ == "__main__":
             observed_vols = np.linspace(0, constants.get_max_vol_of_dam(dam_id), num)
             observed_flows = np.ones(num) * constants.get_max_flow_of_channel(dam_id)
             ax.plot(observed_vols, observed_flows, color='blue', linewidth=2)
-        ax.set_title(f'Outflow limitation for {DAM_NAMES[dam_id]}')
-        ax.set_xlabel("Volume (m3)")
+        ax.set_title(f'Flow Limit function of {DAM_NAMES[dam_id]}')
+        ax.set_xlabel("Volume (m$^3$)")
         if i == 0:
-            ax.set_ylabel("Outflow limit (m3/s)")
+            ax.set_ylabel("Outflow limit (m$^3$/s)")
 
         ax.legend()
         ax.grid(True)

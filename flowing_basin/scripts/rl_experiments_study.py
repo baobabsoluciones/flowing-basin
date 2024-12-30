@@ -57,10 +57,10 @@ def main():
     # total_time = sum(training_times)
     # print("Total time (min):", total_time)
     # ReinforcementLearning.histogram_training_times(regex, hours=True, filename='reports/rl_hist_training_times', filter_timesteps=99_000)
-    ReinforcementLearning.barchart_training_times(
-        regex, hours=True, names_mapping=names, colors_mapping=colors,
-        title="Two reservoirs", filename="reports/rl_times_2_reservoirs"
-    )
+    # ReinforcementLearning.barchart_training_times(
+    #     regex, hours=True, names_mapping=names, colors_mapping=colors,
+    #     title="Two reservoirs", filename="reports/rl_times_2_reservoirs"
+    # )
     # ReinforcementLearning.print_training_times(regex, hours=True, csv_filepath="reports/training_times_experiments1-9.csv")
     # print("Average training time:", ReinforcementLearning.get_avg_training_time(regex))
 

@@ -17,6 +17,7 @@ import torch
 import numpy as np
 import math
 from matplotlib import pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import os
 import re
 import warnings
@@ -930,7 +931,13 @@ class ReinforcementLearning:
                 if baseline.get_solver() in baselines:
                     training += baseline
 
+        def add_commas(x, _):
+            return f"{x:,.0f}"
+
         fig, ax = plt.subplots(figsize=(6, 6))
+        ax.xaxis.set_major_formatter(FuncFormatter(add_commas))
+        ax.yaxis.set_major_formatter(FuncFormatter(add_commas))
+        plt.xticks(rotation=30)
         training.plot_training_curves(ax, values=values, instances=instances, **kwargs)  # noqa
         if filename is not None:
             plt.savefig(f"{filename}.png", format='png', bbox_inches='tight', dpi=300)

@@ -4,7 +4,7 @@
   <img src="logo.svg" alt="Logo">
 </p>
 
-🔗 [[Paper - MILP & PSO](https://doi.org/10.1007/s10100-024-00934-z)] [Paper - RL] [[Thesis](https://oa.upm.es/82355/)] [[Dataset](https://1drv.ms/f/s!AigX06Gtq-2Ai7YGDn7UljVy-f0ozg?e=c7ZHQJ)] [[MILP & PSO solution files](https://1drv.ms/f/s!AigX06Gtq-2Ai6kOGRz0W8jCf7f41w?e=USr7V8)] [[RL model weights](https://1drv.ms/f/s!AigX06Gtq-2Ai7Ycn7bbyeHp-cj0fQ?e=5dKfcd)] [[PSO tuning results](https://1drv.ms/f/s!AigX06Gtq-2Ai8VSpUb5lwZqhCU6kw?e=AaKNCs)]
+🔗 [[Paper - MILP & PSO](https://doi.org/10.1007/s10100-024-00934-z)] [[Paper - RL](https://doi.org/10.3390/math13010151)] [[Thesis](https://oa.upm.es/82355/)] [[Dataset](https://1drv.ms/f/s!AigX06Gtq-2Ai7YGDn7UljVy-f0ozg?e=c7ZHQJ)] [[MILP & PSO solution files](https://1drv.ms/f/s!AigX06Gtq-2Ai6kOGRz0W8jCf7f41w?e=USr7V8)] [[RL model weights](https://1drv.ms/f/s!AigX06Gtq-2Ai7Ycn7bbyeHp-cj0fQ?e=5dKfcd)] [[PSO tuning results](https://1drv.ms/f/s!AigX06Gtq-2Ai8VSpUb5lwZqhCU6kw?e=AaKNCs)]
 
 **Flowing Basin** is a research project focused on the
 optimization of hydropower stations having multiple reservoirs.
@@ -182,5 +182,18 @@ If you find our work useful, please consider citing our papers:
       issn = {1613-9178}
     }
     ```
-- Paper detailing the RL approach (found here):
-    ...
+- Paper detailing the RL approach (found [here](https://doi.org/10.3390/math13010151)):
+    ```
+    @article{Castro-Freibott2025,
+      author = {Castro-Freibott, Rodrigo and García-Sánchez, Álvaro and Espiga-Fernández, Francisco and González-Santander de la Cruz, Guillermo},
+      title = {Deep Reinforcement Learning for Intraday Multireservoir Hydropower Management},
+      journal = {Mathematics},
+      volume = {13},
+      year = {2025},
+      number = {1},
+      article-number = {151},
+      url = {https://www.mdpi.com/2227-7390/13/1/151},
+      issn = {2227-7390},
+      doi = {10.3390/math13010151}
+    }
+    ```

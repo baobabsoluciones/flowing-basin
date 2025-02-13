@@ -1,0 +1,187 @@
+{
+    "action_type": "exiting_flows",
+    "dam_ids": [
+        "dam1",
+        "dam2"
+    ],
+    "do_history_updates": false,
+    "feature_extractor": "MLP",
+    "features": [
+        "past_vols",
+        "past_flows",
+        "past_variations",
+        "future_prices",
+        "future_inflows",
+        "past_turbined",
+        "past_groups",
+        "past_powers",
+        "past_clipped"
+    ],
+    "flow_smoothing": 2,
+    "flow_smoothing_clip": false,
+    "flow_smoothing_penalty": 25,
+    "length_episodes": 99,
+    "limit_zones_penalty": 50,
+    "mode": "linear",
+    "num_steps_sight": [
+        {
+            "key": [
+                "past_vols",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_vols",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_flows",
+                "dam1"
+            ],
+            "value": 2
+        },
+        {
+            "key": [
+                "past_flows",
+                "dam2"
+            ],
+            "value": 6
+        },
+        {
+            "key": [
+                "past_variations",
+                "dam1"
+            ],
+            "value": 2
+        },
+        {
+            "key": [
+                "past_variations",
+                "dam2"
+            ],
+            "value": 2
+        },
+        {
+            "key": [
+                "future_prices",
+                "dam1"
+            ],
+            "value": 16
+        },
+        {
+            "key": [
+                "future_prices",
+                "dam2"
+            ],
+            "value": 16
+        },
+        {
+            "key": [
+                "future_inflows",
+                "dam1"
+            ],
+            "value": 16
+        },
+        {
+            "key": [
+                "future_inflows",
+                "dam2"
+            ],
+            "value": 16
+        },
+        {
+            "key": [
+                "past_turbined",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_turbined",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_groups",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_groups",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_powers",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_powers",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_clipped",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_clipped",
+                "dam2"
+            ],
+            "value": 1
+        }
+    ],
+    "projector_bound": null,
+    "projector_explained_variance": null,
+    "projector_extrapolation": null,
+    "projector_type": "identity",
+    "startups_penalty": 50,
+    "unique_features": [
+        "future_prices"
+    ],
+    "volume_exceedance_bonus": 0.0,
+    "volume_objectives": {},
+    "volume_shortage_penalty": 0.0,
+    "num_timesteps": 99000,
+    "log_episode_freq": 5,
+    "training_data_callback": true,
+    "evaluation_callback": true,
+    "checkpoint_callback": true,
+    "training_data_timesteps_freq": 495,
+    "training_data_instances": [
+        "Percentile00",
+        "Percentile10",
+        "Percentile20",
+        "Percentile30",
+        "Percentile40",
+        "Percentile50",
+        "Percentile60",
+        "Percentile70",
+        "Percentile80",
+        "Percentile90",
+        "Percentile100"
+    ],
+    "evaluation_num_episodes": 10,
+    "evaluation_timesteps_freq": 495,
+    "checkpoint_timesteps_freq": 495
+}

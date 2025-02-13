@@ -1,0 +1,13 @@
+{
+    "description": "RL Experiment 5\nThis script trains agents with QuantilePseudoDiscretizer alone (O222),\nor with a reward set using rl-greedy as a reference (R22).",
+    "agents": [
+        "rl-A1G0O222R1T1",
+        "rl-A1G0O2R22T1",
+        "rl-A1G1O222R1T1",
+        "rl-A1G1O2R22T1",
+        "rl-A113G0O222R1T3",
+        "rl-A113G0O2R22T3",
+        "rl-A113G1O222R1T3",
+        "rl-A113G1O2R22T3"
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "description": "RL Experiment 12 (cont.)\nThis script trains the agents A21 using 6 dams with original and triple network sizes.",
+    "agents": [
+        "rl-A21G2O3R1T74",
+        "rl-A21G2O3R1T748",
+        "rl-A21G3O3R1T74",
+        "rl-A21G3O3R1T748"
+    ]
+}

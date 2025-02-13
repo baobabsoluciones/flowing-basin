@@ -1,0 +1,26 @@
+{
+    "length_episodes": 99,
+    "num_timesteps": 99000,
+    "replay_buffer_size": 100000,
+    "log_episode_freq": 5,
+    "training_data_callback": true,
+    "evaluation_callback": true,
+    "checkpoint_callback": false,
+    "training_data_timesteps_freq": 495,
+    "training_data_instances": [
+        "Percentile00",
+        "Percentile10",
+        "Percentile20",
+        "Percentile30",
+        "Percentile40",
+        "Percentile50",
+        "Percentile60",
+        "Percentile70",
+        "Percentile80",
+        "Percentile90",
+        "Percentile100"
+    ],
+    "evaluation_num_episodes": 10,
+    "evaluation_timesteps_freq": 495,
+    "evaluation_save_best": true
+}

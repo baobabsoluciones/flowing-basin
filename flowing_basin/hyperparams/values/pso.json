@@ -1,0 +1,18 @@
+{
+    "use_relvars": true,
+    "num_particles": 200,
+    "cognitive_coefficient": 2.905405139888455,
+    "social_coefficient": 0.4232260541405988,
+    "inertia_weight": 0.4424113459034113,
+    "bounds_handling": "periodic",
+    "topology": "star",
+    "max_time": 900,
+    "mode": null,
+    "flow_smoothing": null,
+    "max_relvar": null,
+    "limit_zones_penalty": null,
+    "startups_penalty": null,
+    "volume_exceedance_bonus": null,
+    "volume_objectives": null,
+    "volume_shortage_penalty": null
+}

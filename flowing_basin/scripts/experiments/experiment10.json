@@ -1,0 +1,17 @@
+{
+    "description": "RL Experiment 10\nThis script trains agents with discrete actions",
+    "agents": [
+        "rl-A31G0O231R1T1002",
+        "rl-A31G0O231R22T1002",
+        "rl-A31G1O231R1T1002",
+        "rl-A31G1O231R22T1002",
+        "rl-A32G0O231R1T1002",
+        "rl-A32G0O231R22T1002",
+        "rl-A32G1O231R1T1002",
+        "rl-A32G1O231R22T1002",
+        "rl-A33G0O231R1T1002",
+        "rl-A33G0O231R22T1002",
+        "rl-A33G1O231R1T1002",
+        "rl-A33G1O231R22T1002"
+    ]
+}

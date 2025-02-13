@@ -1,0 +1,11 @@
+{
+    "MIPGap": 0.01,
+    "max_time": 900,
+    "flow_smoothing": null,
+    "max_relvar": null,
+    "limit_zones_penalty": null,
+    "startups_penalty": null,
+    "volume_exceedance_bonus": null,
+    "volume_objectives": null,
+    "volume_shortage_penalty": null
+}

@@ -127,3 +127,25 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Flowing basin ML models for power prediction
+/flowing_basin/ml_models/model_E1.sav
+/flowing_basin/ml_models/model_E2.sav
+
+# Images to check river basin code
+/flowing_basin/tests/river_basin_checks/*.png
+
+# Historical data
+/flowing_basin/data/history/historical_data.pickle
+/flowing_basin/data/history/historical_data_reliable_only.pickle
+/flowing_basin/data/history/historical_data_clean.pickle
+/flowing_basin/data/history/historical_data_clean_test.pickle
+/flowing_basin/data/history/historical_data_clean_train.pickle
+/flowing_basin/data/history/historical_data_daily_avg_inflow.pickle
+
+# Files storing arrays
+*.npy
+
+# Images
+*.eps
+*.png

@@ -1,6 +1,205 @@
 {
-  "$schema": "http://json-schema.org/schema#",
-  "type": "object",
-  "properties": {},
-  "required": []
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties": {
+        "time_step_minutes": {
+            "type": "integer"
+        },
+        "datetime": {
+            "type": "object",
+            "properties": {
+                "start_information": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                },
+                "end_decisions": {
+                    "type": "string"
+                },
+                "end_information": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "end_decisions",
+                "start"
+            ]
+        },
+        "instance_name": {
+            "type": "string"
+        },
+        "dams": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "order": {
+                        "type": "integer"
+                    },
+                    "vol_min": {
+                        "type": "number"
+                    },
+                    "vol_max": {
+                        "type": "number"
+                    },
+                    "relevant_lags": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "verification_lags": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "flow_max": {
+                        "type": "number"
+                    },
+                    "flow_limit": {
+                        "type": "object",
+                        "properties": {
+                            "exists": {
+                                "type": "boolean"
+                            },
+                            "observed_vols": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            },
+                            "observed_flows": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            }
+                        },
+                        "if": {
+                            "properties": {
+                                "exists": {
+                                    "const": true
+                                }
+                            }
+                        },
+                        "then": {
+                            "required": [
+                                "exists",
+                                "observed_vols",
+                                "observed_flows"
+                            ]
+                        },
+                        "else": {
+                            "required": [
+                                "exists"
+                            ]
+                        }
+                    },
+                    "turbined_flow": {
+                        "type": "object",
+                        "properties": {
+                            "observed_flows": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            },
+                            "observed_powers": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            }
+                        },
+                        "required": [
+                            "observed_flows",
+                            "observed_powers"
+                        ]
+                    },
+                    "startup_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "shutdown_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "initial_vol": {
+                        "type": "number"
+                    },
+                    "final_vol": {
+                        "type": "number"
+                    },
+                    "initial_lags": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "starting_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "unregulated_flow_max": {
+                        "type": "number"
+                    },
+                    "unregulated_flows": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "required": [
+                    "flow_limit",
+                    "flow_max",
+                    "id",
+                    "initial_lags",
+                    "initial_vol",
+                    "order",
+                    "relevant_lags",
+                    "startup_flows",
+                    "shutdown_flows",
+                    "unregulated_flow_max",
+                    "unregulated_flows",
+                    "vol_max",
+                    "vol_min"
+                ]
+            }
+        },
+        "incoming_flow_max": {
+            "type": "number"
+        },
+        "incoming_flows": {
+            "type": "array",
+            "items": {
+                "type": "number"
+            }
+        },
+        "energy_prices": {
+            "type": "array",
+            "items": {
+                "type": "number"
+            }
+        }
+    },
+    "required": [
+        "dams",
+        "datetime",
+        "energy_prices",
+        "incoming_flow_max",
+        "incoming_flows",
+        "time_step_minutes"
+    ]
 }

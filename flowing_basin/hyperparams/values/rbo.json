@@ -1,0 +1,15 @@
+{
+    "maximize_final_vol": false,
+    "random_biased_flows": false,
+    "random_biased_sorting": true,
+    "prob_below_half": 0.15,
+    "common_ratio": 0.6,
+    "flow_smoothing": null,
+    "max_relvar": null,
+    "mode": null,
+    "limit_zones_penalty": null,
+    "startups_penalty": null,
+    "volume_exceedance_bonus": null,
+    "volume_objectives": null,
+    "volume_shortage_penalty": null
+}

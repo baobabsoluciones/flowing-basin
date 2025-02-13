@@ -1,0 +1,159 @@
+{
+    "dam_ids": [
+        "dam1",
+        "dam2"
+    ],
+    "feature_extractor": "MLP",
+    "features": [
+        "past_vols",
+        "past_flows",
+        "past_variations",
+        "future_prices",
+        "future_inflows",
+        "past_turbined",
+        "past_groups",
+        "past_powers",
+        "past_clipped"
+    ],
+    "features_not_expand": [
+        "past_vols",
+        "past_flows",
+        "past_variations",
+        "past_turbined",
+        "past_groups",
+        "past_powers",
+        "past_clipped"
+    ],
+    "num_steps_sight": [
+        {
+            "key": [
+                "past_vols",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_vols",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_flows",
+                "dam1"
+            ],
+            "value": 2
+        },
+        {
+            "key": [
+                "past_flows",
+                "dam2"
+            ],
+            "value": 6
+        },
+        {
+            "key": [
+                "past_variations",
+                "dam1"
+            ],
+            "value": 2
+        },
+        {
+            "key": [
+                "past_variations",
+                "dam2"
+            ],
+            "value": 2
+        },
+        {
+            "key": [
+                "future_prices",
+                "dam1"
+            ],
+            "value": 64
+        },
+        {
+            "key": [
+                "future_prices",
+                "dam2"
+            ],
+            "value": 64
+        },
+        {
+            "key": [
+                "future_inflows",
+                "dam1"
+            ],
+            "value": 64
+        },
+        {
+            "key": [
+                "future_inflows",
+                "dam2"
+            ],
+            "value": 64
+        },
+        {
+            "key": [
+                "past_turbined",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_turbined",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_groups",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_groups",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_powers",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_powers",
+                "dam2"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_clipped",
+                "dam1"
+            ],
+            "value": 1
+        },
+        {
+            "key": [
+                "past_clipped",
+                "dam2"
+            ],
+            "value": 1
+        }
+    ],
+    "projector_type": "identity",
+    "unique_features": [
+        "future_prices"
+    ]
+}

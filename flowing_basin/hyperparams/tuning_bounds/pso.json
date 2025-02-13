@@ -1,0 +1,64 @@
+{
+    "use_relvars": {
+        "type": "categorical",
+        "values": {
+            "choices": [
+                true,
+                false
+            ]
+        }
+    },
+    "num_particles": {
+        "type": "int",
+        "values": {
+            "low": 10,
+            "high": 1000,
+            "step": 10
+        }
+    },
+    "cognitive_coefficient": {
+        "type": "float",
+        "values": {
+            "low": 0.0,
+            "high": 5.0
+        }
+    },
+    "social_coefficient": {
+        "type": "float",
+        "values": {
+            "low": 0.0,
+            "high": 5.0
+        }
+    },
+    "inertia_weight": {
+        "type": "float",
+        "values": {
+            "low": 0.0,
+            "high": 1.0
+        }
+    },
+    "bounds_handling": {
+        "type": "categorical",
+        "values": {
+            "choices": [
+                "periodic",
+                "nearest",
+                "intermediate",
+                "shrink",
+                "reflective",
+                "random"
+            ]
+        }
+    },
+    "topology": {
+        "type": "categorical",
+        "values": {
+            "choices": [
+                "star",
+                "ring",
+                "pyramid",
+                "random"
+            ]
+        }
+    }
+}

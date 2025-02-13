@@ -1,0 +1,29 @@
+{
+    "description": "RL Experiment 1\nThis script trains agents with different observation configurations in both the normal and simplified environments.",
+    "agents": [
+        "rl-A1G0O1R1T1",
+        "rl-A1G0O1R1T2",
+        "rl-A1G0O12R1T1",
+        "rl-A1G0O12R1T2",
+        "rl-A1G0O121R1T1",
+        "rl-A1G0O121R1T2",
+        "rl-A1G0O2R1T1",
+        "rl-A1G0O2R1T2",
+        "rl-A1G0O22R1T1",
+        "rl-A1G0O22R1T2",
+        "rl-A1G0O221R1T1",
+        "rl-A1G0O221R1T2",
+        "rl-A1G1O1R1T1",
+        "rl-A1G1O1R1T2",
+        "rl-A1G1O12R1T1",
+        "rl-A1G1O12R1T2",
+        "rl-A1G1O121R1T1",
+        "rl-A1G1O121R1T2",
+        "rl-A1G1O2R1T1",
+        "rl-A1G1O2R1T2",
+        "rl-A1G1O22R1T1",
+        "rl-A1G1O22R1T2",
+        "rl-A1G1O221R1T1",
+        "rl-A1G1O221R1T2"
+    ]
+}

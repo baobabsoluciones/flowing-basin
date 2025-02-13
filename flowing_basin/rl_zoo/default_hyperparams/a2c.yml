@@ -1,0 +1,6 @@
+RLEnvironment-ANY:
+  normalize: false
+  n_envs: 1
+  policy: 'MlpPolicy'
+  ent_coef: 0.0
+  n_timesteps: -1
